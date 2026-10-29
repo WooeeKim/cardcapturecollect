@@ -1,6 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 
-export type Tool = 'pen' | 'eraser'
+export type Tool = 'pen' | 'highlighter' | 'eraser'
 
 type Point = { x: number; y: number }
 type Stroke = { tool: Tool; color: string; size: number; points: Point[] }
@@ -40,8 +40,9 @@ export default function DrawingCanvas({ tool, color, size, ref }: Props) {
     ctx.clearRect(0, 0, w, h)
     for (const s of [...strokes.current, ...(current.current ? [current.current] : [])]) {
       ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
+      ctx.globalAlpha = s.tool === 'highlighter' ? 0.35 : 1
       ctx.strokeStyle = s.color
-      ctx.lineWidth = s.size * (w / 300)
+      ctx.lineWidth = (s.tool === 'highlighter' ? s.size * 3 : s.size) * (w / 300)
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
       ctx.beginPath()
@@ -50,6 +51,7 @@ export default function DrawingCanvas({ tool, color, size, ref }: Props) {
       ctx.stroke()
     }
     ctx.globalCompositeOperation = 'source-over'
+    ctx.globalAlpha = 1
   }
 
   useEffect(() => {

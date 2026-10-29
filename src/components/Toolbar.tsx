@@ -72,6 +72,21 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         <Vec src={pencilLead2} x={21.86} y={0.17} w={4.543} h={5.346} inset="-18.71% -22.01% -18.7% -22.01%" />
       </button>
 
+      {/* 형광펜 */}
+      <button
+        aria-label="형광펜"
+        onClick={() => onTool('highlighter')}
+        className="absolute top-[8px] h-[107px] w-[32px] transition-transform"
+        style={{ left: pct(55), transform: `translateY(${tool === 'highlighter' ? 0 : LIFT}px)` }}
+      >
+        <svg viewBox="0 0 32 107" className="block size-full" aria-hidden>
+          <rect x="4" y="24" width="24" height="72" rx="4" fill={color} opacity="0.45" stroke="#888" strokeWidth="1.2" />
+          <rect x="8" y="16" width="16" height="12" rx="2" fill="#ddd" stroke="#aaa" strokeWidth="0.8" />
+          <rect x="10" y="0" width="12" height="18" rx="1" fill="#ccc" />
+          <rect x="4" y="92" width="24" height="8" rx="2" fill={color} opacity="0.7" />
+        </svg>
+      </button>
+
       {/* 지우개 */}
       <button
         aria-label="지우개"
@@ -127,7 +142,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
               aria-label={`색 ${c}`}
               onClick={() => {
                 onColor(c)
-                onTool('pen')
+                if (tool === 'eraser') onTool('pen')
                 setPicking(false)
               }}
               className={`size-[28px] rounded-full border-[1.5px] ${color === c ? 'border-line' : 'border-paper'}`}

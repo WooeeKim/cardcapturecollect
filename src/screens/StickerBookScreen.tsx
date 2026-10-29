@@ -29,6 +29,7 @@ export default function StickerBookScreen({
   const [scrolled, setScrolled] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
+  const [justPlaced, setJustPlaced] = useState<string | null>(null)
 
   const unplaced = stickers.filter((s) => s.bookPage === null)
   const inBook = stickers.filter((s) => s.bookLabel === label && s.bookPage !== null)
@@ -53,8 +54,11 @@ export default function StickerBookScreen({
 
   async function place(p: number, slot: number) {
     if (!selected) return
-    await updateSticker(selected, { bookLabel: label, bookPage: p, bookSlot: slot })
+    const id = selected
+    await updateSticker(id, { bookLabel: label, bookPage: p, bookSlot: slot })
     setSelected(null)
+    setJustPlaced(id)
+    setTimeout(() => setJustPlaced(null), 400)
     onChange()
   }
 
@@ -64,7 +68,7 @@ export default function StickerBookScreen({
     <>
       {/* 라벨 (지금 책). 펼치면 나머지 라벨이 아래로 이어진다 */}
       <div className="absolute top-[calc(env(safe-area-inset-top)+70px)] left-0 z-20 flex flex-col gap-[6px]">
-        {(picking ? [label, ...LABELS.map((l) => l.id).filter((id) => id !== label)] : [label]).map((id) => (
+        {(picking ? [label, ...LABELS.map((l) => l.id).filter((id) => id !== label)] : [label]).map((id, idx) => (
           <button
             key={id}
             onClick={() => {
@@ -73,7 +77,8 @@ export default function StickerBookScreen({
             }}
             aria-label={id === label ? `라벨 ${id} · 다른 책 고르기` : `라벨 ${id} 책으로`}
             aria-expanded={id === label ? picking : undefined}
-            className="relative h-[43px] w-[70.5px]"
+            className={`relative h-[43px] w-[70.5px] ${picking && idx > 0 ? 'animate-slide-in' : ''}`}
+            style={picking && idx > 0 ? { animationDelay: `${(idx - 1) * 0.04}s` } : undefined}
           >
             <span className="absolute inset-[-2.33%_-4.26%_-6.98%_-1.42%]">
               <img src={labelSrc(id)} alt="" className="block size-full max-w-none" />
@@ -99,7 +104,9 @@ export default function StickerBookScreen({
               const slot = i % SLOTS_PER_PAGE
               const sticker = inBook.find((s) => s.bookPage === p && s.bookSlot === slot)
               return sticker ? (
-                <StickerCard key={i} sticker={sticker} flippable />
+                <div key={i} className={sticker.id === justPlaced ? 'animate-pop-in' : ''}>
+                  <StickerCard sticker={sticker} flippable />
+                </div>
               ) : (
                 <button
                   key={i}
@@ -151,13 +158,15 @@ export default function StickerBookScreen({
               key={s.id}
               onClick={() => setSelected(isSelected ? null : s.id)}
               aria-label="스티커 고르기"
-              className="absolute w-[155.435px] shadow-sticker transition-transform"
+              className={`absolute w-[155.435px] shadow-sticker animate-float-up transition-transform ${isSelected ? 'animate-wiggle' : ''}`}
               style={{
+                '--rot': `${layout.rotate}deg`,
                 left: layout.left,
                 top: layout.top,
-                zIndex: layout.z,
+                zIndex: isSelected ? 10 : layout.z,
                 transform: `rotate(${layout.rotate}deg) translateY(${isSelected ? -28 : 0}px)`,
-              }}
+                animationDelay: isSelected ? undefined : `${i * 0.08}s`,
+              } as React.CSSProperties}
             >
               <StickerCard sticker={s} />
             </button>
