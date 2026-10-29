@@ -14,6 +14,10 @@ import size2 from '../assets/figma/size2.svg'
 import size3 from '../assets/figma/size3.svg'
 import size4 from '../assets/figma/size4.svg'
 import size5 from '../assets/figma/size5.svg'
+import highlighterBand from '../assets/figma/highlighter-band.svg'
+import highlighterBody from '../assets/figma/highlighter-body.svg'
+import highlighterCap from '../assets/figma/highlighter-cap.svg'
+import highlighterTip from '../assets/figma/highlighter-tip.svg'
 import type { Tool } from './DrawingCanvas'
 
 export const COLORS = ['#000000', '#7a766c', '#ffffff', '#c0392b', '#e67e22', '#f1c40f', '#469015', '#2e86de', '#8e44ad', '#c584c0']
@@ -76,15 +80,15 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
       <button
         aria-label="형광펜"
         onClick={() => onTool('highlighter')}
-        className="absolute top-[8px] h-[107px] w-[32px] transition-transform"
-        style={{ left: pct(55), transform: `translateY(${tool === 'highlighter' ? 0 : LIFT}px)` }}
+        className="absolute top-0 h-[115px] w-[36px] transition-transform"
+        style={{ left: pct(52), transform: `translateY(${tool === 'highlighter' ? 0 : LIFT}px)` }}
       >
-        <svg viewBox="0 0 32 107" className="block size-full" aria-hidden>
-          <rect x="4" y="24" width="24" height="72" rx="4" fill={color} opacity="0.45" stroke="#888" strokeWidth="1.2" />
-          <rect x="8" y="16" width="16" height="12" rx="2" fill="#ddd" stroke="#aaa" strokeWidth="0.8" />
-          <rect x="10" y="0" width="12" height="18" rx="1" fill="#ccc" />
-          <rect x="4" y="92" width="24" height="8" rx="2" fill={color} opacity="0.7" />
-        </svg>
+        <Vec src={highlighterBody} x={0} y={25} w={36} h={90} inset="-1.4% -2.8%" />
+        <Vec src={highlighterTip} x={4} y={0} w={28} h={22} inset="-3.6% -3.6%" />
+        <Vec src={highlighterCap} x={2} y={25} w={32} h={18} inset="-3.1% -3.1%" />
+        <Vec src={highlighterBand} x={3} y={60} w={30} h={10} inset="-3.3% -10%" />
+        {/* 색 표시: 몸통에 반투명 오버레이 */}
+        <span className="absolute rounded-[3px] opacity-40" style={{ left: 5, top: 43, width: 26, height: 55, background: color }} />
       </button>
 
       {/* 지우개 */}
