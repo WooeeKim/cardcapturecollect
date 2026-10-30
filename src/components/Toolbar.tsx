@@ -37,13 +37,23 @@ function Vec({ src, x, y, w, h, inset }: { src: string; x: number; y: number; w:
   )
 }
 
+// 두께 아이콘 (Figma 원본 크기)
 const SIZE_ICONS = [
-  { src: size1, x: 158.9, y: 52, w: 6.257, h: 6.561, inset: '-15.24% -15.98% -15.24% -15.97%' },
-  { src: size2, x: 180.16, y: 48, w: 13.366, h: 11.864, inset: '-8.43% -7.48%' },
-  { src: size3, x: 208.53, y: 43, w: 22.076, h: 19.735, inset: '-5.07% -4.53% -5.08% -4.53%' },
-  { src: size4, x: 245.6, y: 38, w: 24, h: 27, inset: '-3.7% -4.17%' },
-  { src: size5, x: 284.6, y: 31, w: 36, h: 39, inset: '-2.56% -2.78%' },
+  { src: size1, w: 6.257, h: 6.561, inset: '-15.24% -15.98% -15.24% -15.97%' },
+  { src: size2, w: 13.366, h: 11.864, inset: '-8.43% -7.48%' },
+  { src: size3, w: 22.076, h: 19.735, inset: '-5.07% -4.53% -5.08% -4.53%' },
+  { src: size4, w: 24, h: 27, inset: '-3.7% -4.17%' },
+  { src: size5, w: 36, h: 39, inset: '-2.56% -2.78%' },
 ]
+
+// 도구 5개(연필·형광펜·지우개·두께·색)를 폭을 5칸으로 나눈 칸 가운데에 둔다
+const slot = (i: number) => pct((402 * (i + 0.5)) / 5)
+
+// 44×44 칸 가운데에 두께 아이콘 하나
+function SizeIcon({ i }: { i: number }) {
+  const icon = SIZE_ICONS[i]
+  return <Vec src={icon.src} x={22 - icon.w / 2} y={22 - icon.h / 2} w={icon.w} h={icon.h} inset={icon.inset} />
+}
 
 // 고른 도구는 위로 올라와 있다 (Figma 기본 상태: 연필이 올라와 있음)
 const LIFT = 24
@@ -58,7 +68,9 @@ type Props = {
 }
 
 export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: Props) {
-  const [picking, setPicking] = useState(false)
+  // 펼친 팝오버: 두께(세로로 선다) 또는 색
+  const [open, setOpen] = useState<'size' | 'color' | null>(null)
+  const sizeIndex = Math.max(0, SIZES.indexOf(size))
 
   return (
     <div className="absolute inset-x-0 bottom-0 h-[115px]">
@@ -67,7 +79,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         aria-label="펜"
         onClick={() => onTool('pen')}
         className="absolute top-0 h-[115px] w-[39.5px] transition-transform"
-        style={{ left: pct(22.5), transform: `translateY(${tool === 'pen' ? 0 : LIFT}px)` }}
+        style={{ left: slot(0), transform: `translateX(-50%) translateY(${tool === 'pen' ? 0 : LIFT}px)` }}
       >
         <Vec src={pencilBody} x={0} y={33} w={39.5} h={82} inset="-1.22% -2.53%" />
         <Vec src={pencilTip} x={7.5} y={0} w={30} h={33} inset="-3.03% -3.33%" />
@@ -81,7 +93,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         aria-label="형광펜"
         onClick={() => onTool('highlighter')}
         className="absolute top-0 h-[115px] w-[36px] transition-transform"
-        style={{ left: pct(52), transform: `translateY(${tool === 'highlighter' ? 0 : LIFT}px)` }}
+        style={{ left: slot(1), transform: `translateX(-50%) translateY(${tool === 'highlighter' ? 0 : LIFT}px)` }}
       >
         <Vec src={highlighterBody} x={0} y={25} w={36} h={90} inset="-1.4% -2.8%" />
         <Vec src={highlighterTip} x={4} y={0} w={28} h={22} inset="-3.6% -3.6%" />
@@ -96,37 +108,54 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         aria-label="지우개"
         onClick={() => onTool('eraser')}
         className="absolute top-[37px] h-[77px] w-[67px] transition-transform"
-        style={{ left: pct(80), transform: `translateY(${tool === 'eraser' ? -LIFT : 0}px)` }}
+        style={{ left: slot(2), transform: `translateX(-50%) translateY(${tool === 'eraser' ? -LIFT : 0}px)` }}
       >
         <Vec src={eraserBody} x={0} y={0} w={67} h={77} inset="-1.3% -1.49%" />
         <Vec src={eraserLine1} x={1} y={25} w={53} h={0} inset="-1px -1.89%" />
         <Vec src={eraserLine2} x={0} y={33} w={61} h={0} inset="-1px -1.64%" />
       </button>
 
-      {/* 두께 */}
-      {SIZE_ICONS.map((icon, i) => {
-        const cx = icon.x + icon.w / 2
-        return (
-          <button
-            key={i}
-            aria-label={`두께 ${i + 1}`}
-            aria-pressed={size === SIZES[i]}
-            onClick={() => onSize(SIZES[i])}
-            className="absolute top-[22px] h-[56px] w-[36px] -translate-x-1/2"
-            style={{ left: pct(cx) }}
-          >
-            <Vec src={icon.src} x={18 - icon.w / 2} y={icon.y - 22} w={icon.w} h={icon.h} inset={icon.inset} />
-            {size === SIZES[i] && <span className="absolute bottom-0 left-1/2 size-[5px] -translate-x-1/2 rounded-full bg-line" />}
-          </button>
-        )
-      })}
+      {/* 두께: 지금 두께 하나만 보이고, 누르면 5단계가 세로로 펼쳐진다 */}
+      <button
+        aria-label="두께 고르기"
+        aria-expanded={open === 'size'}
+        onClick={() => setOpen(open === 'size' ? null : 'size')}
+        className="absolute top-[30px] size-[44px] -translate-x-1/2"
+        style={{ left: slot(3) }}
+      >
+        <SizeIcon i={sizeIndex} />
+      </button>
+
+      {open === 'size' && (
+        <div
+          className="absolute bottom-[96px] flex -translate-x-1/2 flex-col rounded-[3px] bg-white px-[4px] py-[6px] shadow-sticker"
+          style={{ left: slot(3) }}
+        >
+          {SIZE_ICONS.map((_, i) => (
+            <button
+              key={i}
+              aria-label={`두께 ${i + 1}`}
+              aria-pressed={size === SIZES[i]}
+              onClick={() => {
+                onSize(SIZES[i])
+                setOpen(null)
+              }}
+              className="relative size-[44px]"
+            >
+              <SizeIcon i={i} />
+              {size === SIZES[i] && <span className="absolute top-1/2 -left-[1px] size-[5px] -translate-y-1/2 rounded-full bg-line" />}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 색 */}
       <button
         aria-label="색 고르기"
-        onClick={() => setPicking((p) => !p)}
-        className="absolute top-[32.99px] h-[38.417px] w-[38.794px]"
-        style={{ left: pct(344.74) }}
+        aria-expanded={open === 'color'}
+        onClick={() => setOpen(open === 'color' ? null : 'color')}
+        className="absolute top-[32.99px] h-[38.417px] w-[38.794px] -translate-x-1/2"
+        style={{ left: slot(4) }}
       >
         <Vec src={colorRing} x={0} y={0} w={38.794} h={38.417} inset="-2.6% -2.58%" />
         <span className="absolute flex h-[27.571px] w-[30.117px] items-center justify-center" style={{ left: 5.26, top: 5.01 }}>
@@ -138,7 +167,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         </span>
       </button>
 
-      {picking && (
+      {open === 'color' && (
         <div className="absolute right-[12px] bottom-[96px] grid grid-cols-5 gap-[10px] rounded-[3px] bg-white p-[12px] shadow-sticker">
           {COLORS.map((c) => (
             <button
@@ -147,7 +176,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
               onClick={() => {
                 onColor(c)
                 if (tool === 'eraser') onTool('pen')
-                setPicking(false)
+                setOpen(null)
               }}
               className={`size-[28px] rounded-full border-[1.5px] ${color === c ? 'border-line' : 'border-paper'}`}
               style={{ background: c }}
