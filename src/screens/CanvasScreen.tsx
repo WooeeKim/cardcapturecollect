@@ -19,6 +19,7 @@ export default function CanvasScreen({ onSaved }: { onSaved: () => void }) {
   const [name, setName] = useState('')
   const [memo, setMemo] = useState('')
   const [back, setBack] = useState(false)
+  const [guide, setGuide] = useState(readGuidePref)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -72,6 +73,25 @@ export default function CanvasScreen({ onSaved }: { onSaved: () => void }) {
         <StickerFrame
           date={formatDate(new Date().toISOString())}
           onFlip={() => setBack((b) => !b)}
+          footer={
+            <button
+              type="button"
+              role="switch"
+              aria-checked={guide}
+              onClick={() => {
+                setGuide(!guide)
+                writeGuidePref(!guide)
+              }}
+              className={`-my-[2.5cqw] -ml-[1cqw] flex items-center gap-[1.66cqw] py-[2.5cqw] pl-[1cqw] pr-[2cqw] text-[3.324cqw] leading-normal font-semibold text-muted ${back ? 'invisible' : ''}`}
+            >
+              <span className={`relative h-[4.43cqw] w-[7.76cqw] rounded-full transition-colors ${guide ? 'bg-line' : 'bg-slot'}`}>
+                <span
+                  className={`absolute top-[0.55cqw] left-[0.55cqw] size-[3.33cqw] rounded-full bg-white shadow-chip transition-transform ${guide ? 'translate-x-[3.33cqw]' : ''}`}
+                />
+              </span>
+              가이드
+            </button>
+          }
           chip={
             <div className={`flex items-center gap-[2.77cqw] overflow-hidden rounded-full border-[0.554cqw] border-chip-border bg-white pr-[4.155cqw] shadow-chip ${back ? 'invisible' : ''}`}>
               <span className="rounded-full bg-line px-[2.45cqw] py-[1.75cqw]">
@@ -94,7 +114,7 @@ export default function CanvasScreen({ onSaved }: { onSaved: () => void }) {
           }
         >
           <div className="absolute inset-0 overflow-hidden rounded-[0.831cqw] border-[1.5px] border-dashed border-paper">
-            <DrawingCanvas ref={canvas} tool={tool} color={color} size={size} />
+            <DrawingCanvas ref={canvas} tool={tool} color={color} size={size} guide={guide} />
             {back && (
               <textarea
                 autoFocus
@@ -112,4 +132,23 @@ export default function CanvasScreen({ onSaved }: { onSaved: () => void }) {
       <Toolbar tool={tool} size={size} color={color} onTool={setTool} onSize={setSize} onColor={setColor} />
     </>
   )
+}
+
+// 가이드 켜짐/꺼짐을 기기에 기억해 둔다 (저장소를 못 쓰는 환경이면 기본값 켜짐)
+const GUIDE_KEY = 'subwayseal.figureGuide'
+
+function readGuidePref() {
+  try {
+    return localStorage.getItem(GUIDE_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+function writeGuidePref(on: boolean) {
+  try {
+    localStorage.setItem(GUIDE_KEY, on ? 'on' : 'off')
+  } catch {
+    // 시크릿 모드 등 — 이번 세션에서만 유지된다
+  }
 }

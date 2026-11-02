@@ -20,6 +20,7 @@ type Props = {
   tool: Tool
   color: string
   size: number
+  guide?: boolean
   ref?: Ref<DrawingCanvasHandle>
 }
 
@@ -53,7 +54,7 @@ function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[], view: View, dpr
 }
 
 // 부모 크기를 꽉 채우는 캔버스. 좌표는 0~1 비율로 저장해 크기가 바뀌어도 다시 그릴 수 있게 한다.
-export default function DrawingCanvas({ tool, color, size, ref }: Props) {
+export default function DrawingCanvas({ tool, color, size, guide = true, ref }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const guideRef = useRef<HTMLDivElement>(null)
   const strokes = useRef<Stroke[]>([])
@@ -175,7 +176,7 @@ export default function DrawingCanvas({ tool, color, size, ref }: Props) {
 
   return (
     <div className="relative size-full overflow-hidden">
-      <div ref={guideRef} className="pointer-events-none absolute top-0 left-0 size-full">
+      <div ref={guideRef} className={`pointer-events-none absolute top-0 left-0 size-full ${guide ? '' : 'hidden'}`}>
         <div className="absolute inset-[4%_0]">
           <FigureGuide />
         </div>

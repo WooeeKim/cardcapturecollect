@@ -9,12 +9,14 @@ export default function StickerFrame({
   children,
   date,
   onFlip,
+  footer,
   className = '',
 }: {
   chip: ReactNode
   children: ReactNode
   date: string
   onFlip?: () => void
+  footer?: ReactNode
   className?: string
 }) {
   return (
@@ -22,7 +24,10 @@ export default function StickerFrame({
       <div className="relative flex aspect-[361/451] w-full flex-col gap-[4.155cqw] overflow-hidden rounded-[0.831cqw] bg-white p-[4.155cqw]">
         <div className="flex items-start">{chip}</div>
         <div className="relative min-h-0 w-full flex-1">{children}</div>
-        <p className="text-right text-[3.324cqw] leading-normal font-semibold text-muted">{date}</p>
+        <div className="flex items-center justify-between">
+          {footer ?? <span />}
+          <p className="text-[3.324cqw] leading-normal font-semibold text-muted">{date}</p>
+        </div>
         {onFlip ? (
           <button
             type="button"
