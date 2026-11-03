@@ -143,7 +143,7 @@ npm install
 - `service_role`/`secret` 키는 절대 쓰지 마세요. 앱에는 anon 키만 씁니다.
 - 키를 넣은 뒤에는 개발 서버를 껐다 켜야 적용됩니다.
 
-**DB 관리자만 (한 번):** 테이블·저장소는 Supabase 대시보드 → SQL Editor에서 만듭니다. 처음엔 [supabase/schema.sql](supabase/schema.sql)을, 그다음 [supabase/migrations/](supabase/migrations/) 안의 파일을 번호 순서대로 실행합니다. 새 마이그레이션 파일이 올라오면 그 파일만 실행하고 팀 채팅에 알려주세요. (현재 팀 DB에는 `002_book_label.sql`까지 적용됨)
+**DB 관리자만 (한 번):** 테이블·저장소는 Supabase 대시보드 → SQL Editor에서 만듭니다. 처음엔 [supabase/schema.sql](supabase/schema.sql)을, 그다음 [supabase/migrations/](supabase/migrations/) 안의 파일을 번호 순서대로 실행합니다. 새 마이그레이션 파일이 올라오면 그 파일만 실행하고 팀 채팅에 알려주세요. (현재 팀 DB에는 `003_card_mood_traits.sql`까지 적용됨)
 
 ### 8. 아이폰에서 열기
 
