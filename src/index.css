@@ -21,6 +21,9 @@
   --shadow-band: 0 3px 5px 0 rgba(57, 74, 46, 0.4);
   --shadow-chip: 1px 1px 3px 0 rgba(0, 0, 0, 0.1);
   --shadow-sticker: 0 5.474px 6.843px 0 rgba(0, 0, 0, 0.2);
+
+  /* 살짝 넘쳤다 돌아오는 스프링 곡선 (ease-spring 유틸리티) */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* 앱 화면 크기. 폰에서는 화면 전체, 넓은 화면(PC·태블릿)에서는 Figma 프레임(402×874) 비율로 가운데 고정한다.
@@ -115,6 +118,32 @@ button {
 }
 .animate-float-up {
   animation: float-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* 상단 탭 전환: 탭 글자들이 넘어온 방향에서 밀려 들어오고(--dir: 1 오른쪽, -1 왼쪽),
+   밑줄은 지나온 탭 쪽에서 늘어난 채 와서 줄어들며 자리 잡는다 */
+@keyframes tab-slide {
+  from { transform: translateX(calc(var(--dir) * 56px)); opacity: 0.3; }
+  to { transform: none; opacity: 1; }
+}
+.animate-tab-slide {
+  animation: tab-slide 0.45s var(--ease-spring) both;
+}
+
+@keyframes underline-stretch {
+  0% { transform: translateX(calc(var(--dir) * -60%)) scaleX(1.8); }
+  55% { transform: translateX(calc(var(--dir) * 4%)) scaleX(0.9); }
+  100% { transform: none; }
+}
+.animate-underline-stretch {
+  animation: underline-stretch 0.5s var(--ease-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tab-slide,
+  .animate-underline-stretch {
+    animation: none;
+  }
 }
 
 /* 3D 카드 뒤집기 */
