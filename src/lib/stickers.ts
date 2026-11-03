@@ -5,6 +5,8 @@ export type Sticker = {
   place: string
   name: string
   memo: string
+  mood: string
+  traits: string[]
   imageUrl: string
   createdAt: string
   bookLabel: number | null
@@ -19,6 +21,9 @@ type Row = {
   place: string
   name: string
   memo: string
+  // 003 마이그레이션 전 DB 에는 없다
+  mood?: string
+  traits?: string[]
   image_path: string
   created_at: string
   book_label: number | null
@@ -40,6 +45,8 @@ function fromRow(row: Row): Sticker {
     place: row.place,
     name: row.name,
     memo: row.memo,
+    mood: row.mood ?? '',
+    traits: row.traits ?? [],
     imageUrl: data.publicUrl,
     createdAt: row.created_at,
     bookLabel: row.book_label ?? null,
@@ -60,7 +67,7 @@ export async function listStickers(): Promise<Sticker[]> {
   return (data as Row[]).map(fromRow)
 }
 
-export type NewSticker = { place: string; name: string; memo: string; image: Blob }
+export type NewSticker = { place: string; name: string; memo: string; mood: string; traits: string[]; image: Blob }
 
 export async function createSticker(input: NewSticker): Promise<Sticker> {
   if (!supabase) {
@@ -69,6 +76,8 @@ export async function createSticker(input: NewSticker): Promise<Sticker> {
       place: input.place,
       name: input.name,
       memo: input.memo,
+      mood: input.mood,
+      traits: input.traits,
       imageUrl: URL.createObjectURL(input.image),
       createdAt: new Date().toISOString(),
       bookLabel: null,
@@ -87,11 +96,14 @@ export async function createSticker(input: NewSticker): Promise<Sticker> {
     .upload(path, input.image, { contentType: 'image/png' })
   if (upload.error) throw upload.error
 
-  const { data, error } = await supabase
-    .from('stickers')
-    .insert({ place: input.place, name: input.name, memo: input.memo, image_path: path })
-    .select()
-    .single()
+  const base = { place: input.place, name: input.name, memo: input.memo, image_path: path }
+  const insert = (row: Partial<Row>) => supabase!.from('stickers').insert(row).select().single()
+  let { data, error } = await insert({ ...base, mood: input.mood, traits: input.traits })
+  // 팀 DB 에 003 마이그레이션이 아직 안 돌았으면 분위기·성격 없이 저장한다 (PGRST204: 없는 컬럼)
+  if (error?.code === 'PGRST204') {
+    console.warn('stickers 테이블에 mood/traits 컬럼이 없어 빼고 저장합니다. supabase/migrations/003 을 실행하세요.')
+    ;({ data, error } = await insert(base))
+  }
   if (error) throw error
   return fromRow(data as Row)
 }

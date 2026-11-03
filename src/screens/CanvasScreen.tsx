@@ -31,7 +31,7 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
     setMessage('')
     try {
       const image = await canvas.current.toBlob()
-      await createSticker({ place: '', name: '', memo: '', image })
+      await createSticker({ place: '', name: '', memo: '', mood: '', traits: [], image })
       canvas.current.clear()
       setDrawn(false)
       onSaved()

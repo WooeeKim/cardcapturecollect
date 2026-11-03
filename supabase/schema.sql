@@ -6,6 +6,9 @@ create table if not exists public.stickers (
   place text not null default '',
   name text not null default '',
   memo text not null default '',
+  -- 캐릭터 카드 분위기(하나)·성격(두 개까지)
+  mood text not null default '',
+  traits text[] not null default '{}',
   image_path text not null,
   created_at timestamptz not null default now(),
   -- 스티커북에 붙인 위치 (null 이면 아직 안 붙임). book_label = 라벨(책) 1~6
