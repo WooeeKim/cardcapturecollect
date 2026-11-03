@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -2 108 244" fill="none" stroke="#3a322b" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Figma 나은 섹션 "Sample Drawing": 6등신 가이드 위에 그린 예시 (연필선 + 바지만 색) -->
+  <path d="M27 112 C26 150 28 200 30 226 L46 226 C46 200 47 166 50 140 C53 166 54 200 54 226 L70 226 C72 200 74 150 73 112 Z" fill="#3c55a5" fill-opacity="0.75" stroke-width="1.3"/>
+  <path d="M31 130 L44 124 M31 150 L45 143 M32 170 L46 163 M33 190 L46 184 M56 128 L69 122 M56 148 L70 141 M56 168 L70 161 M57 188 L70 182" stroke-width="0.7" opacity="0.5"/>
+  <ellipse cx="50" cy="24" rx="16" ry="20" stroke-width="1.3"/>
+  <path d="M34 18 C35 6 47 1 60 4 C66 6 68 12 67 19 M36 14 C42 9 47 13 51 7 C54 12 60 9 66 15 M38 11 C44 6 52 6 58 9" stroke-width="1.6"/>
+  <path d="M39 25 C39 21 47 21 47 25 C47 29 39 29 39 25 Z M53 25 C53 21 61 21 61 25 C61 29 53 29 53 25 Z M47 25 L53 25" stroke-width="1.1"/>
+  <path d="M46 35 C48 37 52 37 54 35" stroke-width="1"/>
+  <path d="M44 44 L44 50 C36 52 26 53 19 59 L13 85 L24 87 L26 76 L27 112 L73 112 L74 76 L76 87 L87 85 L81 59 C74 53 64 52 56 50 L56 44" stroke-width="1.3"/>
+  <path d="M58 66 L66 64" stroke-width="1"/>
+  <path d="M14 86 C11 104 10 118 9 127 C7 132 8 139 11 141 C14 144 17 141 16 136 L15 128 C18 112 21 98 23 87 M86 86 C89 104 90 118 91 127 C93 132 92 139 89 141 C86 144 83 141 84 136 L85 128 C82 112 79 98 77 87" stroke-width="1.2"/>
+  <path d="M0 122 L19 119 L21 143 L2 146 Z M5 128 C7 126 9 130 11 128" stroke-width="1.1"/>
+  <path d="M30 226 C24 229 24 236 30 237 L47 237 C48 233 47 229 46 226 M54 226 C53 229 52 233 53 237 L70 237 C76 236 76 229 70 226" stroke-width="1.3"/>
+</svg>

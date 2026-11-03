@@ -7,6 +7,7 @@ import { supabase } from './lib/supabase'
 import CanvasScreen from './screens/CanvasScreen'
 import CardCompleteScreen from './screens/CardCompleteScreen'
 import CardListScreen from './screens/CardListScreen'
+import OnboardingScreen from './screens/OnboardingScreen'
 import Splash from './screens/Splash'
 import StickerBookScreen from './screens/StickerBookScreen'
 import SubwayDecoScreen from './screens/SubwayDecoScreen'
@@ -17,6 +18,8 @@ type Screen = Tab | 'village' | 'cards'
 
 export default function App() {
   const [started, setStarted] = useState(false)
+  // 온보딩은 첫 실행에만 (기기에 기억)
+  const [onboarded, setOnboarded] = useState(readOnboarded)
   const [tab, setTab] = useState<Screen>('canvas')
   const [stickers, setStickers] = useState<Sticker[]>([])
   const [error, setError] = useState('')
@@ -39,6 +42,16 @@ export default function App() {
   useEffect(refresh, [refresh])
 
   if (!started) return <Splash onStart={() => setStarted(true)} />
+
+  if (!onboarded) return (
+      <OnboardingScreen
+        onStart={() => {
+          writeOnboarded()
+          setOnboarded(true)
+          setTab('canvas')
+        }}
+      />
+    )
 
   // 지하철 꾸미기는 가로 화면이라 탭 없이 전체를 쓴다
   if (tab === 'deco') return (
@@ -108,4 +121,22 @@ export default function App() {
       <StickerBookScreen stickers={stickers} label={label} onLabel={setLabel} onChange={refresh} />
     </div>
   )
+}
+
+const ONBOARDED_KEY = 'subwayseal.onboarded'
+
+function readOnboarded() {
+  try {
+    return localStorage.getItem(ONBOARDED_KEY) === 'yes'
+  } catch {
+    return false
+  }
+}
+
+function writeOnboarded() {
+  try {
+    localStorage.setItem(ONBOARDED_KEY, 'yes')
+  } catch {
+    // 시크릿 모드 등 — 다음 실행 때 온보딩이 다시 보인다
+  }
 }
