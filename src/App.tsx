@@ -41,6 +41,17 @@ export default function App() {
       />
     )
 
+  // 카드 그리기는 자기 위 막대(닫기 · 카드 그리기 · 다음)가 있어 탭 없이 전체를 쓴다
+  if (tab === 'canvas') return (
+      <CanvasScreen
+        onClose={() => setTab('book')}
+        onSaved={() => {
+          refresh()
+          setTab('book')
+        }}
+      />
+    )
+
   return (
     <div className="relative h-full overflow-hidden">
       <GridBackground />
@@ -52,17 +63,7 @@ export default function App() {
           {error ? `DB 오류: ${error}` : 'DB 미연결 · 메모리에만 저장 (.env.local 확인)'}
         </p>
       )}
-      {tab === 'canvas' && (
-        <CanvasScreen
-          onSaved={() => {
-            refresh()
-            setTab('book')
-          }}
-        />
-      )}
-      {tab === 'book' && (
-        <StickerBookScreen stickers={stickers} label={label} onLabel={setLabel} onChange={refresh} />
-      )}
+      <StickerBookScreen stickers={stickers} label={label} onLabel={setLabel} onChange={refresh} />
     </div>
   )
 }
