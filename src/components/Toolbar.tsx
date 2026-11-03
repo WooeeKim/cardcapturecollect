@@ -55,7 +55,8 @@ function SizeIcon({ i }: { i: number }) {
   return <Vec src={icon.src} x={22 - icon.w / 2} y={22 - icon.h / 2} w={icon.w} h={icon.h} inset={icon.inset} />
 }
 
-// 고른 도구는 위로 올라와 있다 (Figma 기본 상태: 연필이 올라와 있음)
+// 고른 도구는 위로 올라와 있다 (Figma 기본 상태: 연필이 올라와 있음).
+// 오르내릴 땐 스프링으로 살짝 넘쳤다 자리 잡고, 누르는 동안엔 조금 커진다.
 const LIFT = 24
 
 type Props = {
@@ -78,7 +79,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
       <button
         aria-label="펜"
         onClick={() => onTool('pen')}
-        className="absolute top-0 h-[115px] w-[39.5px] transition-transform"
+        className="absolute top-0 h-[115px] w-[39.5px] transition-transform duration-[450ms] ease-spring active:scale-105"
         style={{ left: slot(0), transform: `translateX(-50%) translateY(${tool === 'pen' ? 0 : LIFT}px)` }}
       >
         <Vec src={pencilBody} x={0} y={33} w={39.5} h={82} inset="-1.22% -2.53%" />
@@ -92,7 +93,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
       <button
         aria-label="형광펜"
         onClick={() => onTool('highlighter')}
-        className="absolute top-0 h-[115px] w-[36px] transition-transform"
+        className="absolute top-0 h-[115px] w-[36px] transition-transform duration-[450ms] ease-spring active:scale-105"
         style={{ left: slot(1), transform: `translateX(-50%) translateY(${tool === 'highlighter' ? 0 : LIFT}px)` }}
       >
         <Vec src={highlighterBody} x={0} y={25} w={36} h={90} inset="-1.4% -2.8%" />
@@ -107,7 +108,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
       <button
         aria-label="지우개"
         onClick={() => onTool('eraser')}
-        className="absolute top-[37px] h-[77px] w-[67px] transition-transform"
+        className="absolute top-[37px] h-[77px] w-[67px] transition-transform duration-[450ms] ease-spring active:scale-105"
         style={{ left: slot(2), transform: `translateX(-50%) translateY(${tool === 'eraser' ? -LIFT : 0}px)` }}
       >
         <Vec src={eraserBody} x={0} y={0} w={67} h={77} inset="-1.3% -1.49%" />
@@ -120,7 +121,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         aria-label="두께 고르기"
         aria-expanded={open === 'size'}
         onClick={() => setOpen(open === 'size' ? null : 'size')}
-        className="absolute top-[30px] size-[44px] -translate-x-1/2"
+        className="absolute top-[30px] size-[44px] -translate-x-1/2 transition-transform ease-spring active:scale-110"
         style={{ left: slot(3) }}
       >
         <SizeIcon i={sizeIndex} />
@@ -154,7 +155,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         aria-label="색 고르기"
         aria-expanded={open === 'color'}
         onClick={() => setOpen(open === 'color' ? null : 'color')}
-        className="absolute top-[32.99px] h-[38.417px] w-[38.794px] -translate-x-1/2"
+        className="absolute top-[32.99px] h-[38.417px] w-[38.794px] -translate-x-1/2 transition-transform ease-spring active:scale-110"
         style={{ left: slot(4) }}
       >
         <Vec src={colorRing} x={0} y={0} w={38.794} h={38.417} inset="-2.6% -2.58%" />
