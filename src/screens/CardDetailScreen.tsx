@@ -69,21 +69,19 @@ export default function CardDetailScreen({ image, onBack, onSaved }: { image: Bl
       <TopBar left="뒤로" title="카드 만들기" right="완성" onLeft={onBack} onRight={save} rightDisabled={saving} />
 
       <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+88px)] bottom-0 overflow-y-auto px-[24px] pb-[120px] text-pencil">
-        <p className="font-pen text-[20px] leading-none text-muted">그 사람을 떠올리며 이름을 붙여줘요</p>
-
-        <div className="mt-[16px] flex gap-[20px]">
+        <div className="mt-[8px] flex gap-[20px]">
           <div className="relative h-[156px] w-[104px] shrink-0 rounded-[8px] bg-card">
             {preview && <img src={preview} alt="방금 그린 그림" className="absolute inset-[5px] size-[calc(100%-10px)] object-contain" />}
             <SketchBorder w={104} h={156} r={8} seed={701} double={false} />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-[14px] pt-[6px]">
-            {field('이름 (별명)', name, setName, '안경 쓴 산책러')}
+            {field('이름', name, setName, '안경 쓴 산책러')}
             {field('어디서 봤나요', place, setPlace, '2호선 강남역')}
           </div>
         </div>
 
         <section className="mt-[22px]">
-          <h2 className="text-[11px] leading-none text-muted">분위기 — 하나만</h2>
+          <h2 className="text-[11px] leading-none text-muted">분위기</h2>
           <div className="mt-[10px] flex flex-wrap gap-[8px]">
             {MOODS.map((m, i) => (
               <Chip key={m} label={m} seed={121 + i} on={mood === m} onClick={() => setMood(mood === m ? '' : m)} />
@@ -92,7 +90,7 @@ export default function CardDetailScreen({ image, onBack, onSaved }: { image: Bl
         </section>
 
         <section className="mt-[22px]">
-          <h2 className="text-[11px] leading-none text-muted">성격 — 두 개까지</h2>
+          <h2 className="text-[11px] leading-none text-muted">성격</h2>
           <div className="mt-[10px] flex flex-wrap gap-[8px]">
             {TRAITS.map((t, i) => (
               <Chip key={t} label={t} seed={141 + i} on={traits.includes(t)} onClick={() => toggleTrait(t)} />
@@ -113,9 +111,6 @@ export default function CardDetailScreen({ image, onBack, onSaved }: { image: Bl
             />
             <SketchBorder w={354} h={96} r={10} seed={731} weight={1} double={false} className="[&_path]:[stroke-dasharray:4_3]" />
           </div>
-          <p className="mt-[4px] text-right font-hand text-[13px] text-muted">
-            {memo.length} / {MEMO_MAX}
-          </p>
         </section>
         {message && <p className="mt-[8px] text-center font-pen text-[18px] text-muted">{message}</p>}
       </div>

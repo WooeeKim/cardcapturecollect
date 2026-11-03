@@ -18,7 +18,6 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
   const [color, setColor] = useState(COLORS[0])
   const [size, setSize] = useState(SIZES[1])
   const [guide, setGuide] = useState(readGuidePref)
-  const [drawn, setDrawn] = useState(false)
   // 상세 입력으로 넘긴 그림. 있으면 상세 화면을 위에 띄운다.
   const [image, setImage] = useState<Blob | null>(null)
   const [message, setMessage] = useState('')
@@ -45,7 +44,7 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
 
       {/* 한 줄 안내 + 되돌리기/다시하기 */}
       <div className="absolute top-[calc(env(safe-area-inset-top)+92px)] left-1/2 flex -translate-x-1/2 items-center justify-between" style={{ width: CARD_WIDTH }}>
-        <p className="font-pen text-[20px] leading-none text-muted">{drawn ? '천천히 그려도 괜찮아요' : '오늘 눈에 들어온 한 사람'}</p>
+        <p className="font-pen text-[20px] leading-none text-muted">오늘 눈에 들어온 한 사람</p>
         <div className="flex gap-[6px] text-pencil">
           <button aria-label="되돌리기" onClick={() => canvas.current?.undo()} className="p-[4px]">
             <svg viewBox="0 0 26 14" className="h-[14px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" aria-hidden>
@@ -62,15 +61,10 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
 
       <div className="absolute top-[calc(env(safe-area-inset-top)+128px)] left-1/2 -translate-x-1/2" style={{ width: CARD_WIDTH }}>
         {/* 그리는 카드 (2:3 도화지) */}
-        <div className="relative aspect-[2/3] rounded-[12px] bg-card shadow-sticker" onPointerDownCapture={() => setDrawn(true)}>
+        <div className="relative aspect-[2/3] rounded-[12px] bg-card shadow-sticker">
           <div className="absolute inset-[6px] overflow-hidden rounded-[8px]">
             <DrawingCanvas ref={canvas} tool={tool} color={color} size={size} guide={guide} />
           </div>
-          {!drawn && (
-            <p className="pointer-events-none absolute inset-x-0 bottom-[14px] text-center font-pen text-[19px] leading-none text-muted opacity-80">
-              흐린 선을 따라, 기억나는 만큼만
-            </p>
-          )}
           <SketchBorder w={300} h={450} r={12} seed={501} weight={1.5} />
         </div>
 
@@ -105,7 +99,6 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
           onBack={() => setImage(null)}
           onSaved={() => {
             canvas.current?.clear()
-            setDrawn(false)
             setImage(null)
             onSaved()
           }}

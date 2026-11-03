@@ -183,8 +183,7 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
 
   return (
     <div className="absolute right-[14px] bottom-[96px] flex origin-[86%_100%] animate-pop-up flex-col gap-[10px] rounded-[12px] bg-card px-[14px] pt-[12px] pb-[14px] shadow-sticker">
-      <SketchBorder w={232} h={196} r={12} seed={311} double={false} />
-      <p className="font-pen text-[21px] leading-none text-pencil">색 고르기</p>
+      <SketchBorder w={232} h={160} r={12} seed={311} double={false} />
       <div className="grid grid-cols-5 gap-[8px]">
         {COLORS.map((c, i) => (
           <button key={c} aria-label={`색 ${c}`} aria-pressed={color === c} onClick={() => onColor(c, true)} className="relative size-[30px]">
@@ -218,9 +217,7 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
             <path d={wheelRing} strokeWidth={1.2} />
           </svg>
         </div>
-        <label className="flex flex-col gap-[4px]">
-          <span className="font-pen text-[16px] leading-none text-muted">직접 고르기</span>
-          <input
+        <input
             type="range"
             min={15}
             max={85}
@@ -234,7 +231,6 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
             className="h-[12px] w-[112px] cursor-pointer appearance-none rounded-full border border-pencil [&::-webkit-slider-thumb]:size-[14px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[1.5px] [&::-webkit-slider-thumb]:border-pencil [&::-webkit-slider-thumb]:bg-card"
             style={{ background: `linear-gradient(to right, #1a1a1a, hsl(${hue} 55% 50%), #fff)` }}
           />
-        </label>
         <button aria-label="직접 고른 색" aria-pressed={color === custom} onClick={() => onColor(custom, true)} className="relative size-[30px] shrink-0">
           <svg viewBox="0 0 30 30" className="size-full overflow-visible text-pencil" aria-hidden>
             <path d={swatches[7]} fill={custom} stroke="currentColor" strokeWidth={1.1} />
