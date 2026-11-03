@@ -6,11 +6,13 @@ export default function PenButton({
   children,
   onClick,
   ghost = false,
+  small = false,
   disabled = false,
 }: {
   children: ReactNode
   onClick: () => void
   ghost?: boolean
+  small?: boolean
   disabled?: boolean
 }) {
   return (
@@ -18,7 +20,7 @@ export default function PenButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative rounded-[24px] px-[26px] py-[10px] font-pen text-[24px] leading-none transition-transform ease-spring active:scale-95 disabled:opacity-40 ${ghost ? 'text-pencil' : 'bg-pencil text-card'}`}
+      className={`relative rounded-[24px] font-pen leading-none transition-transform ease-spring active:scale-95 disabled:opacity-40 ${small ? 'px-[16px] py-[8px] text-[20px]' : 'px-[26px] py-[10px] text-[24px]'} ${ghost ? 'text-pencil' : 'bg-pencil text-card'}`}
     >
       {children}
       <SketchBorder w={180} h={44} r={22} seed={ghost ? 111 : 101} weight={1.4} double={ghost} />

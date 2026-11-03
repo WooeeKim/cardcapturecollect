@@ -17,7 +17,7 @@ export function PaperBackground() {
   )
 }
 
-// Figma 나은 섹션 "Top Bar": 왼쪽 · 제목(손그림 밑줄) · 오른쪽
+// Figma 나은 섹션 "Top Bar": 왼쪽 · 제목(손그림 밑줄) · 오른쪽. onRight 가 없으면 오른쪽은 글자(개수 등)로만 보인다.
 export function TopBar({
   left,
   title,
@@ -30,7 +30,7 @@ export function TopBar({
   title: string
   right: string
   onLeft: () => void
-  onRight: () => void
+  onRight?: () => void
   rightDisabled?: boolean
 }) {
   const underline = useMemo(() => wobblyLine(90, 7), [])
@@ -45,9 +45,13 @@ export function TopBar({
           <path d={underline} fill="none" stroke="currentColor" strokeWidth={1.2} strokeLinecap="round" opacity={0.8} />
         </svg>
       </h1>
-      <button onClick={onRight} disabled={rightDisabled} className="font-pen text-[24px] leading-none disabled:opacity-40">
-        {right}
-      </button>
+      {onRight ? (
+        <button onClick={onRight} disabled={rightDisabled} className="font-pen text-[24px] leading-none disabled:opacity-40">
+          {right}
+        </button>
+      ) : (
+        <span className="font-pen text-[22px] leading-none text-muted">{right}</span>
+      )}
     </div>
   )
 }
