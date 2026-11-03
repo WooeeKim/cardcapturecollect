@@ -17,8 +17,8 @@
   --color-slot: #aea99d;
   --color-chip-border: #f3f3f3;
 
-  /* 카드 방향(Figma 나은 섹션, 변수 묶음 "나은 / 카드"): 모노톤 + 따뜻한 연필 */
-  --color-card: #f6f0e4;
+  /* 카드 방향(Figma 나은 섹션, 변수 묶음 "나은 / 카드"): 흰 바탕 + 따뜻한 연필 */
+  --color-card: #ffffff;
   --color-wash: #eae2d1;
   --color-pencil: #3a322b;
 
