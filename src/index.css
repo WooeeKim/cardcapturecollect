@@ -159,7 +159,37 @@ button {
   animation: pop-up 0.3s var(--ease-spring) both;
 }
 
+/* 카드 디테일 시트: 아래에서 올라온다 */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.4s var(--ease-spring) both;
+}
+
+/* 마을 캐릭터: 승강장을 왕복하고(--from ↔ --to), 돌아설 때 좌우를 뒤집고, 걸음마다 기우뚱 들썩인다 */
+@keyframes walk-across {
+  0%, 100% { transform: translateX(var(--from)); }
+  50% { transform: translateX(var(--to)); }
+}
+@keyframes walk-face {
+  0%, 49.99% { scale: 1 1; }
+  50%, 100% { scale: -1 1; }
+}
+@keyframes walk-bob {
+  0%, 50%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-4px) rotate(-5deg); }
+  75% { transform: translateY(-4px) rotate(5deg); }
+}
+/* 말풍선: 가끔 떠올랐다 사라진다 */
+@keyframes bubble-blink {
+  0%, 12%, 45%, 100% { opacity: 0; transform: translateY(4px); }
+  18%, 38% { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up,
   .animate-pop-up,
   .animate-tab-slide,
   .animate-underline-stretch {

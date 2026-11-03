@@ -6,13 +6,14 @@ import { formatDate } from '../components/StickerFrame'
 import Toolbar, { COLORS, SIZES } from '../components/Toolbar'
 import CardDetailScreen from './CardDetailScreen'
 import { wobblyRect } from '../lib/sketch'
+import type { Sticker } from '../lib/stickers'
 
 // 2:3 카드 폭. Figma 300px. 화면이 낮으면 위(128px)·아래(가이드 줄 + 툴바 약 190px)와 겹치지 않게 높이 기준으로 줄인다.
 const CARD_WIDTH = 'min(300px, var(--app-w) - 80px, (var(--app-h) - env(safe-area-inset-top) - 128px - 190px) * 2 / 3)'
 
 // Figma: 나은 섹션 01a 빈 카드 · 01b 그리는 중 · 01c 두께 · 01d 색
 // 이름·장소·분위기·성격·메모는 "다음"으로 넘어가는 02 상세 입력 화면에서 받아 함께 저장한다.
-export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void; onClose: () => void }) {
+export default function CanvasScreen({ onSaved, onClose }: { onSaved: (sticker: Sticker) => void; onClose: () => void }) {
   const canvas = useRef<DrawingCanvasHandle>(null)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState(COLORS[0])
@@ -97,10 +98,10 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
         <CardDetailScreen
           image={image}
           onBack={() => setImage(null)}
-          onSaved={() => {
+          onSaved={(sticker) => {
             canvas.current?.clear()
             setImage(null)
-            onSaved()
+            onSaved(sticker)
           }}
         />
       )}

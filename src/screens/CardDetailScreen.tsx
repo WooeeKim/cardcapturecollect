@@ -4,7 +4,7 @@ import { PaperBackground, TopBar } from '../components/Paper'
 import PenButton from '../components/PenButton'
 import SketchBorder from '../components/SketchBorder'
 import { wobblyLine } from '../lib/sketch'
-import { createSticker } from '../lib/stickers'
+import { createSticker, type Sticker } from '../lib/stickers'
 
 const MOODS = ['우아한', '피곤한', '산만한', '느긋한', '들뜬', '조용한']
 const TRAITS = ['다정한', '침착한', '유머러스한', '수줍은', '씩씩한', '꼼꼼한']
@@ -12,7 +12,7 @@ const MAX_TRAITS = 2
 const MEMO_MAX = 80
 
 // Figma: 나은 섹션 02 카드 상세 입력. 방금 그린 그림에 이름 · 장소 · 분위기(하나) · 성격(두 개까지) · 메모를 붙여 카드로 저장한다.
-export default function CardDetailScreen({ image, onBack, onSaved }: { image: Blob; onBack: () => void; onSaved: () => void }) {
+export default function CardDetailScreen({ image, onBack, onSaved }: { image: Blob; onBack: () => void; onSaved: (sticker: Sticker) => void }) {
   const [name, setName] = useState('')
   const [place, setPlace] = useState('')
   const [mood, setMood] = useState('')
@@ -39,8 +39,7 @@ export default function CardDetailScreen({ image, onBack, onSaved }: { image: Bl
     setSaving(true)
     setMessage('')
     try {
-      await createSticker({ place: place.trim(), name: name.trim(), memo: memo.trim(), mood, traits, image })
-      onSaved()
+      onSaved(await createSticker({ place: place.trim(), name: name.trim(), memo: memo.trim(), mood, traits, image }))
     } catch (e) {
       setMessage(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
       setSaving(false)

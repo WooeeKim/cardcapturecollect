@@ -5,17 +5,27 @@ import { DEFAULT_LABEL } from './lib/labels'
 import { listStickers, type Sticker } from './lib/stickers'
 import { supabase } from './lib/supabase'
 import CanvasScreen from './screens/CanvasScreen'
+import CardCompleteScreen from './screens/CardCompleteScreen'
+import CardListScreen from './screens/CardListScreen'
 import Splash from './screens/Splash'
 import StickerBookScreen from './screens/StickerBookScreen'
 import SubwayDecoScreen from './screens/SubwayDecoScreen'
+import VillageScreen from './screens/VillageScreen'
+
+// 위 탭 3개(지하철 꾸미기 · 캔버스 · 스티커북)에 카드 방향 화면(마을 · 카드 목록)을 더한다
+type Screen = Tab | 'village' | 'cards'
 
 export default function App() {
   const [started, setStarted] = useState(false)
-  const [tab, setTab] = useState<Tab>('canvas')
+  const [tab, setTab] = useState<Screen>('canvas')
   const [stickers, setStickers] = useState<Sticker[]>([])
   const [error, setError] = useState('')
   // 지금 보고 있는 스티커북(라벨). 스티커북과 지하철 꾸미기가 같이 쓴다.
   const [label, setLabel] = useState(DEFAULT_LABEL)
+  // 방금 만든 카드 (03 카드 완성 화면에 보여준다)
+  const [made, setMade] = useState<{ sticker: Sticker; number: number } | null>(null)
+  // 카드 목록에서 "마을에서 찾기"로 고른 사람
+  const [focus, setFocus] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
     listStickers()
@@ -41,15 +51,47 @@ export default function App() {
       />
     )
 
-  // 카드 그리기는 자기 위 막대(닫기 · 카드 그리기 · 다음)가 있어 탭 없이 전체를 쓴다
-  if (tab === 'canvas') return (
-      <CanvasScreen
-        onClose={() => setTab('book')}
-        onSaved={() => {
-          refresh()
-          setTab('book')
+  if (made) return (
+      <CardCompleteScreen
+        sticker={made.sticker}
+        number={made.number}
+        onVillage={() => {
+          setMade(null)
+          setFocus(made.sticker.id)
+          setTab('village')
+        }}
+        onList={() => {
+          setMade(null)
+          setTab('cards')
         }}
       />
+    )
+
+  // 카드 방향 화면들은 자기 위 막대가 있어 탭 없이 전체를 쓴다
+  if (tab === 'canvas') return (
+      <CanvasScreen
+        onClose={() => setTab('cards')}
+        onSaved={(sticker) => {
+          refresh()
+          setMade({ sticker, number: stickers.length + 1 })
+        }}
+      />
+    )
+
+  if (tab === 'cards') return (
+      <CardListScreen
+        stickers={stickers}
+        onVillage={() => setTab('village')}
+        onDraw={() => setTab('canvas')}
+        onFind={(id) => {
+          setFocus(id)
+          setTab('village')
+        }}
+      />
+    )
+
+  if (tab === 'village') return (
+      <VillageScreen key={focus ?? ''} stickers={stickers} focusId={focus} onCards={() => setTab('cards')} onDraw={() => setTab('canvas')} />
     )
 
   return (
