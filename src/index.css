@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "pretendard/dist/web/static/pretendard-dynamic-subset.css";
 @import "@fontsource/inter/600.css";
+@import "@fontsource/gaegu/400.css";
+@import "@fontsource/gaegu/700.css";
+@import "@fontsource/nanum-pen-script/400.css";
 
 /* Figma(UX 파일 132:* 화면)에서 옮긴 값. Figma 변수가 정리되면 이름만 맞추면 된다. */
 @theme {
@@ -14,8 +17,15 @@
   --color-slot: #aea99d;
   --color-chip-border: #f3f3f3;
 
+  /* 카드 방향(Figma 나은 섹션, 변수 묶음 "나은 / 카드"): 모노톤 + 따뜻한 연필 */
+  --color-card: #f6f0e4;
+  --color-wash: #eae2d1;
+  --color-pencil: #3a322b;
+
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-inter: Inter, var(--font-sans);
+  --font-hand: Gaegu, var(--font-sans);
+  --font-pen: "Nanum Pen Script", var(--font-sans);
 
   --shadow-sign: 2px 4px 5px 0 rgba(57, 74, 46, 0.4);
   --shadow-band: 0 3px 5px 0 rgba(57, 74, 46, 0.4);
