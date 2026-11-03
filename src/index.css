@@ -139,7 +139,18 @@ button {
   animation: underline-stretch 0.5s var(--ease-spring) both;
 }
 
+/* 팝오버: 누른 버튼 쪽(transform-origin)에서 자라나며 펼쳐진다 */
+@keyframes pop-up {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: none; }
+}
+.animate-pop-up {
+  animation: pop-up 0.3s var(--ease-spring) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-pop-up,
   .animate-tab-slide,
   .animate-underline-stretch {
     animation: none;

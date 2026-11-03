@@ -129,7 +129,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
 
       {open === 'size' && (
         <div
-          className="absolute bottom-[96px] flex -translate-x-1/2 flex-col rounded-[3px] bg-white px-[4px] py-[6px] shadow-sticker"
+          className="absolute bottom-[96px] flex origin-bottom -translate-x-1/2 animate-pop-up flex-col rounded-[3px] bg-white px-[4px] py-[6px] shadow-sticker"
           style={{ left: slot(3) }}
         >
           {SIZE_ICONS.map((_, i) => (
@@ -169,7 +169,8 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
       </button>
 
       {open === 'color' && (
-        <div className="absolute right-[12px] bottom-[96px] grid grid-cols-5 gap-[10px] rounded-[3px] bg-white p-[12px] shadow-sticker">
+        // 색 버튼(오른쪽 끝 칸) 바로 위에서 자라나도록 기준점을 오른쪽 아래로
+        <div className="absolute right-[12px] bottom-[96px] grid origin-[86%_100%] animate-pop-up grid-cols-5 gap-[10px] rounded-[3px] bg-white p-[12px] shadow-sticker">
           {COLORS.map((c) => (
             <button
               key={c}
