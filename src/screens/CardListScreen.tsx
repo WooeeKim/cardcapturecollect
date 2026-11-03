@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import CardSheet from '../components/CardSheet'
 import CharacterCard from '../components/CharacterCard'
 import Chip from '../components/Chip'
+import DrawButton from '../components/DrawButton'
 import { PaperBackground, TopBar } from '../components/Paper'
-import SketchBorder from '../components/SketchBorder'
 import type { Sticker } from '../lib/stickers'
 
 // 카드마다 살짝 다르게 기울인다 (손으로 늘어놓은 느낌)
@@ -35,7 +35,7 @@ export default function CardListScreen({
       <PaperBackground />
       <TopBar left="마을" title="내 카드" right={`${stickers.length}장`} onLeft={onVillage} />
 
-      <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+88px)] bottom-0 overflow-y-auto px-[24px] pb-[40px]">
+      <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+88px)] bottom-0 overflow-y-auto px-[24px] pb-[110px]">
         {moods.length > 1 && (
           <div className="flex flex-wrap gap-[8px] pb-[18px]">
             {moods.map((m, i) => (
@@ -44,13 +44,6 @@ export default function CardListScreen({
           </div>
         )}
         <div className="grid grid-cols-3 gap-x-[12px] gap-y-[14px]">
-          <button onClick={onDraw} className="relative flex aspect-[250/350] flex-col items-center justify-center gap-[8px] text-muted">
-            <SketchBorder w={110} h={154} r={8} seed={960} weight={1.2} double={false} className="opacity-60 [&_path]:[stroke-dasharray:5_4]" />
-            <svg viewBox="0 0 24 24" className="size-[24px] opacity-70" aria-hidden>
-              <path d="M0 12 L24 12 M12 0 L12 24" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" />
-            </svg>
-            <span className="font-pen text-[17px] leading-none">새로 그리기</span>
-          </button>
           {shown.map(({ s, n }, i) => (
             <button key={s.id} onClick={() => setOpenId(s.id)} style={{ rotate: `${TILT[i % TILT.length]}deg` }} className="transition-transform ease-spring active:scale-95">
               <CharacterCard sticker={s} number={n} />
@@ -58,6 +51,8 @@ export default function CardListScreen({
           ))}
         </div>
       </div>
+
+      <DrawButton onClick={onDraw} />
 
       {open && (
         <CardSheet

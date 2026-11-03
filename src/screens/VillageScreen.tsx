@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import CardSheet from '../components/CardSheet'
+import DrawButton from '../components/DrawButton'
 import { PaperBackground, TopBar } from '../components/Paper'
 import PenButton from '../components/PenButton'
 import SketchBorder from '../components/SketchBorder'
@@ -149,6 +150,8 @@ export default function VillageScreen({
             )
           })}
       </div>
+
+      {walkers.length > 0 && <DrawButton onClick={onDraw} />}
 
       {open && (
         <CardSheet
