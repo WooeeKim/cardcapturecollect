@@ -4,14 +4,14 @@ import SketchBorder from '../components/SketchBorder'
 import { PaperBackground, TopBar } from '../components/Paper'
 import { formatDate } from '../components/StickerFrame'
 import Toolbar, { COLORS, SIZES } from '../components/Toolbar'
+import CardDetailScreen from './CardDetailScreen'
 import { wobblyRect } from '../lib/sketch'
-import { createSticker } from '../lib/stickers'
 
 // 2:3 카드 폭. Figma 300px. 화면이 낮으면 위(128px)·아래(가이드 줄 + 툴바 약 190px)와 겹치지 않게 높이 기준으로 줄인다.
 const CARD_WIDTH = 'min(300px, var(--app-w) - 80px, (var(--app-h) - env(safe-area-inset-top) - 128px - 190px) * 2 / 3)'
 
 // Figma: 나은 섹션 01a 빈 카드 · 01b 그리는 중 · 01c 두께 · 01d 색
-// 이름·장소·메모는 다음 화면(02 상세 입력)에서 받는다. 그 화면이 생기기 전까지 "다음"은 그림만 저장한다.
+// 이름·장소·분위기·성격·메모는 "다음"으로 넘어가는 02 상세 입력 화면에서 받아 함께 저장한다.
 export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void; onClose: () => void }) {
   const canvas = useRef<DrawingCanvasHandle>(null)
   const [tool, setTool] = useState<Tool>('pen')
@@ -19,34 +19,29 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
   const [size, setSize] = useState(SIZES[1])
   const [guide, setGuide] = useState(readGuidePref)
   const [drawn, setDrawn] = useState(false)
-  const [saving, setSaving] = useState(false)
+  // 상세 입력으로 넘긴 그림. 있으면 상세 화면을 위에 띄운다.
+  const [image, setImage] = useState<Blob | null>(null)
   const [message, setMessage] = useState('')
   const track = useMemo(() => wobblyRect(30, 16, 8, 611, 0.4), [])
 
-  async function save() {
+  // 다음: 그림을 이미지로 떠서 상세 입력 화면으로. 그림은 그대로 두어 "뒤로" 오면 이어 그릴 수 있다.
+  async function next() {
     if (!canvas.current || canvas.current.isEmpty()) {
       setMessage('먼저 그려주세요')
       return
     }
-    setSaving(true)
     setMessage('')
     try {
-      const image = await canvas.current.toBlob()
-      await createSticker({ place: '', name: '', memo: '', mood: '', traits: [], image })
-      canvas.current.clear()
-      setDrawn(false)
-      onSaved()
+      setImage(await canvas.current.toBlob())
     } catch (e) {
-      setMessage(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
-    } finally {
-      setSaving(false)
+      setMessage(`그림을 담지 못했어요: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
   return (
     <div className="relative h-full overflow-hidden">
       <PaperBackground />
-      <TopBar left="닫기" title="카드 그리기" right="다음" onLeft={onClose} onRight={save} rightDisabled={saving} />
+      <TopBar left="닫기" title="카드 그리기" right="다음" onLeft={onClose} onRight={next} />
 
       {/* 한 줄 안내 + 되돌리기/다시하기 */}
       <div className="absolute top-[calc(env(safe-area-inset-top)+92px)] left-1/2 flex -translate-x-1/2 items-center justify-between" style={{ width: CARD_WIDTH }}>
@@ -103,6 +98,19 @@ export default function CanvasScreen({ onSaved, onClose }: { onSaved: () => void
       </div>
 
       <Toolbar tool={tool} size={size} color={color} onTool={setTool} onSize={setSize} onColor={setColor} />
+
+      {image && (
+        <CardDetailScreen
+          image={image}
+          onBack={() => setImage(null)}
+          onSaved={() => {
+            canvas.current?.clear()
+            setDrawn(false)
+            setImage(null)
+            onSaved()
+          }}
+        />
+      )}
     </div>
   )
 }
