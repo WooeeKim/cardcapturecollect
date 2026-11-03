@@ -92,7 +92,8 @@ export function wobblyPoly(points: Pt[], seed: number, closed = true, jitter = 0
       const j = k === 0 || k === n ? 0 : jitter
       seg.push([x1 + (x2 - x1) * t + (R() - 0.5) * 2 * j, y1 + (y2 - y1) * t + (R() - 0.5) * 2 * j])
     }
-    parts.push(smooth(seg))
+    // 변마다 따로 시작(M)하면 닫힌 도형이 안 돼 칠이 안 되므로, 두 번째 변부터는 앞 변 끝에서 이어 그린다
+    parts.push(i === 0 ? smooth(seg) : smooth(seg).replace(/^M[^C]*/, ''))
   }
-  return parts.join(' ')
+  return parts.join(' ') + (closed ? ' Z' : '')
 }
