@@ -1,55 +1,41 @@
-import sampleDrawing from '../assets/sample-drawing.svg'
-import CharacterCard from '../components/CharacterCard'
 import { PaperBackground } from '../components/Paper'
 import PenButton from '../components/PenButton'
-import type { Sticker } from '../lib/stickers'
+import { wobblyCircle, wobblyLine } from '../lib/sketch'
 
-// 예시 카드 (Figma 샘플 그림)
-const SAMPLE: Sticker = {
-  id: 'sample',
-  place: 'Gangnam Station, Seoul',
-  name: 'Glasses Walker',
-  memo: 'Wondered what song they were humming through the earbuds.',
-  mood: 'Calm',
-  traits: [],
-  imageUrl: sampleDrawing,
-  createdAt: new Date().toISOString(),
-  village: 1,
-  bookLabel: null,
-  bookPage: null,
-  bookSlot: null,
-  decoX: null,
-  decoY: null,
+// Figma 00 온보딩의 "지하철 라인 쫘르륵" 자리: 402×874 화면 기준 중심 좌표(%)와 길이
+const LINES = [
+  { x: 24.5, y: 19.5, len: 130, seed: 11 },
+  { x: 66, y: 29.5, len: 130, seed: 12 },
+  { x: 24.5, y: 73, len: 130, seed: 13 },
+  { x: 72, y: 85.5, len: 130, seed: 14 },
+]
+
+// 손으로 쭉 그은 지하철 노선: 가로선 + 역 동그라미 두 개
+function Line({ len, seed }: { len: number; seed: number }) {
+  return (
+    <svg width={len} height="24" viewBox={`-6 -12 ${len + 12} 24`} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+      <path d={wobblyLine(len, seed, 3)} />
+      <path d={wobblyCircle(len * 0.28, 0, 5, seed + 20)} fill="var(--color-card)" />
+      <path d={wobblyCircle(len * 0.74, 0, 5, seed + 40)} fill="var(--color-card)" />
+    </svg>
+  )
 }
 
-// Figma: 나은 섹션 00 온보딩 (첫 실행만). 서비스 의미 + 관찰 매너.
+// Figma: 나은 섹션 00 온보딩 (첫 실행만). 질문 한 줄 + 마을로 가는 버튼.
 export default function OnboardingScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="relative h-full overflow-hidden text-pencil">
       <PaperBackground />
 
-      {/* 겹쳐 놓은 카드: 뒷면 위에 예시 앞면 */}
-      <div className="absolute top-[calc(env(safe-area-inset-top)+70px)] left-1/2 h-[min(330px,calc(var(--app-h)-420px))] w-[min(270px,calc(var(--app-w)-110px))] -translate-x-1/2">
-        <div className="absolute top-[18px] left-[42px] isolate z-0 w-[78%] rotate-[7deg]">
-          <CharacterCard sticker={SAMPLE} number={1} flipped />
-        </div>
-        <div className="absolute top-0 left-0 isolate z-10 w-[82%] animate-float-up" style={{ '--rot': '-5deg' } as React.CSSProperties}>
-          <CharacterCard sticker={SAMPLE} number={1} />
-        </div>
-      </div>
+      {LINES.map((l) => (
+        <span key={l.seed} className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-pencil/70" style={{ left: `${l.x}%`, top: `${l.y}%` }}>
+          <Line len={l.len} seed={l.seed} />
+        </span>
+      ))}
 
-      <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+40px)] flex flex-col items-center gap-[14px] px-[24px] text-center">
-        <h1 className="font-hand text-[30px] leading-[1.2] font-bold">
-          Someone you met on the subway,
-          <br />
-          kept as a card?
-        </h1>
-        <p className="mb-[22px] font-pen text-[21px] leading-[1.2] text-muted">
-          Don’t stare · Don’t sneak photos
-          <br />
-          Draw only what stayed with you, slowly
-        </p>
-        <PenButton onClick={onStart}>Go draw</PenButton>
+      <div className="absolute inset-x-0 top-[41%] flex -translate-y-1/2 flex-col items-center gap-[16px] px-[24px] text-center">
+        <h1 className="font-hand text-[30px] leading-[1.2] font-bold tracking-[-0.02em]">Who catches your eyes?</h1>
+        <PenButton onClick={onStart}>Go to town</PenButton>
       </div>
     </div>
   )
