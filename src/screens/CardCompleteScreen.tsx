@@ -3,15 +3,8 @@ import { PaperBackground } from '../components/Paper'
 import PenButton from '../components/PenButton'
 import type { Sticker } from '../lib/stickers'
 
-// 카드 주변 반짝임 (x, y, 크기)
-const SPARKLES = [
-  [12, 22, 9],
-  [88, 16, 7],
-  [92, 70, 10],
-  [8, 64, 6],
-]
-
-// Figma: 나은 섹션 03 카드 완성. 과정의 의미 한 줄 + 마을로 풀어주기 / 카드 목록.
+// Figma: 03 세부사항 | 작성 후. 완성된 카드 위로 올라오는 시트에서
+// "마을에 데려갈까요?" — 마을 입장권(마을로) / 컬렉션에 보관(카드 목록).
 export default function CardCompleteScreen({
   sticker,
   number,
@@ -23,32 +16,30 @@ export default function CardCompleteScreen({
   onVillage: () => void
   onList: () => void
 }) {
+  const name = sticker.name || '이 사람'
   return (
     <div className="absolute inset-0 z-30 overflow-hidden text-pencil">
       <PaperBackground />
-      <p className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+36px)] text-center font-hand text-[26px] leading-none font-bold">완성!</p>
 
-      <div className="absolute top-[calc(env(safe-area-inset-top)+84px)] left-1/2 w-[min(300px,var(--app-w)-80px,(var(--app-h)-env(safe-area-inset-top)-330px)*250/350)] -translate-x-1/2">
+      <div className="absolute top-[calc(env(safe-area-inset-top)+60px)] left-1/2 w-[min(300px,var(--app-w)-80px,(var(--app-h)-env(safe-area-inset-top)-400px)*250/350)] -translate-x-1/2">
         <div className="animate-float-up" style={{ '--rot': '-2deg' } as React.CSSProperties}>
           <CharacterCard sticker={sticker} number={number} />
         </div>
-        {SPARKLES.map(([x, y, r], i) => (
-          <svg key={i} viewBox="-12 -12 24 24" className="absolute -translate-1/2" style={{ left: `${x}%`, top: `${y}%`, width: r * 2.4, height: r * 2.4 }} aria-hidden>
-            <path d={`M0 -${r} L0.5 ${r} M-${r} 0 L${r} 0.4 M-${r * 0.6} -${r * 0.6} L${r * 0.6} ${r * 0.6}`} stroke="currentColor" strokeWidth={1.2} strokeLinecap="round" opacity={0.8} />
-          </svg>
-        ))}
       </div>
 
-      <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+24px)] flex flex-col items-center gap-[14px]">
-        <p className="mb-[10px] text-center font-hand text-[23px] leading-[1.25] font-bold">
-          한 사람을 오래 바라본 시간이
-          <br />
-          카드 한 장이 됐어요
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" aria-hidden />
+      <div className="absolute inset-x-0 bottom-0 animate-sheet-up rounded-t-[27px] bg-card px-[51px] pt-[10px] pb-[calc(env(safe-area-inset-bottom)+40px)] shadow-[0_-5px_25px_rgba(0,0,0,0.2)]">
+        <span className="mx-auto block h-[4px] w-[70px] rounded-full bg-pencil" />
+        <p className="mt-[34px] text-center font-pen text-[24px] leading-[1.2]">
+          <span className="underline decoration-1 underline-offset-[6px]">{name}</span>
+          {sticker.name ? '을(를)' : ''} 마을에 데려갈까요?
         </p>
-        <PenButton onClick={onVillage}>마을에 풀어주기</PenButton>
-        <PenButton ghost onClick={onList}>
-          카드 목록 보기
-        </PenButton>
+        <div className="mt-[28px] flex flex-col items-stretch gap-[12px] [&>button]:w-full">
+          <PenButton onClick={onVillage}>마을 입장권 받기</PenButton>
+          <PenButton ghost onClick={onList}>
+            컬렉션에 보관
+          </PenButton>
+        </div>
       </div>
     </div>
   )
