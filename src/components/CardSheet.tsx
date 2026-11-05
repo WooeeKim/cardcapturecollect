@@ -11,12 +11,15 @@ export default function CardSheet({
   number,
   action,
   onAction,
+  secondary,
   onClose,
 }: {
   sticker: Sticker
   number: number
   action: string
   onAction: () => void
+  // 선택: 시트 아래쪽에 하나 더 놓는 버튼 (예: 마을에서 내보내기)
+  secondary?: { label: string; onClick: () => void }
   onClose: () => void
 }) {
   const [flipped, setFlipped] = useState(false)
@@ -52,6 +55,11 @@ export default function CardSheet({
               <PenButton small ghost onClick={() => setFlipped(!flipped)}>
                 카드 뒤집기
               </PenButton>
+              {secondary && (
+                <PenButton small ghost onClick={secondary.onClick}>
+                  {secondary.label}
+                </PenButton>
+              )}
             </div>
           </div>
         </div>

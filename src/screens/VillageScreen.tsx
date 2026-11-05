@@ -36,18 +36,38 @@ function useWidth(ref: React.RefObject<HTMLDivElement | null>) {
 // Figma: 나은 섹션 04 마을 · 06 카드 디테일. 카드가 된 사람들이 승강장을 분위기대로 걸어 다니고, 누르면 카드가 열린다.
 export default function VillageScreen({
   stickers,
+  village,
   focusId,
+  movedIn,
+  onMovedInShown,
+  onLeave,
   onCards,
   onDraw,
 }: {
   stickers: Sticker[]
+  village: number
   focusId: string | null
+  // 방금 이사 온 사람 이름 (있으면 잠깐 알려준다)
+  movedIn: string
+  onMovedInShown: () => void
+  // 마을에서 내보내 컬렉션으로 돌려보낸다
+  onLeave: (id: string) => void
   onCards: () => void
   onDraw: () => void
 }) {
   const area = useRef<HTMLDivElement>(null)
   const { w, h } = useWidth(area)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [leaveId, setLeaveId] = useState<string | null>(null)
+  const [toast, setToast] = useState(movedIn)
+  // 이사 알림은 2.5초만 보이고 사라진다
+  useEffect(() => {
+    if (!toast) return
+    onMovedInShown()
+    const t = setTimeout(() => setToast(''), 2500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [follow, setFollow] = useState(focusId)
   const scene = useMemo(
     () => ({
@@ -59,13 +79,14 @@ export default function VillageScreen({
     [],
   )
   // 최근 카드부터 마을에 나온다
-  const walkers = useMemo(() => stickers.map((s, i) => ({ s, n: i + 1 })).reverse().slice(0, MAX_WALKERS), [stickers])
+  const walkers = useMemo(() => stickers.map((s, i) => ({ s, n: i + 1 })).filter(({ s }) => s.village === village).reverse().slice(0, MAX_WALKERS), [stickers, village])
   const open = walkers.find(({ s }) => s.id === openId)
+  const leaving = walkers.find(({ s }) => s.id === leaveId)?.s
 
   return (
     <div className="relative h-full overflow-hidden text-pencil">
       <PaperBackground />
-      <TopBar left="카드" title="2호선 마을" right={`${walkers.length}명`} onLeft={onCards} />
+      <TopBar left="카드" title={`마을 ${String(village).padStart(2, '0')}`} right={`${walkers.length}명`} onLeft={onCards} />
 
       {/* 승강장: 열차 · 승강장 끝선 · 점자 블록 */}
       <svg viewBox="0 0 402 180" preserveAspectRatio="xMidYMin slice" className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+88px)] h-[180px] w-full" fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden>
@@ -162,8 +183,47 @@ export default function VillageScreen({
             setFollow(follow === open.s.id ? null : open.s.id)
             setOpenId(null)
           }}
+          secondary={{
+            label: '마을에서 내보내기',
+            onClick: () => {
+              setLeaveId(open.s.id)
+              setOpenId(null)
+            },
+          }}
           onClose={() => setOpenId(null)}
         />
+      )}
+
+      {toast && (
+        <p className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+110px)] z-20 animate-pop-up text-center font-pen text-[24px] leading-none">
+          <span className="underline decoration-1 underline-offset-[6px]">{toast}</span> 이사 왔어요!
+        </p>
+      )}
+
+      {/* Figma 04 마을에서 탈락: 컬렉션으로 돌려보낼지 묻는 시트 */}
+      {leaving && (
+        <div className="absolute inset-0 z-30">
+          <button aria-label="닫기" onClick={() => setLeaveId(null)} className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
+          <div className="absolute inset-x-0 bottom-0 animate-sheet-up rounded-t-[27px] bg-card px-[51px] pt-[10px] pb-[calc(env(safe-area-inset-bottom)+40px)] shadow-[0_-5px_25px_rgba(0,0,0,0.2)]">
+            <span className="mx-auto block h-[4px] w-[70px] rounded-full bg-pencil" />
+            <p className="mt-[34px] text-center font-pen text-[24px] leading-[1.2]">
+              <span className="underline decoration-1 underline-offset-[6px]">{leaving.name || '이 사람'}</span> 컬렉션으로 돌려보낼까요?
+            </p>
+            <div className="mt-[28px] flex flex-col items-stretch gap-[12px] [&>button]:w-full">
+              <PenButton
+                onClick={() => {
+                  onLeave(leaving.id)
+                  setLeaveId(null)
+                }}
+              >
+                돌려보내기
+              </PenButton>
+              <PenButton ghost onClick={() => setLeaveId(null)}>
+                마을에 남기기
+              </PenButton>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
