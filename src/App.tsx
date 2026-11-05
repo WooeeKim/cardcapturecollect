@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import GridBackground from './components/GridBackground'
 import TopTabs, { type Tab } from './components/TopTabs'
 import { DEFAULT_LABEL } from './lib/labels'
-import { listStickers, updateSticker, type Sticker } from './lib/stickers'
+import { deleteSticker, listStickers, updateSticker, type Sticker } from './lib/stickers'
 import { supabase } from './lib/supabase'
 import CanvasScreen from './screens/CanvasScreen'
 import CardCompleteScreen from './screens/CardCompleteScreen'
@@ -32,6 +32,8 @@ export default function App() {
   const [focus, setFocus] = useState<string | null>(null)
   // 04 이정표 선택 중인지, 지금 보는 마을, 방금 이사 온 사람 이름
   const [choosing, setChoosing] = useState(false)
+  // 컬렉션에서 입장권을 눌러 마을 고르기로 온 경우 (뒤로 가면 컬렉션으로)
+  const [fromList, setFromList] = useState(false)
   const [villageNo, setVillageNo] = useState<number | null>(null)
   const [movedIn, setMovedIn] = useState('')
 
@@ -75,7 +77,13 @@ export default function App() {
       <VillageSelectScreen
         sticker={made.sticker}
         stickers={stickers}
-        onBack={() => setChoosing(false)}
+        onBack={() => {
+          setChoosing(false)
+          if (fromList) {
+            setMade(null)
+            setFromList(false)
+          }
+        }}
         onPick={async (village) => {
           await updateSticker(made.sticker.id, { village }).catch((e) => setError(e instanceof Error ? e.message : String(e)))
           await refresh()
@@ -84,6 +92,7 @@ export default function App() {
           setFocus(made.sticker.id)
           setMade(null)
           setChoosing(false)
+          setFromList(false)
           setTab('village')
         }}
       />
@@ -120,6 +129,15 @@ export default function App() {
           setTab('village')
         }}
         onDraw={() => setTab('canvas')}
+        onTicket={(sticker, number) => {
+          setFromList(true)
+          setMade({ sticker, number })
+          setChoosing(true)
+        }}
+        onDelete={async (sticker) => {
+          await deleteSticker(sticker).catch((e) => setError(e instanceof Error ? e.message : String(e)))
+          await refresh()
+        }}
         onFind={(id) => {
           setFocus(id)
           setVillageNo(stickers.find((s) => s.id === id)?.village ?? null)
