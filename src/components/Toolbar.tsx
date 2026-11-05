@@ -6,7 +6,8 @@ import type { Tool } from './DrawingCanvas'
 export const COLORS = ['#000000', '#7a766c', '#ffffff', '#c0392b', '#e67e22', '#f1c40f', '#469015', '#2e86de', '#8e44ad', '#c584c0']
 export const SIZES = [2, 4, 8, 14, 22]
 
-// Figma 나은 섹션 "Tool Bar": 손그림 연필 · 형광펜 · 지우개 · 두께 · 색. 폭을 5칸으로 나눈 칸 가운데에 둔다.
+// Figma 02 그리기: 손그림 연필 · 형광펜 · 지우개 · 되돌리기/다시하기 · 색. 폭을 5칸으로 나눈 칸 가운데에 둔다.
+// 두께는 이미 고른 도구를 한 번 더 누르면 그 위로 펼쳐진다.
 const slot = (i: number) => `${((i + 0.5) / 5) * 100}%`
 // 도구 그림은 60×140 칸에 그리고 1.4배로 키워 아랫부분은 화면 밖으로 내보낸다
 const TOOL_W = 84
@@ -25,17 +26,24 @@ type Props = {
   onTool: (tool: Tool) => void
   onSize: (size: number) => void
   onColor: (color: string) => void
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
 }
 
-export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: Props) {
+export default function Toolbar({ tool, size, color, onTool, onSize, onColor, canUndo, canRedo, onUndo, onRedo }: Props) {
   // 펼친 팝오버: 두께(세로로 선다) 또는 색
   const [open, setOpen] = useState<'size' | 'color' | null>(null)
-  const sizeIndex = Math.max(0, SIZES.indexOf(size))
   const paths = useMemo(drawTools, [])
 
+  // 고른 도구를 다시 누르면 두께 팝오버 (지우개도 두께가 있다)
   function pick(next: Tool) {
-    onTool(next)
-    setOpen(null)
+    if (next === tool) setOpen(open === 'size' ? null : 'size')
+    else {
+      onTool(next)
+      setOpen(null)
+    }
   }
 
   const toolButton = (name: Tool, label: string, i: number, art: React.ReactNode) => (
@@ -94,27 +102,32 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor }: 
         </>,
       )}
 
-      {/* 두께: 지금 두께 점 하나, 누르면 5단계가 세로로 펼쳐진다 */}
-      <button
-        aria-label="두께 고르기"
-        aria-expanded={open === 'size'}
-        onClick={() => setOpen(open === 'size' ? null : 'size')}
-        className="absolute top-[34px] size-[44px] -translate-x-1/2 transition-transform ease-spring active:scale-110"
-        style={{ left: slot(3) }}
-      >
-        <svg viewBox="0 0 44 44" className="size-full text-pencil" aria-hidden>
-          <path d={paths.sizeRing} fill="none" stroke="currentColor" strokeWidth={1} opacity={0.35} />
-          <circle cx={22} cy={22} r={Math.max(2.5, DOT[sizeIndex] / 2)} fill="currentColor" />
-        </svg>
-      </button>
+      {/* 되돌리기 · 다시하기: 할 수 있을 때만 진하게 */}
+      {([
+        ['되돌리기', onUndo, canUndo, 0.67, 'M5 17 C9 6 24 6 28 17 M5 17 L4 8 M5 17 L13 15'],
+        ['다시 하기', onRedo, canRedo, 0.78, 'M28 17 C24 6 9 6 5 17 M28 17 L29 8 M28 17 L20 15'],
+      ] as const).map(([label, fn, on, at, d]) => (
+        <button
+          key={label}
+          aria-label={label}
+          disabled={!on}
+          onClick={fn}
+          className="absolute top-[38px] flex size-[38px] -translate-x-1/2 items-center justify-center text-pencil transition-[opacity,transform] ease-spring active:scale-110 disabled:opacity-30"
+          style={{ left: `${at * 100}%` }}
+        >
+          <svg viewBox="0 0 33 24" className="h-[24px] w-[33px]" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
+            <path d={d} />
+          </svg>
+        </button>
+      ))}
 
       {open === 'size' && (
         <div
-          className="absolute bottom-[98px] flex origin-bottom -translate-x-1/2 animate-pop-up flex-col rounded-[12px] bg-card px-[6px] py-[8px] shadow-sticker"
-          style={{ left: slot(3) }}
+          className="absolute bottom-[152px] flex origin-bottom-left animate-pop-up flex-row rounded-[12px] bg-card px-[8px] py-[6px] shadow-sticker"
+          style={{ left: `calc(${tool === 'pen' ? 0 : tool === 'highlighter' ? 1 : 2} * 24% + 14px)` }}
         >
-          <SketchBorder w={52} h={206} r={12} seed={421} double={false} />
-          {SIZES.map((s, i) => ({ s, i })).reverse().map(({ s, i }) => (
+          <SketchBorder w={212} h={50} r={12} seed={421} double={false} />
+          {SIZES.map((s, i) => ({ s, i })).map(({ s, i }) => (
             <button
               key={s}
               aria-label={`두께 ${i + 1}`}
@@ -261,7 +274,6 @@ function drawTools() {
       body: wobblyPoly(rect(4, 50, 52, 90), 30),
       line: wobblyPoly([[4, 72], [56, 72]], 31, false),
     },
-    sizeRing: wobblyCircle(22, 22, 14, 41, 0.06),
     sizeSelected: wobblyCircle(20, 19, 14, 410, 0.05),
     colorRing: wobblyCircle(24, 24, 21, 50, 0.05),
     colorInner: wobblyCircle(24, 24, 11, 51, 0.08),

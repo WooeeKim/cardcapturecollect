@@ -21,10 +21,12 @@ type Props = {
   color: string
   size: number
   guide?: boolean
+  // 그린 것이 있는지 / 되돌리기·다시하기가 가능한지가 바뀔 때마다 알린다
+  onHistory?: (state: { inked: boolean; canUndo: boolean; canRedo: boolean }) => void
   ref?: Ref<DrawingCanvasHandle>
 }
 
-// 툴바에 undo/redo 버튼이 없는 디자인이라 제스처로 대신한다: 두 손가락 탭 = 실행 취소, 세 손가락 탭 = 다시 실행
+// 툴바의 되돌리기·다시하기 버튼 말고도 제스처로 할 수 있다: 두 손가락 탭 = 실행 취소, 세 손가락 탭 = 다시 실행
 // 두 손가락을 벌리거나 끌면 탭이 아니라 확대/이동으로 본다.
 const TAP_MS = 300
 const TAP_SLOP = 10
@@ -54,7 +56,7 @@ function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[], view: View, dpr
 }
 
 // 부모 크기를 꽉 채우는 캔버스. 좌표는 0~1 비율로 저장해 크기가 바뀌어도 다시 그릴 수 있게 한다.
-export default function DrawingCanvas({ tool, color, size, guide = true, ref }: Props) {
+export default function DrawingCanvas({ tool, color, size, guide = true, onHistory, ref }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const guideRef = useRef<HTMLDivElement>(null)
   const strokes = useRef<Stroke[]>([])
@@ -65,9 +67,16 @@ export default function DrawingCanvas({ tool, color, size, guide = true, ref }: 
   const view = useRef<View>(IDENTITY)
   const pinch = useRef<{ dist: number; mid: Point; view: View } | null>(null)
 
+  const lastHistory = useRef('')
   function redraw() {
     const canvas = canvasRef.current
     if (!canvas) return
+    const state = { inked: strokes.current.length > 0 || !!current.current, canUndo: strokes.current.length > 0, canRedo: redoStack.current.length > 0 }
+    const key = `${state.inked}${state.canUndo}${state.canRedo}`
+    if (key !== lastHistory.current) {
+      lastHistory.current = key
+      onHistory?.(state)
+    }
     const all = current.current ? [...strokes.current, current.current] : strokes.current
     paint(canvas.getContext('2d')!, all, view.current, window.devicePixelRatio)
     const { s, x, y } = view.current
@@ -194,6 +203,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, ref }: 
           if (pointers.current.size === 1) {
             gesture.current = { maxTouches: 1, startedAt: e.timeStamp, moved: false }
             current.current = { tool, color, size, points: [toPoint(e)] }
+            redraw()
           } else {
             // 손가락이 하나 더 닿으면 그리던 획은 버리고 제스처로 본다
             gesture.current.maxTouches = Math.max(gesture.current.maxTouches, pointers.current.size)
@@ -233,6 +243,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, ref }: 
           strokes.current.push(current.current)
           redoStack.current = []
           current.current = null
+          redraw()
         }}
         onPointerCancel={(e) => {
           pointers.current.delete(e.pointerId)
