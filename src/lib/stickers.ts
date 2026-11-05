@@ -136,3 +136,16 @@ export async function updateSticker(id: string, patch: StickerPatch): Promise<vo
   }
   if (error) throw error
 }
+
+// 카드를 지운다. 그림 파일은 못 지워도 카드 자체는 지워진 것으로 본다.
+export async function deleteSticker(sticker: Sticker): Promise<void> {
+  if (!supabase) {
+    memory = memory.filter((s) => s.id !== sticker.id)
+    return
+  }
+  const { error } = await supabase.from('stickers').delete().eq('id', sticker.id)
+  if (error) throw error
+  // imageUrl 의 마지막 조각이 저장소 파일 이름이다
+  const file = sticker.imageUrl.split('/').pop()
+  if (file) await supabase.storage.from(BUCKET).remove([file]).catch(() => undefined)
+}
