@@ -9,6 +9,8 @@ export type Sticker = {
   traits: string[]
   imageUrl: string
   createdAt: string
+  // 마을 번호. null 이면 컬렉션에만 있고 마을엔 없다 (Figma 04: 이정표 선택)
+  village: number | null
   bookLabel: number | null
   bookPage: number | null
   bookSlot: number | null
@@ -24,6 +26,8 @@ type Row = {
   // 003 마이그레이션 전 DB 에는 없다
   mood?: string
   traits?: string[]
+  // 004 마이그레이션 전 DB 에는 없다
+  village?: number | null
   image_path: string
   created_at: string
   book_label: number | null
@@ -49,6 +53,7 @@ function fromRow(row: Row): Sticker {
     traits: row.traits ?? [],
     imageUrl: data.publicUrl,
     createdAt: row.created_at,
+    village: row.village ?? null,
     bookLabel: row.book_label ?? null,
     bookPage: row.book_page,
     bookSlot: row.book_slot,
@@ -80,6 +85,7 @@ export async function createSticker(input: NewSticker): Promise<Sticker> {
       traits: input.traits,
       imageUrl: URL.createObjectURL(input.image),
       createdAt: new Date().toISOString(),
+      village: null,
       bookLabel: null,
       bookPage: null,
       bookSlot: null,
@@ -108,7 +114,7 @@ export async function createSticker(input: NewSticker): Promise<Sticker> {
   return fromRow(data as Row)
 }
 
-export type StickerPatch = Partial<Pick<Sticker, 'bookLabel' | 'bookPage' | 'bookSlot' | 'decoX' | 'decoY'>>
+export type StickerPatch = Partial<Pick<Sticker, 'village' | 'bookLabel' | 'bookPage' | 'bookSlot' | 'decoX' | 'decoY'>>
 
 export async function updateSticker(id: string, patch: StickerPatch): Promise<void> {
   if (!supabase) {
@@ -116,11 +122,17 @@ export async function updateSticker(id: string, patch: StickerPatch): Promise<vo
     return
   }
   const row: Partial<Row> = {}
+  if ('village' in patch) row.village = patch.village
   if ('bookLabel' in patch) row.book_label = patch.bookLabel
   if ('bookPage' in patch) row.book_page = patch.bookPage
   if ('bookSlot' in patch) row.book_slot = patch.bookSlot
   if ('decoX' in patch) row.deco_x = patch.decoX
   if ('decoY' in patch) row.deco_y = patch.decoY
   const { error } = await supabase.from('stickers').update(row).eq('id', id)
+  // 팀 DB 에 004 마이그레이션이 아직 안 돌았으면 마을 배정은 저장되지 않는다
+  if (error?.code === 'PGRST204' && 'village' in patch) {
+    console.warn('stickers 테이블에 village 컬럼이 없어 마을 배정을 저장하지 못했습니다. supabase/migrations/004 를 실행하세요.')
+    return
+  }
   if (error) throw error
 }

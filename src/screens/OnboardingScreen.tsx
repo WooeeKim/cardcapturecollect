@@ -14,6 +14,7 @@ const SAMPLE: Sticker = {
   traits: ['다정한', '침착한'],
   imageUrl: sampleDrawing,
   createdAt: new Date().toISOString(),
+  village: 1,
   bookLabel: null,
   bookPage: null,
   bookSlot: null,
