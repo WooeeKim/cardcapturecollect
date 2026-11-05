@@ -207,7 +207,8 @@ export default function VillageScreen({
           <div className="absolute inset-x-0 bottom-0 animate-sheet-up rounded-t-[27px] bg-card px-[51px] pt-[10px] pb-[calc(env(safe-area-inset-bottom)+40px)] shadow-[0_-5px_25px_rgba(0,0,0,0.2)]">
             <span className="mx-auto block h-[4px] w-[70px] rounded-full bg-pencil" />
             <p className="mt-[34px] text-center font-pen text-[24px] leading-[1.2]">
-              <span className="underline decoration-1 underline-offset-[6px]">{leaving.name || '이 사람'}</span> 컬렉션으로 돌려보낼까요?
+              <span className="underline decoration-1 underline-offset-[6px]">{leaving.name || '이 사람'}</span>
+              {leaving.name ? '을(를)' : ''} 컬렉션으로 돌려보낼까요?
             </p>
             <div className="mt-[28px] flex flex-col items-stretch gap-[12px] [&>button]:w-full">
               <PenButton
