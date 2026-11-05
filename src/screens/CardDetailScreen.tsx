@@ -92,7 +92,7 @@ export default function CardDetailScreen({ image, onBack, onSaved }: { image: Bl
       </div>
 
       {picking && (
-        <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px]">
+        <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px]">
           <button aria-label="닫기" onClick={() => setPicking(false)} className="absolute inset-0" />
           <div className="absolute top-1/2 left-1/2 w-[min(360px,var(--app-w)-40px)] -translate-x-1/2 -translate-y-1/2">
             <div className="grid grid-cols-4 gap-x-[7px] gap-y-[10px] p-[10px]">
