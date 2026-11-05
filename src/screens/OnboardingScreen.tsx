@@ -7,11 +7,11 @@ import type { Sticker } from '../lib/stickers'
 // 예시 카드 (Figma 샘플 그림)
 const SAMPLE: Sticker = {
   id: 'sample',
-  place: '2호선 강남역',
-  name: '안경 쓴 산책러',
-  memo: '이어폰 너머로 흥얼거리던 노래가 궁금했다.',
-  mood: '느긋한',
-  traits: ['다정한', '침착한'],
+  place: 'Gangnam Station, Seoul',
+  name: 'Glasses Walker',
+  memo: 'Wondered what song they were humming through the earbuds.',
+  mood: 'Calm',
+  traits: [],
   imageUrl: sampleDrawing,
   createdAt: new Date().toISOString(),
   village: 1,
@@ -40,16 +40,16 @@ export default function OnboardingScreen({ onStart }: { onStart: () => void }) {
 
       <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+40px)] flex flex-col items-center gap-[14px] px-[24px] text-center">
         <h1 className="font-hand text-[30px] leading-[1.2] font-bold">
-          지하철에서 만난 사람,
+          Someone you met on the subway,
           <br />
-          카드로 남겨볼래요?
+          kept as a card?
         </h1>
         <p className="mb-[22px] font-pen text-[21px] leading-[1.2] text-muted">
-          얼굴을 빤히 보지 않기 · 몰래 찍지 않기
+          Don’t stare · Don’t sneak photos
           <br />
-          기억에 남은 모습만, 천천히 그려요
+          Draw only what stayed with you, slowly
         </p>
-        <PenButton onClick={onStart}>그리러 가기</PenButton>
+        <PenButton onClick={onStart}>Go draw</PenButton>
       </div>
     </div>
   )

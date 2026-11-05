@@ -9,12 +9,15 @@ import type { Sticker } from '../lib/stickers'
 
 // 분위기대로 걷는다: [한 번 왕복하는 데 걸리는 초, 한 걸음 초, 가끔 하는 말]
 const PACE: Record<string, [number, number, string]> = {
-  느긋한: [28, 1.2, '음~'],
-  피곤한: [34, 1.5, '졸려…'],
-  조용한: [26, 1.1, '…'],
-  우아한: [24, 1, '후후'],
-  들뜬: [12, 0.55, '신난다!'],
-  산만한: [14, 0.6, '어? 저기!'],
+  Calm: [28, 1.2, 'Hmm~'],
+  Sleepy: [34, 1.5, 'So sleepy…'],
+  Silent: [26, 1.1, '…'],
+  Elegant: [24, 1, 'Hehe'],
+  Joyful: [12, 0.55, 'Yay!'],
+  Lively: [14, 0.6, 'Let’s go!'],
+  Busy: [10, 0.5, 'Late, late!'],
+  Scattered: [14, 0.6, 'Huh? Over there!'],
+  Shy: [30, 1.3, '…um'],
 }
 const DEFAULT_PACE: [number, number, string] = [20, 0.9, '']
 const MAX_WALKERS = 10
@@ -86,7 +89,7 @@ export default function VillageScreen({
   return (
     <div className="relative h-full overflow-hidden text-pencil">
       <PaperBackground />
-      <TopBar left="카드" title={`마을 ${String(village).padStart(2, '0')}`} right={`${walkers.length}명`} onLeft={onCards} />
+      <TopBar left="Cards" title={`Village ${String(village).padStart(2, '0')}`} right={`${walkers.length}`} onLeft={onCards} />
 
       {/* 승강장: 열차 · 승강장 끝선 · 점자 블록 */}
       <svg viewBox="0 0 402 180" preserveAspectRatio="xMidYMin slice" className="pointer-events-none absolute inset-x-0 top-[calc(env(safe-area-inset-top)+88px)] h-[180px] w-full" fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden>
@@ -106,7 +109,7 @@ export default function VillageScreen({
         <SketchBorder w={30} h={420} r={4} seed={940} double={false} />
       </div>
       <div className="pointer-events-none absolute top-[calc(env(safe-area-inset-top)+282px)] right-[20px] rounded-full bg-card px-[26px] py-[4px] font-hand text-[18px] font-bold">
-        강남
+        Gangnam
         <SketchBorder w={92} h={34} r={17} seed={950} weight={1.4} double={false} />
       </div>
       <svg viewBox="-1 -1 122 36" className="pointer-events-none absolute right-[32px] bottom-[86px] h-[36px] w-[122px]" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" aria-hidden>
@@ -115,8 +118,8 @@ export default function VillageScreen({
 
       {walkers.length === 0 && (
         <div className="absolute inset-x-0 top-1/2 flex flex-col items-center gap-[16px]">
-          <p className="font-pen text-[22px] text-muted">아직 마을이 조용해요</p>
-          <PenButton onClick={onDraw}>그리러 가기</PenButton>
+          <p className="font-pen text-[22px] text-muted">The village is quiet</p>
+          <PenButton onClick={onDraw}>Go draw</PenButton>
         </div>
       )}
 
@@ -134,7 +137,7 @@ export default function VillageScreen({
             return (
               <button
                 key={s.id}
-                aria-label={`${s.name || '이름 없는 사람'} 카드 보기`}
+                aria-label={`${s.name || 'Nameless'} card`}
                 onClick={() => setOpenId(s.id)}
                 className="absolute left-0 flex flex-col items-center"
                 style={
@@ -164,7 +167,7 @@ export default function VillageScreen({
                   {following && <SketchBorder w={64} h={96} r={30} seed={970} weight={1.6} double={false} className="-inset-[6px]! size-[calc(100%+12px)]! [&_path]:[stroke-dasharray:6_4]" />}
                 </span>
                 <span className="relative mt-[2px] max-w-[110px] truncate rounded-full bg-card px-[9px] font-pen text-[14px] leading-[1.35]">
-                  {s.name || '이름 없는 사람'}
+                  {s.name || 'Nameless'}
                   <SketchBorder w={90} h={20} r={10} seed={9 + i} weight={1} double={false} />
                 </span>
               </button>
@@ -178,13 +181,13 @@ export default function VillageScreen({
         <CardSheet
           sticker={open.s}
           number={open.n}
-          action={follow === open.s.id ? '그만 따라가기' : '따라가기'}
+          action={follow === open.s.id ? 'Stop following' : 'Follow'}
           onAction={() => {
             setFollow(follow === open.s.id ? null : open.s.id)
             setOpenId(null)
           }}
           secondary={{
-            label: '마을에서 내보내기',
+            label: 'Send out of village',
             onClick: () => {
               setLeaveId(open.s.id)
               setOpenId(null)
@@ -196,19 +199,18 @@ export default function VillageScreen({
 
       {toast && (
         <p className="pointer-events-none absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+110px)] z-20 animate-pop-up text-center font-pen text-[24px] leading-none">
-          <span className="underline decoration-1 underline-offset-[6px]">{toast}</span> 이사 왔어요!
+          <span className="underline decoration-1 underline-offset-[6px]">{toast}</span> moved in!
         </p>
       )}
 
       {/* Figma 04 마을에서 탈락: 컬렉션으로 돌려보낼지 묻는 시트 */}
       {leaving && (
         <div className="absolute inset-0 z-30">
-          <button aria-label="닫기" onClick={() => setLeaveId(null)} className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
+          <button aria-label="Close" onClick={() => setLeaveId(null)} className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
           <div className="absolute inset-x-0 bottom-0 animate-sheet-up rounded-t-[27px] bg-card px-[51px] pt-[10px] pb-[calc(env(safe-area-inset-bottom)+40px)] shadow-[0_-5px_25px_rgba(0,0,0,0.2)]">
             <span className="mx-auto block h-[4px] w-[70px] rounded-full bg-pencil" />
             <p className="mt-[34px] text-center font-pen text-[24px] leading-[1.2]">
-              <span className="underline decoration-1 underline-offset-[6px]">{leaving.name || '이 사람'}</span>
-              {leaving.name ? '을(를)' : ''} 컬렉션으로 돌려보낼까요?
+              Send <span className="underline decoration-1 underline-offset-[6px]">{leaving.name || 'this person'}</span> back to Collection?
             </p>
             <div className="mt-[28px] flex flex-col items-stretch gap-[12px] [&>button]:w-full">
               <PenButton
@@ -217,10 +219,10 @@ export default function VillageScreen({
                   setLeaveId(null)
                 }}
               >
-                돌려보내기
+                Send back
               </PenButton>
               <PenButton ghost onClick={() => setLeaveId(null)}>
-                마을에 남기기
+                Stay in village
               </PenButton>
             </div>
           </div>

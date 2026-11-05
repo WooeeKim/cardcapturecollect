@@ -13,7 +13,7 @@ export default function DrawButton({ onClick }: { onClick: () => void }) {
   )
   return (
     <button
-      aria-label="새로 그리기"
+      aria-label="Draw new"
       onClick={onClick}
       className="absolute right-[20px] bottom-[calc(env(safe-area-inset-bottom)+24px)] z-20 size-[60px] rounded-full bg-pencil text-card shadow-sticker transition-transform ease-spring active:scale-90"
     >

@@ -107,7 +107,7 @@ export async function createSticker(input: NewSticker): Promise<Sticker> {
   let { data, error } = await insert({ ...base, mood: input.mood, traits: input.traits })
   // 팀 DB 에 003 마이그레이션이 아직 안 돌았으면 분위기·성격 없이 저장한다 (PGRST204: 없는 컬럼)
   if (error?.code === 'PGRST204') {
-    console.warn('stickers 테이블에 mood/traits 컬럼이 없어 빼고 저장합니다. supabase/migrations/003 을 실행하세요.')
+    console.warn('stickers table has no mood/traits columns; saving without them. Run supabase/migrations/003.')
     ;({ data, error } = await insert(base))
   }
   if (error) throw error
@@ -131,7 +131,7 @@ export async function updateSticker(id: string, patch: StickerPatch): Promise<vo
   const { error } = await supabase.from('stickers').update(row).eq('id', id)
   // 팀 DB 에 004 마이그레이션이 아직 안 돌았으면 마을 배정은 저장되지 않는다
   if (error?.code === 'PGRST204' && 'village' in patch) {
-    console.warn('stickers 테이블에 village 컬럼이 없어 마을 배정을 저장하지 못했습니다. supabase/migrations/004 를 실행하세요.')
+    console.warn('stickers table has no village column; village assignment was not saved. Run supabase/migrations/004.')
     return
   }
   if (error) throw error

@@ -111,7 +111,7 @@ export default function SubwayDecoScreen({
             onLabel(l.id)
             setSelected(null)
           }}
-          aria-label={`라벨 ${l.id}`}
+          aria-label={`Label ${l.id}`}
           aria-pressed={l.id === label}
           className="absolute h-[70.5px] w-[43px] transition-[top]"
           style={{ left: BACK_SPACE + (LABELS.length - l.id) * flagGap, top: l.id === label ? 0 : -30 }}
@@ -127,7 +127,7 @@ export default function SubwayDecoScreen({
       {/* 뒤로 */}
       <button
         onClick={onBack}
-        aria-label="뒤로"
+        aria-label="Back"
         className="absolute top-[calc(env(safe-area-inset-top)+17px)] left-[12px] size-[60px]"
       >
         <span className="absolute inset-0 rounded-[50px] blur-[16.2px]">
@@ -145,13 +145,13 @@ export default function SubwayDecoScreen({
       {/* 스티커 줄 */}
       <div className="absolute inset-x-0 bottom-[env(safe-area-inset-bottom)] flex h-[120px] items-end gap-[7.143px] overflow-x-auto px-[16px] pb-[10px]">
         {inBook.length === 0 && (
-          <p className="self-center text-[13px] font-semibold text-muted">이 라벨 스티커북에 붙인 스티커가 없어요</p>
+          <p className="self-center text-[13px] font-semibold text-muted">No stickers in this label’s book yet</p>
         )}
         {inBook.map((s) => (
           <button
             key={s.id}
             onClick={() => setSelected(s.id === selected ? null : s.id)}
-            aria-label="스티커 고르기"
+            aria-label="Pick a sticker"
             className="w-[80.044px] shrink-0 shadow-[0_3px_3px_0_rgba(0,0,0,0.2)] transition-transform"
             style={{ transform: s.id === selected ? 'translateY(-12px)' : undefined }}
           >

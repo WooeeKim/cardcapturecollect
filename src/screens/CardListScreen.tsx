@@ -8,7 +8,7 @@ import type { Sticker } from '../lib/stickers'
 
 // 카드마다 살짝 다르게 기울인다 (손으로 늘어놓은 느낌)
 const TILT = [1, -1.5, 0.5, -0.5, 1.5, -1, 0.8, -1.2]
-const ALL = '전체'
+const ALL = 'All'
 
 // Figma: 나은 섹션 05 카드 목록. 모은 카드를 3열로, 분위기로 거르기, 누르면 카드 디테일.
 export default function CardListScreen({
@@ -42,7 +42,7 @@ export default function CardListScreen({
   return (
     <div className="relative h-full overflow-hidden text-pencil">
       <PaperBackground />
-      <TopBar left="마을" title="내 카드" right={`${stickers.length}장`} onLeft={onVillage} />
+      <TopBar left="Village" title="My Cards" right={`${stickers.length}`} onLeft={onVillage} />
 
       <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+88px)] bottom-0 overflow-y-auto px-[24px] pb-[130px]">
         {moods.length > 1 && (
@@ -70,9 +70,9 @@ export default function CardListScreen({
         </div>
       </div>
 
-      {/* Figma: 아래 가운데 넓은 "그리기 시작" 버튼 (목록은 흰 바탕으로 흐려진다) */}
+      {/* Figma: 아래 가운데 넓은 "Start Draw" 버튼 (목록은 흰 바탕으로 흐려진다) */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-card from-60% to-transparent px-[24px] pt-[40px] pb-[calc(env(safe-area-inset-bottom)+24px)] [&>button]:pointer-events-auto [&>button]:w-full">
-        <PenButton onClick={onDraw}>그리기 시작</PenButton>
+        <PenButton onClick={onDraw}>Start Draw</PenButton>
       </div>
 
       {open && (

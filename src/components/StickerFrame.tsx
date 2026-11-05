@@ -32,7 +32,7 @@ export default function StickerFrame({
           <button
             type="button"
             onClick={onFlip}
-            aria-label="뒤집기"
+            aria-label="Flip"
             className="absolute top-[5.54cqw] left-[87.53cqw] h-[5.54cqw] w-[6.856cqw]"
           >
             <FlipIcon />

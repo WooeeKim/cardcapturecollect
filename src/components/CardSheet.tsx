@@ -28,18 +28,18 @@ export default function CardSheet({
 
   return (
     <div className="absolute inset-0 z-30">
-      <button aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-pencil/25" />
+      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-pencil/25" />
       <div className="absolute inset-x-0 bottom-0 animate-sheet-up rounded-t-[24px] bg-card px-[18px] pt-[30px] pb-[calc(env(safe-area-inset-bottom)+28px)] text-pencil">
         <svg viewBox="0 0 402 470" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
           <path d={edge} fill="none" stroke="currentColor" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
         </svg>
         <span className="absolute top-[12px] left-1/2 h-[3px] w-[40px] -translate-x-1/2 rounded-full bg-pencil/50" />
         <div className="flex gap-[16px]">
-          <button aria-label="카드 뒤집기" onClick={() => setFlipped(!flipped)} className="w-[min(196px,48%)] shrink-0 -rotate-[1.5deg]">
+          <button aria-label="Flip card" onClick={() => setFlipped(!flipped)} className="w-[min(196px,48%)] shrink-0 -rotate-[1.5deg]">
             <CharacterCard sticker={sticker} number={number} flipped={flipped} />
           </button>
           <div className="flex min-w-0 flex-1 flex-col gap-[10px] pt-[8px]">
-            <h2 className="font-hand text-[22px] leading-tight font-bold break-keep">{sticker.name || '이름 없는 사람'}</h2>
+            <h2 className="font-hand text-[22px] leading-tight font-bold break-keep">{sticker.name || 'Nameless'}</h2>
             {sticker.place && <p className="font-pen text-[18px] leading-none text-muted">{sticker.place}</p>}
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-[6px]">
@@ -53,7 +53,7 @@ export default function CardSheet({
                 {action}
               </PenButton>
               <PenButton small ghost onClick={() => setFlipped(!flipped)}>
-                카드 뒤집기
+                Flip card
               </PenButton>
               {secondary && (
                 <PenButton small ghost onClick={secondary.onClick}>

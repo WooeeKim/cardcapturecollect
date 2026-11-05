@@ -75,7 +75,7 @@ export default function StickerBookScreen({
               if (picking) onLabel(id)
               setPicking(!picking)
             }}
-            aria-label={id === label ? `라벨 ${id} · 다른 책 고르기` : `라벨 ${id} 책으로`}
+            aria-label={id === label ? `Label ${id} · choose another book` : `Go to label ${id} book`}
             aria-expanded={id === label ? picking : undefined}
             className={`relative h-[43px] w-[70.5px] ${picking && idx > 0 ? 'animate-slide-in' : ''}`}
             style={picking && idx > 0 ? { animationDelay: `${(idx - 1) * 0.04}s` } : undefined}
@@ -111,7 +111,7 @@ export default function StickerBookScreen({
                 <button
                   key={i}
                   onClick={() => place(p, slot)}
-                  aria-label={`${p}쪽 ${slot + 1}번 칸`}
+                  aria-label={`Page ${p}, slot ${slot + 1}`}
                   className={`aspect-[361/451] rounded-[0.831%] border border-dashed border-slot ${selected ? 'bg-white/70' : 'bg-white/40'}`}
                 />
               )
@@ -157,7 +157,7 @@ export default function StickerBookScreen({
             <button
               key={s.id}
               onClick={() => setSelected(isSelected ? null : s.id)}
-              aria-label="스티커 고르기"
+              aria-label="Pick a sticker"
               className={`absolute w-[155.435px] shadow-sticker animate-float-up transition-transform ${isSelected ? 'animate-wiggle' : ''}`}
               style={{
                 '--rot': `${layout.rotate}deg`,

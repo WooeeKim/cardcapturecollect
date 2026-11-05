@@ -87,7 +87,7 @@ export default function App() {
         onPick={async (village) => {
           await updateSticker(made.sticker.id, { village }).catch((e) => setError(e instanceof Error ? e.message : String(e)))
           await refresh()
-          setMovedIn(made.sticker.name || '새로운 사람')
+          setMovedIn(made.sticker.name || 'Someone new')
           setVillageNo(village)
           setFocus(made.sticker.id)
           setMade(null)
@@ -171,7 +171,7 @@ export default function App() {
       </div>
       {(!supabase || error) && (
         <p className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+2px)] z-10 text-center text-[10px] font-medium text-muted">
-          {error ? `DB 오류: ${error}` : 'DB 미연결 · 메모리에만 저장 (.env.local 확인)'}
+          {error ? `DB error: ${error}` : 'DB not connected · saved in memory only (check .env.local)'}
         </p>
       )}
       <StickerBookScreen stickers={stickers} label={label} onLabel={setLabel} onChange={refresh} />

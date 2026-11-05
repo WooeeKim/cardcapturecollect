@@ -30,10 +30,10 @@ function CardScale({ className = '', children }: { className?: string; children:
 
 export const cardNo = (n: number) => String(n).padStart(3, '0')
 
-// 앞면: 첫 만남 태그 · 이름 · 분위기 배지 / 그림 / 번호·장소 띠 / 성격 / 메모
+// 앞면: First meet 태그 · 이름 · 분위기 배지 / 그림 / 번호·장소 띠 / 성격 / 메모
 function Front({ sticker, number }: { sticker: Sticker; number: number }) {
   const marks = useMemo(() => ({ energy: [wobblyCircle(6.5, 6.5, 5.6, 10), wobblyCircle(6.5, 6.5, 5.6, 21)], divider: wobblyLine(220, 7) }), [])
-  const info = [`No.${cardNo(number)}`, sticker.place || '어딘가에서', formatDate(sticker.createdAt)].join(' · ')
+  const info = [`No.${cardNo(number)}`, sticker.place || 'Somewhere', formatDate(sticker.createdAt)].join(' · ')
   return (
     <div className="relative flex size-full flex-col gap-[6px] overflow-hidden rounded-[14px] bg-card px-[13px] pt-[14px] pb-[12px] text-pencil shadow-sticker">
       <div className="pointer-events-none absolute inset-[5px]">
@@ -43,10 +43,10 @@ function Front({ sticker, number }: { sticker: Sticker; number: number }) {
       <div className="flex items-center justify-between gap-[6px]">
         <div className="flex min-w-0 items-center gap-[6px]">
           <span className="relative shrink-0 rotate-3 rounded-[8px] bg-wash px-[7px] font-pen text-[14px] leading-[1.25]">
-            첫 만남
+            First meet
             <SketchBorder w={50} h={18} r={8} seed={21} weight={1} double={false} />
           </span>
-          <span className="truncate font-hand text-[17px] leading-tight font-bold">{sticker.name || '이름 없는 사람'}</span>
+          <span className="truncate font-hand text-[17px] leading-tight font-bold">{sticker.name || 'Nameless'}</span>
         </div>
         <span className="relative flex size-[22px] shrink-0 items-center justify-center rounded-full bg-wash font-pen text-[15px] leading-none">
           {sticker.mood ? sticker.mood[0] : '?'}
@@ -65,7 +65,7 @@ function Front({ sticker, number }: { sticker: Sticker; number: number }) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-[6px] px-[2px]">
-        {sticker.traits.length === 0 && <p className="font-pen text-[17px] leading-none text-muted">성격은 아직 비밀</p>}
+        {sticker.traits.length === 0 && <p className="font-pen text-[17px] leading-none text-muted">Personality: a secret</p>}
         {sticker.traits.slice(0, 2).map((t, i) => (
           <div key={t} className="flex items-center gap-[8px]">
             <span className="flex w-[28px] gap-[2px]">
@@ -115,11 +115,11 @@ function Back() {
         </span>
         <span className="flex flex-col items-center">
           <span className="font-hand text-[18px] leading-none font-bold whitespace-nowrap">Subway Seal</span>
-          <span className="font-pen text-[12px] leading-none text-muted">찌 부 씰</span>
+          <span className="font-pen text-[12px] leading-none text-muted">Card Capture Collect</span>
         </span>
         <SketchBorder w={150} h={46} r={23} seed={71} weight={1.5} />
       </div>
-      <p className="absolute inset-x-0 bottom-[34px] text-center font-pen text-[14px] text-muted">지하철에서 만난 사람들</p>
+      <p className="absolute inset-x-0 bottom-[34px] text-center font-pen text-[14px] text-muted">People met on the subway</p>
       <div className="pointer-events-none absolute inset-[5px]">
         <SketchBorder w={240} h={340} r={11} seed={81} weight={1.5} />
       </div>

@@ -70,7 +70,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor, ca
     <div className="absolute inset-x-0 bottom-0 h-[120px]">
       {toolButton(
         'pen',
-        '연필',
+        'Pencil',
         0,
         <>
           <path d={paths.pencil.body} fill="var(--color-card)" strokeWidth={1.3} />
@@ -82,7 +82,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor, ca
       )}
       {toolButton(
         'highlighter',
-        '형광펜',
+        'Highlighter',
         1,
         <>
           <path d={paths.highlighter.body} fill="var(--color-card)" strokeWidth={1.3} />
@@ -93,7 +93,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor, ca
       )}
       {toolButton(
         'eraser',
-        '지우개',
+        'Eraser',
         2,
         <>
           <path d={paths.eraser.body} fill="var(--color-card)" strokeWidth={1.3} />
@@ -104,8 +104,8 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor, ca
 
       {/* 되돌리기 · 다시하기: 할 수 있을 때만 진하게 */}
       {([
-        ['되돌리기', onUndo, canUndo, 0.67, 'M5 17 C9 6 24 6 28 17 M5 17 L4 8 M5 17 L13 15'],
-        ['다시 하기', onRedo, canRedo, 0.78, 'M28 17 C24 6 9 6 5 17 M28 17 L29 8 M28 17 L20 15'],
+        ['Undo', onUndo, canUndo, 0.67, 'M5 17 C9 6 24 6 28 17 M5 17 L4 8 M5 17 L13 15'],
+        ['Redo', onRedo, canRedo, 0.78, 'M28 17 C24 6 9 6 5 17 M28 17 L29 8 M28 17 L20 15'],
       ] as const).map(([label, fn, on, at, d]) => (
         <button
           key={label}
@@ -130,7 +130,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor, ca
           {SIZES.map((s, i) => ({ s, i })).map(({ s, i }) => (
             <button
               key={s}
-              aria-label={`두께 ${i + 1}`}
+              aria-label={`Thickness ${i + 1}`}
               aria-pressed={size === s}
               onClick={() => {
                 onSize(s)
@@ -149,7 +149,7 @@ export default function Toolbar({ tool, size, color, onTool, onSize, onColor, ca
 
       {/* 색: 무지개 고리 안에 지금 색 */}
       <button
-        aria-label="색 고르기"
+        aria-label="Pick color"
         aria-expanded={open === 'color'}
         onClick={() => setOpen(open === 'color' ? null : 'color')}
         className="absolute top-[30px] size-[48px] -translate-x-1/2 transition-transform ease-spring active:scale-110"
@@ -199,7 +199,7 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
       <SketchBorder w={232} h={160} r={12} seed={311} double={false} />
       <div className="grid grid-cols-5 gap-[8px]">
         {COLORS.map((c, i) => (
-          <button key={c} aria-label={`색 ${c}`} aria-pressed={color === c} onClick={() => onColor(c, true)} className="relative size-[30px]">
+          <button key={c} aria-label={`Color ${c}`} aria-pressed={color === c} onClick={() => onColor(c, true)} className="relative size-[30px]">
             <svg viewBox="0 0 30 30" className="size-full overflow-visible text-pencil" aria-hidden>
               <path d={swatches[i]} fill={c} stroke="currentColor" strokeWidth={1.1} />
               {color === c && <path d={ring} fill="none" stroke="currentColor" strokeWidth={1.5} />}
@@ -210,7 +210,7 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
       <div className="flex items-center gap-[10px]">
         <div
           role="slider"
-          aria-label="색상 고르기"
+          aria-label="Hue"
           aria-valuemin={0}
           aria-valuemax={359}
           aria-valuenow={hue}
@@ -235,7 +235,7 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
             min={15}
             max={85}
             value={light}
-            aria-label="밝기"
+            aria-label="Brightness"
             onChange={(e) => {
               const l = Number(e.target.value)
               setLight(l)
@@ -244,7 +244,7 @@ function ColorPopover({ color, onColor }: { color: string; onColor: (color: stri
             className="h-[12px] w-[112px] cursor-pointer appearance-none rounded-full border border-pencil [&::-webkit-slider-thumb]:size-[14px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-[1.5px] [&::-webkit-slider-thumb]:border-pencil [&::-webkit-slider-thumb]:bg-card"
             style={{ background: `linear-gradient(to right, #1a1a1a, hsl(${hue} 55% 50%), #fff)` }}
           />
-        <button aria-label="직접 고른 색" aria-pressed={color === custom} onClick={() => onColor(custom, true)} className="relative size-[30px] shrink-0">
+        <button aria-label="Custom color" aria-pressed={color === custom} onClick={() => onColor(custom, true)} className="relative size-[30px] shrink-0">
           <svg viewBox="0 0 30 30" className="size-full overflow-visible text-pencil" aria-hidden>
             <path d={swatches[7]} fill={custom} stroke="currentColor" strokeWidth={1.1} />
             {color === custom && <path d={ring} fill="none" stroke="currentColor" strokeWidth={1.5} />}
