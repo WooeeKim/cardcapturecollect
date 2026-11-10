@@ -194,3 +194,13 @@ git push
 - 한 사람이 한 컴포넌트 파일을 맡습니다. 같은 파일을 동시에 고치면 충돌이 납니다.
 - `npm run build`가 에러로 끝나면 올리지 마세요. 다른 팀원 모두가 막힙니다.
 - `git pull --rebase` 중 "CONFLICT"가 나오면 혼자 해결하려 하지 말고 팀 채팅에 공유하세요.
+
+---
+
+## prototyping 브랜치 (Figma "prototyping" 섹션 웹 프로토타입)
+
+- 화면: 메인 마을(걷기·핀치줌·끝에서 당겨 마을 넘기기·카드 상세·Follow·Migration), Town List, Collection, Draw
+- 데이터: 이 브라우저 localStorage에만 저장 (DB 사용 안 함)
+- 아이폰에서 보기: `npm run dev -- --host` → **https**://(Network 주소):5173 접속 → 인증서 경고에서 "이 웹 사이트 방문" (위치 권한 때문에 https 필요)
+- PC 미리보기용 http: `npm run dev -- --mode http`
+- 역 이름 데이터 © OpenStreetMap contributors (ODbL), 폰트: 그리운 묘은흘림체 원본 파일
