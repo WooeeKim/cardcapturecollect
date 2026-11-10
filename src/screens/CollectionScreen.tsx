@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { BackIcon, CardView, CloseIcon, Popup, TextButton, Thumb, type PopupAction } from '../components/ui'
+import crownIcon from '../assets/proto/crown.svg'
+import { CardView, CloseIcon, Header, Popup, TextButton, Thumb, type PopupAction } from '../components/ui'
+import { toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, townOf, type Card, type State } from '../lib/store'
 
 // Figma wireframe: 콜렉션 (town strip → selected town's deck → other towns' cards) + card detail overlay.
@@ -30,7 +32,6 @@ export default function CollectionScreen({
   const [drag, setDrag] = useState<Drag | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const root = useRef<HTMLDivElement>(null)
-  const deckEl = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
 
   const town = state.towns.find((t) => t.id === townId) ?? state.towns[0]
@@ -54,8 +55,7 @@ export default function CollectionScreen({
   const press = useRef<{ id: string; from: Drag['from']; x: number; y: number; timer: number; fired: boolean } | null>(null)
 
   function local(e: React.PointerEvent) {
-    const r = root.current!.getBoundingClientRect()
-    return { x: e.clientX - r.left, y: e.clientY - r.top }
+    return toLocal(e.clientX, e.clientY, root.current!)
   }
   function onDown(e: React.PointerEvent, id: string, from: Drag['from']) {
     const p = local(e)
@@ -133,30 +133,33 @@ export default function CollectionScreen({
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
   })
 
-  return (
-    <div ref={root} className="relative flex h-full flex-col overflow-hidden bg-white font-hand">
-      {/* header */}
-      <div className="relative h-[64px] shrink-0" style={{ marginTop: 'calc(var(--top) + 4px)' }}>
-        <button aria-label="Back" onClick={onBack} className="absolute top-[6px] left-[22px] p-[6px]">
-          <BackIcon />
-        </button>
-        <h1 className="absolute inset-x-0 top-[12px] text-center text-[30px] leading-none">Collection</h1>
-        <TextButton onClick={() => setNewest(!newest)} className="absolute top-[16px] right-[22px] text-[16px]">
-          {newest ? 'Newest' : 'Oldest'}
-        </TextButton>
-      </div>
+  // Figma wireframe 콜렉션 geometry (frame px)
+  const SLOT_X = [26, 151, 275]
+  const SLOT_Y = [20.5, 137]
+  const PITCH = 82
 
-      {/* towns on one line (same look as Town List, laid sideways) */}
-      <div className="relative shrink-0 overflow-x-auto pb-[8px] [scrollbar-width:none]">
-        <div className="relative flex w-max gap-[18px] px-[20px] pt-[4px]">
-          <div className="absolute top-[12px] right-0 left-0 h-[48px] bg-bar" />
+  return (
+    <div ref={root} className="relative h-full overflow-hidden bg-white font-hand">
+      <Header
+        title="Collection"
+        onBack={onBack}
+        right={
+          <TextButton onClick={() => setNewest(!newest)} className="absolute top-[82px] right-[24px] z-20 text-[18px]">
+            {newest ? 'Newest' : 'Oldest'}
+          </TextButton>
+        }
+      />
+
+      {/* towns on one grey line, like Town List laid sideways */}
+      <div className="absolute inset-x-0 top-[117px] h-[106px] overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
+        <div className="relative h-full" style={{ width: Math.max(402, 28 + state.towns.length * PITCH + 20) }}>
+          <div className="absolute top-0 h-[79px] bg-[#ccc]" style={{ left: 63, width: Math.max(0, (state.towns.length - 1) * PITCH) }} />
           {state.towns.map((t, i) => {
-            const chief = state.cards[t.residents[0] ?? ""]
             const on = t.id === town.id
             return (
-              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} className="relative flex w-[66px] flex-col items-center">
-                <Thumb image={chief?.image} size={on ? 64 : 58} seed={11 + i} strong={on} />
-                <span className={`mt-[6px] w-full truncate text-center text-[14px] ${on ? '' : 'text-[#777]'}`}>{t.name}</span>
+              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} className="absolute top-[4px] w-[70px]" style={{ left: 28 + i * PITCH }}>
+                <Thumb image={state.cards[t.residents[0] ?? '']?.image} size={70} strong={on} />
+                <span className={`absolute top-[81px] left-1/2 w-[80px] -translate-x-1/2 truncate text-center text-[12px] leading-[normal] ${on ? '' : 'text-[#777]'}`}>{t.name}</span>
               </button>
             )
           })}
@@ -164,30 +167,30 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <div data-deck className="relative shrink-0 bg-[#dcdcdc] pb-[10px]" ref={deckEl}>
+      <div data-deck className="absolute inset-x-0 top-[228px] h-[260px] bg-[#d9d9d9]">
         <div
-          className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none]"
+          className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
           onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
         >
           {Array.from({ length: pages }, (_, p) => (
-            <div key={p} className="grid w-full shrink-0 snap-start grid-cols-3 gap-x-[22px] gap-y-[20px] px-[30px] pt-[26px]">
+            <div key={p} className="relative h-full w-[402px] shrink-0 snap-start">
               {Array.from({ length: PER_PAGE }, (_, k) => {
                 const at = p * PER_PAGE + k
-                if (at >= MAX_RESIDENTS) return <span key={k} />
+                if (at >= MAX_RESIDENTS) return null
                 const c = deck[at]
                 return (
-                  <div key={k} data-slot={Math.min(at, deck.length)} className="relative aspect-square">
-                    {at === 0 && c && <Crown />}
+                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute size-[100px]" style={{ left: SLOT_X[k % 3], top: SLOT_Y[Math.floor(k / 3)] }}>
+                    {at === 0 && c && <img src={crownIcon} alt="Chief" className="absolute -top-[20.5px] left-[36px] h-[22px] w-[26.4px]" />}
                     {c ? (
                       <button
                         aria-label={`${c.nickname || 'Card'}${at === 0 ? ', chief' : ''}`}
                         {...cardProps(c, 'deck')}
-                        className={`size-full touch-pan-x border-[3px] border-black bg-white p-[3px] ${drag?.id === c.id ? 'opacity-30' : ''}`}
+                        className={`size-full touch-pan-x border-[5px] border-black bg-white p-[4px] ${drag?.id === c.id ? 'opacity-30' : ''}`}
                       >
                         <img src={c.image} alt="" draggable={false} className="pointer-events-none size-full object-contain" />
                       </button>
                     ) : (
-                      <span className="block size-full border-[2px] border-dashed border-[#aaa]" />
+                      <span className="block size-full border-[3px] border-dashed border-[#a5a5a5]" />
                     )}
                   </div>
                 )
@@ -195,25 +198,23 @@ export default function CollectionScreen({
             </div>
           ))}
         </div>
-        <div className="mt-[12px] flex justify-center gap-[6px]">
-          {Array.from({ length: pages }, (_, p) => (
-            <span key={p} className={`size-[7px] rounded-full ${p === page ? 'bg-[#666]' : 'bg-[#aaa]'}`} />
-          ))}
-        </div>
+        {Array.from({ length: pages }, (_, p) => (
+          <span key={p} className={`absolute top-[243px] size-[10px] rounded-full ${p === page ? 'bg-[#5f5f5f]' : 'bg-[#b3b3b3]'}`} style={{ left: 188 + p * 15.7 }} />
+        ))}
       </div>
 
       {/* everyone else (only this part scrolls) */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-[30px] pt-[20px] pb-[40px]">
+      <div className="absolute inset-x-0 top-[488px] bottom-0 overflow-y-auto [scrollbar-width:none]">
         {rest.length === 0 ? (
-          <p className="pt-[30px] text-center text-[17px] text-[#8e8e8e]">Cards in other towns show up here.</p>
+          <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">Cards in other towns show up here.</p>
         ) : (
-          <div className="grid grid-cols-3 gap-x-[22px] gap-y-[20px]">
+          <div className="grid grid-cols-[repeat(3,100px)] gap-x-[25px] gap-y-[16.6px] pt-[22px] pb-[60px] pl-[23.3px]">
             {rest.map((c) => (
               <button
                 key={c.id}
                 aria-label={c.nickname || 'Card'}
                 {...cardProps(c, 'rest')}
-                className={`aspect-square border-[3px] border-[#b5b5b5] bg-white p-[3px] ${drag?.id === c.id ? 'opacity-30' : ''}`}
+                className={`size-[100px] border-[5px] border-[#b3b3b3] bg-white p-[4px] ${drag?.id === c.id ? 'opacity-30' : ''}`}
               >
                 <img src={c.image} alt="" draggable={false} className="pointer-events-none size-full object-contain" />
               </button>
@@ -225,7 +226,7 @@ export default function CollectionScreen({
       {/* card following the finger */}
       {drag && (
         <div
-          className="pointer-events-none absolute z-40 size-[96px] -translate-x-1/2 -translate-y-1/2 rotate-[-6deg] border-[3px] border-black bg-white p-[3px] shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
+          className="pointer-events-none absolute z-40 size-[100px] -translate-x-1/2 -translate-y-1/2 rotate-[-6deg] border-[5px] border-black bg-white p-[4px] shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
           style={{ left: drag.x, top: drag.y }}
         >
           <img src={state.cards[drag.id]?.image} alt="" className="size-full object-contain" />
@@ -247,14 +248,6 @@ export default function CollectionScreen({
   )
 }
 
-function Crown() {
-  return (
-    <svg viewBox="0 0 40 26" className="absolute -top-[20px] left-1/2 z-10 w-[34px] -translate-x-1/2" aria-label="Chief">
-      <path d="M3 24 L3 6 L12 15 L20 2 L28 15 L37 6 L37 24 Z" fill="#000" stroke="#000" strokeWidth={2} strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 // card overlay: tap the drawing to hide the card text, drag to tilt it around
 function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; townName: string; onClose: () => void; onMigrate: () => void; onDelete: () => void }) {
   const [plain, setPlain] = useState(false)
@@ -263,14 +256,12 @@ function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; 
   const [held, setHeld] = useState(false)
 
   return (
-    <div className="animate-fade-in absolute inset-0 z-30 flex flex-col bg-black/55 px-[34px] text-white">
-      <div className="flex items-center justify-between" style={{ marginTop: 'calc(var(--top) + 60px)' }}>
-        <p className="text-[20px]">{townName}</p>
-        <button aria-label="Close" onClick={onClose} className="p-[6px]">
-          <CloseIcon size={18} />
-        </button>
-      </div>
-      <div className="mt-[10px] [perspective:700px]">
+    <div className="animate-fade-in absolute inset-0 z-30 bg-black/55 text-white">
+      <p className="absolute top-[180px] left-[40px] text-[18px] leading-[normal]">{townName}</p>
+      <button aria-label="Close" onClick={onClose} className="absolute top-[172px] left-[338px] p-[8px]">
+        <CloseIcon size={16} />
+      </button>
+      <div className="absolute top-[208px] left-[32px] w-[338px] [perspective:700px]">
         <div
           className="animate-pop-in touch-none"
           style={{
@@ -307,10 +298,8 @@ function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; 
           <CardView card={card} plain={plain} />
         </div>
       </div>
-      <div className="mt-[22px] flex justify-between text-[20px]">
-        <TextButton onClick={onMigrate}>Migration</TextButton>
-        <TextButton onClick={onDelete}>Delete</TextButton>
-      </div>
+      <TextButton onClick={onMigrate} className="absolute top-[713px] left-[40px] text-[19.5px]" light>Migration</TextButton>
+      <TextButton onClick={onDelete} className="absolute top-[713px] right-[40px] text-[19.5px]" light>Delete</TextButton>
     </div>
   )
 }

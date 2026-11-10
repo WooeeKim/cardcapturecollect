@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
 import FigureGuide from './FigureGuide'
+import { toLocal } from '../lib/frame'
 
 export type Tool = 'pen' | 'highlighter' | 'eraser'
 
@@ -108,8 +109,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
 
     // 트랙패드 핀치(ctrl+휠)·ctrl+휠 = 확대, 확대 중 일반 휠 = 이동. 페이지 확대를 막으려고 passive: false 로 단다.
     const onWheel = (e: WheelEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      const at = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      const at = toLocal(e.clientX, e.clientY, canvas)
       if (e.ctrlKey) {
         e.preventDefault()
         zoomAround(view.current, view.current.s * Math.exp(-e.deltaY * 0.01), at, at)
@@ -161,8 +161,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   }))
 
   function screenPoint(e: React.PointerEvent<HTMLCanvasElement>): Point {
-    const rect = e.currentTarget.getBoundingClientRect()
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+    return toLocal(e.clientX, e.clientY, e.currentTarget)
   }
 
   function toPoint(e: React.PointerEvent<HTMLCanvasElement>): Point {
@@ -180,7 +179,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   return (
     <div className="relative size-full overflow-hidden">
       <div ref={guideRef} className={`pointer-events-none absolute top-0 left-0 size-full ${guide ? '' : 'hidden'}`}>
-        <div className="absolute inset-[6%_0]">
+        <div className="absolute inset-[9.2%_0]">
           <FigureGuide />
         </div>
       </div>

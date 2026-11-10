@@ -1,0 +1,30 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="28.1191" height="24.4168" viewBox="0 0 28.1191 24.4168" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="Group 69">
+<g id="Vector 186">
+<use xlink:href="#stroke0_0_6" fill="black"/>
+<use xlink:href="#stroke0_0_6" fill="black"/>
+<path d="M14.5221 23.9168V1.86603L27.2531 23.9168H14.5221Z" stroke="black"/>
+</g>
+<g id="Vector 189">
+<use xlink:href="#stroke1_0_6" fill="black"/>
+<use xlink:href="#stroke1_0_6" fill="black"/>
+<path d="M13.597 23.9168V1.86603L0.866025 23.9168H13.597Z" stroke="black"/>
+</g>
+<g id="Vector 187">
+<use xlink:href="#stroke2_0_6" fill="black"/>
+<use xlink:href="#stroke2_0_6" fill="black"/>
+<path d="M0.866032 23.9168V1.86603L13.5971 23.9168H0.866032Z" stroke="black"/>
+</g>
+<g id="Vector 188">
+<use xlink:href="#stroke3_0_6" fill="black"/>
+<use xlink:href="#stroke3_0_6" fill="black"/>
+<path d="M27.2531 23.9168V1.86603L14.5221 23.9168H27.2531Z" stroke="black"/>
+</g>
+</g>
+<defs>
+<path id="stroke0_0_6" d="M14.5221 1.86603V23.9168H27.2531L14.5221 1.86603Z"/>
+<path id="stroke1_0_6" d="M13.597 1.86603V23.9168H0.866025L13.597 1.86603Z"/>
+<path id="stroke2_0_6" d="M0.866032 1.86603V23.9168H13.5971L0.866032 1.86603Z"/>
+<path id="stroke3_0_6" d="M27.2531 1.86603V23.9168H14.5221L27.2531 1.86603Z"/>
+</defs>
+</svg>

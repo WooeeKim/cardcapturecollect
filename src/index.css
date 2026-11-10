@@ -17,28 +17,9 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* App = phone screen. On wide screens, a 402×874 frame (Figma size) in the middle. */
+/* PC preview: always the Figma frame (402×874), scaled down to fit the window (see main.tsx). */
 :root {
-  --app-w: 100vw;
-  --app-h: 100dvh;
-  --top: calc(env(safe-area-inset-top) + 14px);
-}
-
-@media (min-width: 600px) {
-  :root {
-    --app-w: min(402px, 100dvh * 402 / 874);
-    --app-h: min(874px, 100dvh);
-    --top: 48px;
-  }
-  body {
-    display: grid;
-    place-items: center;
-    background: #9a9a9a;
-  }
-  #root {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-    border-radius: 40px;
-  }
+  --k: 1;
 }
 
 html,
@@ -48,7 +29,10 @@ body {
 
 body {
   margin: 0;
-  background: var(--color-paper);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #9a9a9a;
   color: var(--color-ink);
   font-family: var(--font-hand);
   overscroll-behavior: none;
@@ -60,12 +44,15 @@ body {
 
 #root {
   position: relative;
-  width: var(--app-w);
-  height: var(--app-h);
-  margin: 0 auto;
+  flex: none;
+  width: 402px;
+  height: 874px;
   overflow: clip;
+  border-radius: 62px;
   background: var(--color-paper);
-  transform: translateZ(0);
+  /* keeps position: fixed children inside the frame too */
+  transform: scale(var(--k));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 }
 
 button {

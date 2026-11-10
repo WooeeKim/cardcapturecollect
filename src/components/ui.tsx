@@ -1,5 +1,12 @@
-import { useMemo, type ReactNode } from 'react'
-import { wobblyCircle } from '../lib/sketch'
+import xIcon from '../assets/proto/x.svg'
+import handleIcon from '../assets/proto/handle.svg'
+import goBox from '../assets/proto/gobox.svg'
+import backIcon from '../assets/proto/back.svg'
+import plusIcon from '../assets/proto/plus.svg'
+import underlineSvg from '../assets/proto/underline.svg'
+import wifiIcon from '../assets/proto/wifi.svg'
+import batteryIcon from '../assets/proto/battery.svg'
+import { type ReactNode } from 'react'
 import { moodOf } from '../lib/moods'
 import type { Card } from '../lib/store'
 
@@ -7,20 +14,6 @@ import type { Card } from '../lib/store'
 
 const icon = 'fill-none stroke-current stroke-[2.2] [stroke-linecap:round] [stroke-linejoin:round]'
 
-export function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className={`size-[30px] ${icon}`} aria-hidden>
-      <path d="M15 3 L6 12 L15 21" />
-    </svg>
-  )
-}
-export function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className={`size-[30px] ${icon}`} aria-hidden>
-      <path d="M12 2 V22 M2 12 H22" />
-    </svg>
-  )
-}
 export function CloseIcon({ size = 20 }: { size?: number }) {
   return (
     <svg viewBox="0 0 24 24" style={{ width: size, height: size }} className={icon} aria-hidden>
@@ -29,10 +22,17 @@ export function CloseIcon({ size = 20 }: { size?: number }) {
   )
 }
 export function HandleIcon() {
+  return <img src={handleIcon} alt="" className="h-[8.3px] w-[16.1px]" />
+}
+export function XIcon() {
+  return <img src={xIcon} alt="" className="h-[16.8px] w-[14.3px]" />
+}
+export function GoTag() {
   return (
-    <svg viewBox="0 0 24 24" className={`size-[22px] ${icon}`} aria-hidden>
-      <path d="M4 9 H20 M4 15 H20" />
-    </svg>
+    <span className="relative block h-[37px] w-[54px]">
+      <img src={goBox} alt="" className="absolute inset-0 size-full" />
+      <span className="absolute top-[3px] left-[13px] font-hand text-[25px] leading-[normal]">Go</span>
+    </span>
   )
 }
 export function CheckIcon() {
@@ -43,11 +43,33 @@ export function CheckIcon() {
   )
 }
 
-// Underlined text button (Figma: "Edit", "Done", "Got it!" …)
-export function TextButton({ children, onClick, dim = false, className = '' }: { children: ReactNode; onClick: () => void; dim?: boolean; className?: string }) {
+// Underlined text button (Figma: "Edit", "Done", "Got it!" … hand-drawn underline)
+export function TextButton({ children, onClick, dim = false, light = false, className = '', style }: { children: ReactNode; onClick: () => void; dim?: boolean; light?: boolean; className?: string; style?: React.CSSProperties }) {
   return (
-    <button onClick={onClick} className={`font-hand underline decoration-[1.5px] underline-offset-[5px] ${dim ? 'text-[#777]' : ''} ${className}`}>
+    <button onClick={onClick} className={`${className.includes('absolute') ? '' : 'relative'} font-hand leading-[normal] ${dim ? 'text-[#646464]' : ''} ${className}`} style={style}>
       {children}
+      <img src={underlineSvg} alt="" className={`absolute inset-x-[-3px] -bottom-[2px] h-[3px] w-[calc(100%+6px)] max-w-none ${dim ? 'opacity-60' : ''} ${light ? 'invert' : ''}`} />
+    </button>
+  )
+}
+
+// Figma header (townList): back chevron · title · optional right control
+export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
+  return (
+    <>
+      <button aria-label="Back" onClick={onBack} className="absolute top-[72px] left-[17px] z-20 p-[10px]">
+        <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
+      </button>
+      <h1 className="pointer-events-none absolute inset-x-0 top-[77px] z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black]">{title}</h1>
+      {right}
+    </>
+  )
+}
+
+export function PlusButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button aria-label={label} onClick={onClick} className="absolute top-[72px] left-[344px] z-20 p-[10px]">
+      <img src={plusIcon} alt="" className="h-[23.8px] w-[26.8px]" />
     </button>
   )
 }
@@ -75,22 +97,21 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
 
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
-export function Thumb({ image, size = 70, seed = 1, strong = false, grey = false }: { image?: string; size?: number; seed?: number; strong?: boolean; grey?: boolean }) {
-  const ring = useMemo(() => wobblyCircle(50, 50, 45, seed, 0.06), [seed])
+export function Thumb({ image, size = 70, strong = false, grey = false }: { image?: string; size?: number; strong?: boolean; grey?: boolean }) {
+  // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body
+  const ring = strong ? 8.5 : 9
   return (
-    <span className="relative block shrink-0" style={{ width: size, height: size }}>
-      <span className="absolute inset-[8%] overflow-hidden rounded-full bg-white">
-        {image ? (
-          <img src={image} alt="" className={`size-full object-cover object-top ${grey ? 'grayscale' : ''}`} />
-        ) : (
-          <span className="flex size-full items-center justify-center font-hand text-[34px]" style={{ fontSize: size * 0.5 }}>
-            ?
-          </span>
-        )}
-      </span>
-      <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
-        <path d={ring} fill="none" stroke={strong ? '#5a5a5a' : '#c8c8c8'} strokeWidth={strong ? 9 : 8} strokeLinecap="round" />
-      </svg>
+    <span
+      className="relative block shrink-0 overflow-hidden rounded-full bg-white"
+      style={{ width: size, height: size, border: `${ring}px solid ${strong ? '#686868' : '#ccc'}` }}
+    >
+      {image ? (
+        <img src={image} alt="" className={`absolute top-[10%] left-[-8%] w-[116%] max-w-none ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
+      ) : (
+        <span className="flex size-full items-center justify-center font-hand leading-none" style={{ fontSize: size * 0.55 }}>
+          ?
+        </span>
+      )}
     </span>
   )
 }
@@ -143,5 +164,30 @@ function ChipCq({ mood }: { mood: string }) {
     <span className="block rounded-full px-[3.3cqw] py-[1.8cqw] text-[5.8cqw] leading-[1.1]" style={{ background: m.color, color: m.ink }}>
       {mood}
     </span>
+  )
+}
+
+// ---------- phone chrome from the Figma frames: status bar, home indicator, black bezel ----------
+
+
+export function PhoneChrome() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[100]">
+      <div className="absolute inset-x-0 top-0 flex h-[62px] items-center pt-[3px]">
+        <p className="flex-1 pl-[10px] text-center font-[system-ui] text-[17.67px] leading-[22px] font-semibold">9:41</p>
+        <span className="h-[37px] w-[125px] rounded-full bg-black" />
+        <div className="flex flex-1 items-center justify-center gap-[8px] pr-[10px]">
+          <span className="flex items-end gap-[2.33px] pt-[1.3px]">
+            {[6.33, 8.67, 11, 13.67].map((h) => (
+              <span key={h} className="w-[3.33px] rounded-[4px] bg-black" style={{ height: h }} />
+            ))}
+          </span>
+          <img src={wifiIcon} alt="" className="h-[14.33px] w-[19.33px]" />
+          <img src={batteryIcon} alt="" className="h-[13.67px] w-[29.33px]" />
+        </div>
+      </div>
+      <span className="absolute top-[861px] left-[129px] h-[5px] w-[144px] rounded-full bg-[#1a1a1a]" />
+      <span className="absolute inset-0 rounded-[62px] border-[13px] border-black" />
+    </div>
   )
 }

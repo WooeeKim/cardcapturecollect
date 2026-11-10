@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Popup } from './components/ui'
+import { PhoneChrome, Popup } from './components/ui'
 import { load, makePending, placeCard, save, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
@@ -149,6 +149,7 @@ export default function App() {
   return (
     <>
       {screen}
+      <PhoneChrome />
       {error && <Popup message={error} actions={[{ label: 'Got it!', onClick: () => setError('') }]} />}
     </>
   )

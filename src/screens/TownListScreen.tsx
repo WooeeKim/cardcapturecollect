@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { BackIcon, CardView, CloseIcon, HandleIcon, PlusIcon, Popup, TextButton, Thumb, type PopupAction } from '../components/ui'
+import { CardView, GoTag, HandleIcon, Header, PlusButton, Popup, TextButton, Thumb, XIcon, type PopupAction } from '../components/ui'
+import { frameScale } from '../lib/frame'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
 
 // Figma prototyping: townList · townList-detail · townList for migration · 마을 추가
@@ -9,6 +10,7 @@ import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, 
 export type ListMode = 'browse' | 'migrate' | 'send'
 
 const ROW = 124
+const OPEN_EXTRA = 100 // open row is 224 tall
 
 export default function TownListScreen({
   state,
@@ -41,6 +43,8 @@ export default function TownListScreen({
   const cardEl = useRef<HTMLDivElement>(null)
   const listEl = useRef<HTMLDivElement>(null)
 
+  const openIndex = state.towns.findIndex((t) => t.id === openId)
+  const chiefImage = (t: Town) => state.cards[t.residents[0] ?? '']?.image
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
   const open = state.towns.find((t) => t.id === openId)
   const dirty = !!open && editing && (draft.name !== open.name || draft.bio !== open.bio)
@@ -111,9 +115,10 @@ export default function TownListScreen({
     if (mode === 'migrate' && t.id === homeId) return gotIt('This card already lives here.')
     if (t.residents.length >= MAX_RESIDENTS) return gotIt('This town is full.')
     const from = cardEl.current?.getBoundingClientRect()
-    const to = thumbs.current.get(t.id)?.getBoundingClientRect()
+    const to = thumbs.current.get(t.id)?.querySelector('[data-thumb]')?.getBoundingClientRect()
     if (!from || !to) return onPlace(t.id)
-    setFlying({ x: to.left + to.width / 2 - (from.left + from.width / 2), y: to.top + to.height / 2 - (from.top + from.height / 2) })
+    const k = frameScale()
+    setFlying({ x: (to.left + to.width / 2 - (from.left + from.width / 2)) / k, y: (to.top + to.height / 2 - (from.top + from.height / 2)) / k })
     setTimeout(() => onPlace(t.id), 650)
   }
 
@@ -123,13 +128,13 @@ export default function TownListScreen({
     e.currentTarget.setPointerCapture(e.pointerId)
     setOpenId(null)
     setEditing(false)
-    dragStart.current = e.clientY
+    dragStart.current = e.clientY / frameScale()
     setDragIdx(i)
     setDragDy(0)
   }
   function onHandleMove(e: React.PointerEvent) {
     if (dragIdx === null) return
-    let dy = e.clientY - dragStart.current
+    let dy = e.clientY / frameScale() - dragStart.current
     const steps = Math.trunc(dy / ROW + Math.sign(dy) * 0.5)
     const to = Math.max(0, Math.min(state.towns.length - 1, dragIdx + steps))
     if (to !== dragIdx) {
@@ -147,68 +152,121 @@ export default function TownListScreen({
 
   const action = mode === 'migrate' ? 'Migration' : mode === 'send' ? 'Send' : null
 
+  // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
+  const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
+  const listHeight = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0) + 120
+
+  const detail = (t: Town | null) => {
+    const isNew = !t
+    const editable = isNew || editing
+    return (
+      <>
+        <div className="absolute top-[5px] left-[80px] h-[178px] w-[307px] rounded-[12px] bg-[#ededed]" />
+        {editable ? (
+          <input
+            autoFocus
+            value={draft.name}
+            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            maxLength={20}
+            placeholder={isNew ? `New Town ${state.towns.length + 1}` : ''}
+            aria-label="Town name"
+            className="absolute top-[14px] left-[127px] w-[210px] bg-transparent text-[24px] leading-[normal] outline-none placeholder:text-[#5f5f5f]"
+          />
+        ) : (
+          <p className="absolute top-[18px] left-[127px] w-[215px] truncate text-[24px] leading-[normal]">{t!.name}</p>
+        )}
+        <button aria-label="Close" onClick={isNew ? () => setAdding(null) : close} className="absolute top-[20px] left-[347px] p-[8px]">
+          <XIcon />
+        </button>
+        <p className="absolute top-[50px] left-[133px] text-[11px] leading-[normal] text-[#8a8a8a]">
+          Residents {t ? t.residents.length : 0}/{MAX_RESIDENTS}
+        </p>
+        {editable ? (
+          <textarea
+            value={draft.bio}
+            onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
+            maxLength={100}
+            rows={3}
+            placeholder="Write your town biography."
+            aria-label="Town biography"
+            className="absolute top-[74px] left-[133px] w-[230px] resize-none bg-transparent text-[12px] leading-[normal] outline-none placeholder:text-black"
+          />
+        ) : (
+          <p className="absolute top-[76px] left-[133px] line-clamp-3 w-[230px] text-[12px] leading-[normal] break-words">{t!.bio}</p>
+        )}
+        <p className="absolute top-[120px] left-[133px] text-[9px] leading-[normal]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
+        {isNew ? (
+          <>
+            <TextButton dim onClick={() => setAdding(null)} className="absolute top-[142px] left-[136px] text-[19.5px]">Discard</TextButton>
+            <TextButton onClick={create} className="absolute top-[142px] right-[38px] text-[19.5px]">Create</TextButton>
+          </>
+        ) : editing ? (
+          <>
+            <TextButton dim onClick={() => askDelete(t!)} className="absolute top-[142px] left-[136px] text-[19.5px]">Delete</TextButton>
+            <TextButton onClick={save} className="absolute top-[142px] right-[38px] text-[19.5px]">Done</TextButton>
+          </>
+        ) : action ? (
+          <TextButton onClick={() => place(t!)} className="absolute top-[142px] right-[38px] text-[19.5px]">{action}</TextButton>
+        ) : (
+          <TextButton
+            onClick={() => {
+              setDraft({ name: t!.name, bio: t!.bio })
+              setEditing(true)
+            }}
+            className="absolute top-[142px] right-[38px] text-[19.5px]"
+          >
+            Edit
+          </TextButton>
+        )}
+        {t && !editing && mode === 'browse' && (
+          <button aria-label={`Go to ${t.name}`} onClick={() => onGo(t.id)} className="absolute top-[74px] left-[43px]">
+            <GoTag />
+          </button>
+        )}
+        <span data-thumb className="pointer-events-none absolute top-[1px] left-[24px]">
+          <Thumb image={t ? chiefImage(t) : undefined} size={84} strong />
+        </span>
+      </>
+    )
+  }
+
   return (
     <div className="relative h-full overflow-hidden bg-white font-hand">
-      {/* header */}
-      <button aria-label="Back" onClick={() => (dirty ? askSave(onBack) : onBack())} className="absolute left-[22px] z-20 p-[6px]" style={{ top: 'calc(var(--top) + 10px)' }}>
-        <BackIcon />
-      </button>
-      <h1 className="absolute inset-x-0 z-20 text-center text-[30px] leading-none" style={{ top: 'calc(var(--top) + 16px)' }}>
-        Town List
-      </h1>
-      <button aria-label="Add town" onClick={startAdd} className="absolute right-[22px] z-20 p-[6px]" style={{ top: 'calc(var(--top) + 10px)' }}>
-        <PlusIcon />
-      </button>
+      <Header title="Town List" onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label="Add town" onClick={startAdd} />} />
+      <div className="absolute inset-x-0 top-0 z-10 h-[149px] bg-white" />
 
-      <div ref={listEl} className="absolute inset-x-0 bottom-0 overflow-y-auto" style={{ top: 'calc(var(--top) + 70px)' }}>
-        <div className="relative min-h-full pt-[60px] pb-[200px]">
+      <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
+        <div className="relative min-h-full" style={{ height: listHeight }}>
           {/* the grey line every town hangs on */}
-          <div className="absolute top-[95px] bottom-0 left-[27px] w-[79px] bg-bar" />
+          <div className="absolute top-[79px] bottom-0 left-[27px] w-[79px] bg-[#ccc]" />
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id
-            const chief = state.cards[t.residents[0] ?? ""]
-            const dimmed = (openId && !isOpen) || !!adding
+            const dimmed = (!!openId && !isOpen) || !!adding
             const lifted = dragIdx === i
             return (
               <div
                 key={t.id}
-                className={`relative flex ${isOpen ? 'items-start' : 'items-center'} ${lifted ? 'z-10' : 'transition-transform duration-200'}`}
-                style={{ minHeight: ROW, transform: lifted ? `translateY(${dragDy}px)` : undefined }}
+                className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-200'}`}
+                style={{ top: rowTop(i) + (lifted ? dragDy : 0), height: isOpen ? ROW + OPEN_EXTRA : ROW }}
+                ref={(el) => {
+                  if (el) thumbs.current.set(t.id, el)
+                  else thumbs.current.delete(t.id)
+                }}
               >
-                {isOpen && <div className="absolute top-[22px] right-[9px] bottom-[18px] left-[95px] rounded-[12px] bg-[#ececec]" />}
-                <button
-                  aria-label={`${t.name} details`}
-                  onClick={() => toggle(t)}
-                  className="relative shrink-0"
-                  style={{ marginLeft: isOpen ? 24 : 31, marginTop: isOpen ? 22 : 0 }}
-                  ref={(el) => {
-                    if (el) thumbs.current.set(t.id, el)
-                    else thumbs.current.delete(t.id)
-                  }}
-                >
-                  <Thumb image={chief?.image} size={isOpen ? 84 : 70} seed={11 + i} strong={isOpen} grey={!!dimmed} />
-                  {isOpen && !editing && mode === 'browse' && (
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onGo(t.id)
-                      }}
-                      className="absolute -bottom-[18px] left-1/2 -translate-x-1/2 rounded-[4px] border-[2.5px] border-[#5a5a5a] bg-white px-[8px] text-[22px] leading-[1.25]"
-                    >
-                      Go
-                    </span>
-                  )}
-                </button>
-
-                {!isOpen ? (
+                {isOpen ? (
+                  detail(t)
+                ) : (
                   <>
-                    <button onClick={() => toggle(t)} className="relative ml-[23px] flex-1 truncate text-left text-[22px]">
+                    <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
+                      <Thumb image={chiefImage(t)} size={70} grey={dimmed} />
+                    </button>
+                    <button onClick={() => toggle(t)} className="absolute top-[26px] left-[124px] max-w-[220px] truncate text-left text-[20px] leading-[normal]">
                       {t.name}
                     </button>
                     <span
                       aria-label="Reorder"
-                      className="relative mr-[26px] touch-none p-[8px]"
+                      className="absolute top-[31px] left-[352px] touch-none p-[10px]"
                       onPointerDown={(e) => onHandleDown(e, i)}
                       onPointerMove={onHandleMove}
                       onPointerUp={onHandleUp}
@@ -217,108 +275,14 @@ export default function TownListScreen({
                       <HandleIcon />
                     </span>
                   </>
-                ) : (
-                  <div className="relative mt-[30px] mr-[20px] mb-[26px] ml-[18px] flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-start gap-[8px]">
-                      {editing ? (
-                        <input
-                          autoFocus
-                          value={draft.name}
-                          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                          maxLength={20}
-                          aria-label="Town name"
-                          className="min-w-0 flex-1 border-b border-black/30 bg-transparent text-[26px] leading-[1.1] outline-none"
-                        />
-                      ) : (
-                        <p className="min-w-0 flex-1 truncate text-[26px] leading-[1.1]">{t.name}</p>
-                      )}
-                      <button aria-label="Close" onClick={close} className="p-[4px]">
-                        <CloseIcon />
-                      </button>
-                    </div>
-                    <p className="mt-[2px] text-[12px] text-[#9a9a9a]">
-                      Residents {t.residents.length}/{MAX_RESIDENTS}
-                    </p>
-                    {editing ? (
-                      <textarea
-                        value={draft.bio}
-                        onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
-                        maxLength={120}
-                        rows={2}
-                        placeholder="Write your town biography."
-                        aria-label="Town biography"
-                        className="mt-[10px] resize-none border-b border-black/30 bg-transparent text-[15px] leading-[1.3] outline-none"
-                      />
-                    ) : (
-                      t.bio && <p className="mt-[10px] text-[15px] leading-[1.3] break-words">{t.bio}</p>
-                    )}
-                    <p className="mt-[8px] text-[11px]">since {dotDate(t.createdAt)}</p>
-                    <div className="mt-[10px] flex justify-between text-[17px]">
-                      {editing ? (
-                        <>
-                          <TextButton dim onClick={() => askDelete(t)}>Delete</TextButton>
-                          <TextButton onClick={save}>Done</TextButton>
-                        </>
-                      ) : action ? (
-                        <TextButton onClick={() => place(t)} className="ml-auto">
-                          {action}
-                        </TextButton>
-                      ) : (
-                        <TextButton
-                          onClick={() => {
-                            setDraft({ name: t.name, bio: t.bio })
-                            setEditing(true)
-                          }}
-                          className="ml-auto"
-                        >
-                          Edit
-                        </TextButton>
-                      )}
-                    </div>
-                  </div>
                 )}
               </div>
             )
           })}
 
-          {/* new town being written */}
           {adding && (
-            <div className="relative flex items-start" style={{ minHeight: ROW }}>
-              <div className="absolute top-[22px] right-[9px] bottom-[18px] left-[95px] rounded-[12px] bg-[#ececec]" />
-              <span className="relative" style={{ marginLeft: 24, marginTop: 22 }}>
-                <Thumb size={84} seed={99} strong />
-              </span>
-              <div className="relative mt-[30px] mr-[20px] mb-[26px] ml-[18px] flex min-w-0 flex-1 flex-col">
-                <div className="flex items-start gap-[8px]">
-                  <input
-                    autoFocus
-                    value={draft.name}
-                    onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                    maxLength={20}
-                    placeholder={`New Town ${state.towns.length + 1}`}
-                    aria-label="Town name"
-                    className="min-w-0 flex-1 border-b border-black/30 bg-transparent text-[26px] leading-[1.1] outline-none placeholder:text-[#9a9a9a]"
-                  />
-                  <button aria-label="Close" onClick={() => setAdding(null)} className="p-[4px]">
-                    <CloseIcon />
-                  </button>
-                </div>
-                <p className="mt-[2px] text-[12px] text-[#9a9a9a]">Residents 0/{MAX_RESIDENTS}</p>
-                <textarea
-                  value={draft.bio}
-                  onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
-                  maxLength={120}
-                  rows={2}
-                  placeholder="Write your town biography."
-                  aria-label="Town biography"
-                  className="mt-[10px] resize-none border-b border-black/30 bg-transparent text-[15px] leading-[1.3] outline-none"
-                />
-                <p className="mt-[8px] text-[11px]">since {dotDate(adding.createdAt)}</p>
-                <div className="mt-[10px] flex justify-between text-[17px]">
-                  <TextButton dim onClick={() => setAdding(null)}>Discard</TextButton>
-                  <TextButton onClick={create}>Create</TextButton>
-                </div>
-              </div>
+            <div className="absolute inset-x-0" style={{ top: rowTop(state.towns.length), height: ROW + OPEN_EXTRA }}>
+              {detail(null)}
             </div>
           )}
         </div>
@@ -328,7 +292,7 @@ export default function TownListScreen({
       {card && (
         <div
           ref={cardEl}
-          className="pointer-events-none absolute right-[14px] bottom-[34px] z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
+          className="pointer-events-none absolute top-[676px] left-[290px] z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
           style={{
             transform: flying ? `translate(${flying.x}px, ${flying.y}px) scale(0.15) rotate(0deg)` : 'rotate(6deg)',
             opacity: flying ? 0.2 : 1,

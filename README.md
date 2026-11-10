@@ -201,6 +201,6 @@ git push
 
 - 화면: 메인 마을(걷기·핀치줌·끝에서 당겨 마을 넘기기·카드 상세·Follow·Migration), Town List, Collection, Draw
 - 데이터: 이 브라우저 localStorage에만 저장 (DB 사용 안 함)
-- 아이폰에서 보기: `npm run dev -- --host` → **https**://(Network 주소):5173 접속 → 인증서 경고에서 "이 웹 사이트 방문" (위치 권한 때문에 https 필요)
-- PC 미리보기용 http: `npm run dev -- --mode http`
+- PC 미리보기: `npm run dev -- --mode http` → http://localhost:5173 (Figma 프레임 402×874 그대로, 창이 작으면 통째로 축소)
+- https가 필요하면(위치 권한): `npm run dev` → 인증서 경고에서 계속 진행
 - 역 이름 데이터 © OpenStreetMap contributors (ODbL), 폰트: 그리운 묘은흘림체 원본 파일
