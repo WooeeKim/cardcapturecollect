@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
 import backIcon from '../assets/proto/back.svg'
-import { CardView, CheckIcon, Popup, TextButton, type PopupAction } from '../components/ui'
+import { CardView, Popup, TextButton, type PopupAction } from '../components/ui'
+import { CheckMark, ColorIcon, EraserIcon, HighlighterIcon, PenIcon, RedoIcon, SizeBubble, TabUnderline, ToggleIcon, UndoIcon } from '../components/drawIcons'
 import { MOODS } from '../lib/moods'
 import { locatePlace } from '../lib/place'
-import { wobblyCircle, wobblyLine, wobblyPoly } from '../lib/sketch'
 import type { Card } from '../lib/store'
 
 // Figma wireframe 그리기: Draw | Write tabs, guide toggle, pencil · highlighter · eraser, undo/redo, color.
@@ -29,7 +29,6 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const [preview, setPreview] = useState<string | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const typedPlace = useRef(false)
-  const art = useMemo(drawArt, [])
 
   useEffect(() => {
     locatePlace().then((p) => {
@@ -67,9 +66,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
   // Figma wireframe 그리기 geometry (frame px)
   const TOOLS = {
-    pen: { left: 32, top: 793, w: 38, h: 150, box: '17 4 26 138' },
-    highlighter: { left: 86, top: 797, w: 46, h: 127, box: '13 13 34 129' },
-    eraser: { left: 155, top: 801, w: 67, h: 98, box: '2 48 56 94' },
+    pen: { left: 32, top: 793, w: 40, h: 152 },
+    highlighter: { left: 86, top: 797, w: 48, h: 128 },
+    eraser: { left: 155, top: 801, w: 69, h: 100 },
   } as const
   const LIFT = 46
 
@@ -89,14 +88,16 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         >
           {t === 'draw' ? 'Draw' : 'Write'}
           {tab === t && (
-            <svg viewBox="0 0 78 4" className="absolute top-[30px] left-1/2 h-[4px] w-[70px] -translate-x-1/2 overflow-visible" preserveAspectRatio="none" aria-hidden>
-              <path d={art.underline} transform="translate(9 2)" fill="none" stroke="#000" strokeWidth={1.6} strokeLinecap="round" />
-            </svg>
+            <span className="absolute top-[30px] left-1/2 h-[5px] w-[78px] -translate-x-1/2">
+              <TabUnderline />
+            </span>
           )}
         </button>
       ))}
       <button aria-label="Finish card" onClick={check} className="absolute top-[72px] left-[346px] z-10">
-        <CheckIcon />
+        <span className="block h-[35px] w-[36px]">
+          <CheckMark />
+        </span>
       </button>
 
       {/* card-sized canvas */}
@@ -162,10 +163,10 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
       {/* guide toggle */}
       {tab === 'draw' && (
-        <button onClick={() => setGuide(!guide)} aria-pressed={guide} className="absolute top-[668px] left-[18px] flex items-center gap-[10px] text-[20px] leading-[27px]">
-          Guide
-          <span className="relative h-[23px] w-[46px] rounded-full border-[2px] border-black">
-            <span className={`absolute top-[3px] size-[13px] rounded-full bg-black transition-[left] duration-200 ${guide ? 'left-[26px]' : 'left-[3px]'}`} />
+        <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label="Guide" className="absolute top-[668px] left-[18px] h-[27px] w-[110px]">
+          <span className="absolute top-0 left-0 text-[20px] leading-[27px]">Guide</span>
+          <span className="absolute top-[1.5px] left-[60px] h-[26px] w-[49px]">
+            <ToggleIcon on={guide} />
           </span>
         </button>
       )}
@@ -184,64 +185,46 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 className="absolute transition-transform duration-300 ease-[var(--ease-spring)]"
                 style={{ left: g.left, top: g.top, width: g.w, height: g.h, transform: `translateY(${tool === t ? -LIFT : 0}px)` }}
               >
-                <svg viewBox={g.box} className="size-full overflow-visible" fill="none" stroke="#000" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  {t === 'pen' && (
-                    <>
-                      <path d={art.pencil.body} fill="#fff" strokeWidth={1.4} />
-                      <path d={art.pencil.tip} fill="#fff" strokeWidth={1.4} />
-                      <path d={art.pencil.lead} fill={color} strokeWidth={1.1} />
-                      <path d={art.pencil.band} strokeWidth={1.4} />
-                    </>
-                  )}
-                  {t === 'highlighter' && (
-                    <>
-                      <path d={art.highlighter.body} fill="#fff" strokeWidth={1.4} />
-                      <path d={art.highlighter.tip} fill={color} fillOpacity={0.6} strokeWidth={1.4} />
-                      <path d={art.highlighter.cap} strokeWidth={1.4} />
-                    </>
-                  )}
-                  {t === 'eraser' && (
-                    <>
-                      <path d={art.eraser.body} fill="#fff" strokeWidth={1.4} />
-                      <path d={art.eraser.line} strokeWidth={1.4} />
-                    </>
-                  )}
-                </svg>
+                {t === 'pen' ? <PenIcon /> : t === 'highlighter' ? <HighlighterIcon color={color} /> : <EraserIcon />}
               </button>
             )
           })}
 
-          <button aria-label="Undo" onClick={() => canvas.current?.undo()} className="absolute top-[792px] left-[250px] p-[6px]">
-            <svg viewBox="0 0 24 26" className="h-[25px] w-[23px] fill-none stroke-black stroke-[1.8] [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden>
-              <path d="M8 4 L3 9 L8 14 M3 9 H14 C18 9 21 12 21 16 C21 20 18 23 14 23 H9" />
-            </svg>
+          <button aria-label="Undo" onClick={() => canvas.current?.undo()} className="absolute top-[798px] left-[256px] h-[27px] w-[25px]">
+            <UndoIcon />
           </button>
-          <button aria-label="Redo" onClick={() => canvas.current?.redo()} className="absolute top-[791px] left-[293px] p-[6px]">
-            <svg viewBox="0 0 24 26" className="h-[25px] w-[23px] -scale-x-100 fill-none stroke-black stroke-[1.8] [stroke-linecap:round] [stroke-linejoin:round]" aria-hidden>
-              <path d="M8 4 L3 9 L8 14 M3 9 H14 C18 9 21 12 21 16 C21 20 18 23 14 23 H9" />
-            </svg>
+          <button aria-label="Redo" onClick={() => canvas.current?.redo()} className="absolute top-[797px] left-[299px] h-[29px] w-[26px]">
+            <RedoIcon />
           </button>
-          <button aria-label="Color" aria-expanded={open === 'color'} onClick={() => setOpen(open === 'color' ? null : 'color')} className="absolute top-[793px] left-[345px] h-[38.4px] w-[38.8px]">
-            <span className="absolute inset-[8px] rounded-full" style={{ background: color }} />
-            <svg viewBox="0 0 48 48" className="absolute inset-0 size-full" fill="none" stroke="#000" aria-hidden>
-              <path d={art.ring} strokeWidth={2} />
-            </svg>
+          <button aria-label="Color" aria-expanded={open === 'color'} onClick={() => setOpen(open === 'color' ? null : 'color')} className="absolute top-[793px] left-[345px] size-[41px]">
+            <ColorIcon color={color === '#ffffff' ? '#cccccc' : color} />
           </button>
 
           {/* thickness: 5 steps in a bubble above the tool (Figma Group 17) */}
           {open === 'size' && (
             <div
-              className="animate-pop-in absolute top-[708px] flex h-[44px] w-[148px] items-center justify-around rounded-full border-[2px] border-black bg-white px-[8px]"
-              style={{ left: Math.min(230, Math.max(20, TOOLS[tool].left + TOOLS[tool].w / 2 - 74)) }}
+              className="animate-pop-in absolute top-[708px] h-[46px] w-[150px]"
+              style={{ left: Math.min(236, Math.max(16, TOOLS[tool].left + TOOLS[tool].w / 2 - 75)) }}
             >
-              {SIZES.map((s) => (
-                <button key={s} aria-label={`Size ${s}`} aria-pressed={size === s} onClick={() => { setSize(s); setOpen(null) }} className="flex size-[26px] items-center justify-center">
-                  <span
-                    className={`rounded-[3px] ${size === s ? 'outline-2 outline-offset-2 outline-black' : ''}`}
-                    style={{ width: 5 + s * 0.75, height: 5 + s * 0.75, background: tool === 'eraser' ? '#bbb' : color, border: color === '#ffffff' ? '1px solid #999' : undefined }}
-                  />
-                </button>
-              ))}
+              <SizeBubble />
+              {SIZES.map((s, i) => {
+                const side = [8, 11, 14, 17, 19][i]
+                return (
+                  <button
+                    key={s}
+                    aria-label={`Size ${s}`}
+                    aria-pressed={size === s}
+                    onClick={() => { setSize(s); setOpen(null) }}
+                    className="absolute top-[11px] flex h-[24px] w-[26px] -translate-x-1/2 items-center justify-center"
+                    style={{ left: [20, 41.5, 65.5, 92.5, 121.5][i] }}
+                  >
+                    <span
+                      className={`rotate-[-12deg] rounded-[2px] ${size === s ? 'outline-[1.5px] outline-offset-[3px] outline-black' : ''}`}
+                      style={{ width: side, height: side * 0.8, background: tool === 'eraser' ? '#bbb' : color === '#ffffff' ? '#ddd' : color, opacity: tool === 'highlighter' ? 0.75 : 1 }}
+                    />
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -341,27 +324,4 @@ async function toDataUrl(blob: Blob, maxSide = 480) {
   c.height = Math.max(1, Math.round(h * k))
   c.getContext('2d')!.drawImage(src, x0, y0, w, h, 0, 0, c.width, c.height)
   return c.toDataURL('image/png')
-}
-
-function drawArt() {
-  const rect = (x: number, y: number, w: number, h: number): [number, number][] => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
-  return {
-    pencil: {
-      body: wobblyPoly(rect(19, 36, 22, 104), 10),
-      tip: wobblyPoly([[19, 36], [30, 6], [41, 36]], 11),
-      lead: wobblyPoly([[26, 17], [30, 6], [34, 17]], 12),
-      band: wobblyPoly([[19, 48], [41, 48]], 13, false),
-    },
-    highlighter: {
-      body: wobblyPoly(rect(15, 42, 30, 98), 20),
-      tip: wobblyPoly([[21, 42], [23, 22], [37, 15], [39, 42]], 21),
-      cap: wobblyPoly([[15, 60], [45, 60]], 22, false),
-    },
-    eraser: {
-      body: wobblyPoly(rect(4, 50, 52, 90), 30),
-      line: wobblyPoly([[4, 72], [56, 72]], 31, false),
-    },
-    ring: wobblyCircle(24, 24, 21, 50, 0.05),
-    underline: wobblyLine(60, 7, 2.2),
-  }
 }

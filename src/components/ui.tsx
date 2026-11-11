@@ -35,13 +35,6 @@ export function GoTag() {
     </span>
   )
 }
-export function CheckIcon() {
-  return (
-    <svg viewBox="0 0 40 40" className={`size-[34px] ${icon}`} aria-hidden>
-      <path d="M4 20 C8 24 10 30 13 36 C18 22 26 10 37 3" />
-    </svg>
-  )
-}
 
 // Underlined text button (Figma: "Edit", "Done", "Got it!" … hand-drawn underline)
 export function TextButton({ children, onClick, dim = false, light = false, className = '', style }: { children: ReactNode; onClick: () => void; dim?: boolean; light?: boolean; className?: string; style?: React.CSSProperties }) {
