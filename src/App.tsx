@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
+import { identify, track, trackScreen } from './lib/analytics'
 import { currentUser, loadRemote, logOut, saveRemote, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
@@ -55,6 +56,7 @@ export default function App() {
   const enter = useCallback(async (u: User | null) => {
     userRef.current = u
     setUser(u)
+    identify(u)
     let next = load(keyFor(u?.id ?? null))
     if (u) {
       next = (await loadRemote(u)) ?? next
@@ -105,6 +107,8 @@ export default function App() {
     setRoute({ name: 'main', townId, enter, focus })
   }
 
+  useEffect(() => trackScreen(route.name), [route.name])
+
   // pending card vanished (e.g. storage reset) → go home
   const lost = (route.name === 'tada' || route.name === 'send') && !state.pending
   useEffect(() => {
@@ -148,6 +152,7 @@ export default function App() {
           onGo={() => {}}
           onPlace={(townId) => {
             commit((s) => placeCard(s, route.cardId, townId))
+            track('card_moved', { from: route.to })
             if (route.to === 'collection') setRoute({ name: 'collection', townId: route.back.name === 'collection' ? route.back.townId : townId })
             else goMain(townId, 'center', route.cardId)
           }}
@@ -167,6 +172,7 @@ export default function App() {
           onPlace={(townId) => {
             const id = state.pending!.id
             commit((s) => sendPending(s, townId))
+            track('card_sent')
             goMain(townId, 'center', id)
             if (!userRef.current && !flag(PROMPTED)) {
               setFlag(PROMPTED, '1')
@@ -202,6 +208,7 @@ export default function App() {
               return setError('Storage is full. Delete some cards to save new ones.')
             }
             setState(next)
+            track('card_made', { mood: draft.mood })
             setRoute({ name: 'tada' })
           }}
         />
@@ -224,6 +231,7 @@ export default function App() {
           }}
           onReset={() => {
             const fresh = initial()
+            track('reset')
             commit(() => fresh)
             setHomeId(fresh.towns[0].id)
           }}

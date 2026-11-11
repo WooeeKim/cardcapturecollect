@@ -17,9 +17,9 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* PC preview: always the Figma frame (402×874), scaled down to fit the window (see main.tsx). */
+/* Frame size + transform come from main.tsx. --cut = 874 − frame height (Figma px), 0 on PC. */
 :root {
-  --k: 1;
+  --cut: 0;
 }
 
 html,
@@ -29,8 +29,6 @@ body {
 
 body {
   margin: 0;
-  display: grid;
-  place-items: center;
   overflow: hidden;
   background: #9a9a9a;
   color: var(--color-ink);
@@ -43,16 +41,47 @@ body {
 }
 
 #root {
-  position: relative;
-  flex: none;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 402px;
   height: 874px;
   overflow: clip;
   border-radius: 62px;
   background: var(--color-paper);
-  /* keeps position: fixed children inside the frame too */
-  transform: scale(var(--k));
+  /* the transform also keeps position: fixed children inside the frame */
+  transform-origin: 0 0;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* phone: full screen, real status bar instead of the fake one */
+.phone body {
+  background: #fff;
+}
+.phone #root {
+  border-radius: 0;
+  box-shadow: none;
+}
+.phone .fake-chrome {
+  display: none;
+}
+
+/* #/admin card gallery: a plain scrolling page */
+.admin body {
+  overflow: auto;
+  background: #fff;
+  font-family: system-ui, sans-serif;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.admin #root {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
 }
 
 button {

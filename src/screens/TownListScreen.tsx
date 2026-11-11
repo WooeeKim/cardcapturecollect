@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { CardView, GoTag, HandleIcon, Header, PlusButton, Popup, TextButton, Thumb, XIcon, type PopupAction } from '../components/ui'
-import { frameScale } from '../lib/frame'
+import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, TextButton, Thumb, XIcon, type PopupAction } from '../components/ui'
+import { framePoint } from '../lib/frame'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
 
 // Figma prototyping: townList · townList-detail · townList for migration · 마을 추가
@@ -117,8 +117,9 @@ export default function TownListScreen({
     const from = cardEl.current?.getBoundingClientRect()
     const to = thumbs.current.get(t.id)?.querySelector('[data-thumb]')?.getBoundingClientRect()
     if (!from || !to) return onPlace(t.id)
-    const k = frameScale()
-    setFlying({ x: (to.left + to.width / 2 - (from.left + from.width / 2)) / k, y: (to.top + to.height / 2 - (from.top + from.height / 2)) / k })
+    const a = framePoint(from.left + from.width / 2, from.top + from.height / 2)
+    const b = framePoint(to.left + to.width / 2, to.top + to.height / 2)
+    setFlying({ x: b.x - a.x, y: b.y - a.y })
     setTimeout(() => onPlace(t.id), 650)
   }
 
@@ -128,13 +129,13 @@ export default function TownListScreen({
     e.currentTarget.setPointerCapture(e.pointerId)
     setOpenId(null)
     setEditing(false)
-    dragStart.current = e.clientY / frameScale()
+    dragStart.current = framePoint(e.clientX, e.clientY).y
     setDragIdx(i)
     setDragDy(0)
   }
   function onHandleMove(e: React.PointerEvent) {
     if (dragIdx === null) return
-    let dy = e.clientY / frameScale() - dragStart.current
+    let dy = framePoint(e.clientX, e.clientY).y - dragStart.current
     const steps = Math.trunc(dy / ROW + Math.sign(dy) * 0.5)
     const to = Math.max(0, Math.min(state.towns.length - 1, dragIdx + steps))
     if (to !== dragIdx) {
@@ -292,8 +293,9 @@ export default function TownListScreen({
       {card && (
         <div
           ref={cardEl}
-          className="pointer-events-none absolute top-[676px] left-[290px] z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
+          className="pointer-events-none absolute left-[290px] z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
           style={{
+            top: fromBottom(676),
             transform: flying ? `translate(${flying.x}px, ${flying.y}px) scale(0.15) rotate(0deg)` : 'rotate(6deg)',
             opacity: flying ? 0.2 : 1,
             transition: 'transform 0.6s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.6s ease-in',

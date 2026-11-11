@@ -9,7 +9,8 @@ import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
 import { moodOf } from '../lib/moods'
 import { TONES, type Card, type State, type Town } from '../lib/store'
-import { frameScale, toLocal } from '../lib/frame'
+import { fromBottom } from '../components/ui'
+import { framePoint, toLocal } from '../lib/frame'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
@@ -433,17 +434,17 @@ function Detail({ card, onClose, onFollow, onMigrate }: { card: Card; onClose: (
   const start = useRef<number | null>(null)
   return (
     <div
-      className="animate-sheet-up absolute inset-x-0 bottom-0 z-10 top-[577px] bg-[rgba(238,238,238,0.9)] font-hand backdrop-blur-[5px]"
-      style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
+      className="animate-sheet-up absolute inset-x-0 bottom-0 z-10 bg-[rgba(238,238,238,0.9)] font-hand backdrop-blur-[5px]"
+      style={{ top: fromBottom(577), transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
     >
       {/* handle: pull down to close */}
       <div
         className="absolute inset-x-0 top-0 flex h-[28px] touch-none justify-center pt-[8px]"
         onPointerDown={(e) => {
-          start.current = e.clientY
+          start.current = framePoint(e.clientX, e.clientY).y
           e.currentTarget.setPointerCapture(e.pointerId)
         }}
-        onPointerMove={(e) => start.current !== null && setDrag(Math.max(0, (e.clientY - start.current) / frameScale()))}
+        onPointerMove={(e) => start.current !== null && setDrag(Math.max(0, framePoint(e.clientX, e.clientY).y - start.current))}
         onPointerUp={() => {
           start.current = null
           if (drag > 70) onClose()

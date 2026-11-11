@@ -202,6 +202,7 @@ git push
 - 화면: 메인 마을(걷기·핀치줌·끝에서 당겨 마을 넘기기·카드 상세·Follow·Migration), Town List, Collection, Draw
 - 데이터: 이 브라우저 localStorage에만 저장 (DB 사용 안 함)
 - PC 미리보기: `npm run dev -- --mode http` → http://localhost:5173 (Figma 프레임 402×874 그대로, 창이 작으면 통째로 축소)
+- 폰: 화면 폭에 꽉 차고 높이는 폰에 맞춰 늘거나 줄어듦(아래 도구·버튼은 화면 아래에 붙음). 가짜 상태바는 숨김. 가로로 돌려도 앱은 세로로 고정
 - https가 필요하면(위치 권한): `npm run dev` → 인증서 경고에서 계속 진행
 - 역 이름 데이터 © OpenStreetMap contributors (ODbL), 폰트: 그리운 묘은흘림체 원본 파일
 
@@ -218,6 +219,36 @@ git push
 1. `.env.local`에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`(퍼블릭 키) 입력 → 개발 서버 재시작. 시크릿 키는 절대 넣지 말 것
 2. SQL Editor에서 `supabase/migrations/004_user_states.sql` 실행 (계정별 데이터 테이블 + 본인만 읽기/쓰기 규칙)
 3. 이메일 확인(Confirm email)은 Supabase 기본으로 켜져 있음 → 가입 후 메일 링크를 눌러야 로그인 가능. 테스트 편하게 하려면 Authentication → Sign In / Providers → Email 에서 꺼도 됨
+
+### 사용성 테스트 로그 (PostHog)
+
+- 화면 녹화(세션 리플레이), 히트맵, 화면별 체류시간, 주요 행동 이벤트, 피드백을 PostHog로 보냄. 키가 없으면 아무것도 안 보냄
+- 화면마다 주소가 바뀜(`#/main`, `#/draw`, `#/towns`, `#/collection`, `#/mypage` …) → PostHog에서 화면별로 나눠 봄
+- 체류시간: `$pageview` 이벤트의 `$prev_pageview_duration`(초)
+- 이벤트: `card_made`(mood), `card_sent`, `card_moved`, `log_in`/`sign_up`(ok), `reset`, `feedback`(text) + 자동 클릭 수집
+- 로그인한 테스터는 PostHog 사람 목록에 이메일로 보임. 입력칸 글자는 녹화에서 가려짐
+- 피드백: 마이페이지 → Feedback
+
+**설정 (한 번)**
+1. posthog.com 가입 → 프로젝트 생성 → Project API key를 `.env.local`의 `VITE_POSTHOG_KEY`에 (EU 리전이면 `VITE_POSTHOG_HOST=https://eu.i.posthog.com`)
+2. PostHog → Settings → Session replay 켜기, 그리기 화면까지 녹화하려면 **Capture canvas** 켜기
+3. Settings → Heatmaps 켜기 (Toolbar로 배포 주소 열어 화면별 확인)
+4. 화면을 녹화하므로 테스터에게 미리 알리고 동의 받기
+
+### 카드 갤러리 (팀용)
+
+- `<배포 주소>/#/admin` → 관리자 이메일로 로그인 → 테스터별·마을별 카드 전부 보기
+- SQL Editor에서 `supabase/migrations/005_admin_gallery.sql` 실행 후, 맨 아래 주석처럼 관리자 이메일 추가:
+  `insert into public.app_admins (email) values ('내이메일@example.com');`
+- 관리자 목록은 SQL Editor에서만 바꿀 수 있음(앱에서는 못 바꿈)
+
+### Vercel 배포
+
+1. vercel.com → Add New Project → GitHub `WooeeKim/subwayseal` 선택 → Production Branch는 Settings → Git에서 `prototyping`으로(또는 브랜치 미리보기 주소 사용)
+2. Framework: Vite (자동), Build `npm run build`, Output `dist`
+3. Environment Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (시크릿 키 금지)
+4. 배포 주소를 Supabase → Authentication → URL Configuration → **Site URL**에 넣기 (가입 확인 메일 링크가 이 주소로 열림)
+5. 위치 권한은 https에서만 동작 → Vercel 주소는 https라 그대로 됨
 
 ### 장소 자동 입력
 

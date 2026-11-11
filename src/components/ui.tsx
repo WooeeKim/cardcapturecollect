@@ -165,7 +165,7 @@ function ChipCq({ mood }: { mood: string }) {
 
 export function PhoneChrome() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-[100]">
+    <div className="fake-chrome pointer-events-none absolute inset-0 z-[100]">
       <div className="absolute inset-x-0 top-0 flex h-[62px] items-center pt-[3px]">
         <p className="flex-1 pl-[10px] text-center font-[system-ui] text-[17.67px] leading-[22px] font-semibold">9:41</p>
         <span className="h-[37px] w-[125px] rounded-full bg-black" />
@@ -184,3 +184,21 @@ export function PhoneChrome() {
     </div>
   )
 }
+
+// Pinned to the screen bottom: children keep their Figma (874-tall) `top` values and move up
+// by --cut on shorter phones. Zero height, so it never blocks touches itself.
+export function Bottom({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="absolute inset-x-0 h-0" style={{ top: 'calc(var(--cut) * -1px)' }}>
+      {children}
+    </div>
+  )
+}
+
+// Shrinks something `h` px tall (whose bottom is pinned near the Bottom row) on shorter phones.
+export const shrink = (h: number): React.CSSProperties => ({
+  transform: `scale(clamp(0.5, calc((${h} - var(--cut)) / ${h}), 1))`,
+  transformOrigin: 'top center',
+})
+// `top` that follows the screen bottom (for things that also need bottom: 0)
+export const fromBottom = (top: number) => `calc(${top}px - var(--cut) * 1px)`

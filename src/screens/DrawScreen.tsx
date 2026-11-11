@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
 import backIcon from '../assets/proto/back.svg'
-import { CardView, Popup, TextButton, type PopupAction } from '../components/ui'
+import { Bottom, CardView, Popup, TextButton, fromBottom, shrink, type PopupAction } from '../components/ui'
 import { CheckMark, ColorIcon, EraserIcon, HighlighterIcon, PenIcon, RedoIcon, SizeBubble, TabUnderline, ToggleIcon, UndoIcon } from '../components/drawIcons'
 import { MOODS } from '../lib/moods'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
@@ -130,7 +130,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
       </button>
 
       {/* card-sized canvas */}
-      <div className="absolute top-[145px] left-[21px] h-[515px] w-[360px] overflow-hidden rounded-[10px] bg-[#f0f0f0]">
+      <div className="absolute top-[145px] left-[21px] h-[515px] w-[360px] overflow-hidden rounded-[10px] bg-[#f0f0f0] transition-transform duration-300" style={tab === 'draw' ? shrink(515) : undefined}>
         <DrawingCanvas ref={canvas} tool={tool} color={color} size={size} guide={guide && tab === 'draw'} onChange={() => setEmpty(!!canvas.current?.isEmpty())} />
         {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[226px] text-center text-[22px]">A few lines will do!</p>}
         {tab === 'write' && <div className="absolute inset-0 bg-[#bdbdbd]/55" />}
@@ -192,6 +192,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         </>
       )}
 
+      <Bottom>
       {/* guide toggle */}
       {tab === 'draw' && (
         <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label="Guide" className="absolute top-[668px] left-[18px] h-[27px] w-[110px]">
@@ -275,15 +276,16 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           )}
         </>
       )}
+      </Bottom>
 
       {/* confirm (wireframe: card preview + "can't edit after") */}
       {preview && (
         <div className="animate-fade-in absolute inset-0 z-40 bg-white">
           <p className="absolute inset-x-0 top-[79px] text-center text-[24px] leading-[30px]">Draw</p>
-          <div className="absolute top-[142px] left-[32px] w-[338px]">
+          <div className="absolute top-[142px] left-[32px] w-[338px]" style={shrink(483)}>
             <CardView card={{ ...draft(preview), id: 'preview', createdAt: '', serial: '' }} />
           </div>
-          <div className="animate-sheet-up absolute inset-x-0 top-[642px] bottom-0 bg-[#d9d9d9]">
+          <div className="animate-sheet-up absolute inset-x-0 bottom-0 bg-[#d9d9d9]" style={{ top: fromBottom(642) }}>
             <p className="absolute inset-x-0 top-[56px] text-center text-[20px]">Once finished, this card can't be edited.</p>
             <button onClick={() => { rememberPlace(place.trim()); onFinish(draft(preview)) }} className="absolute top-[134px] left-[114px] -translate-x-1/2 px-[12px] py-[6px] text-[21px]">
               Finish
@@ -311,14 +313,16 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
           <path key={d} d={d} stroke="#000" strokeWidth={2} strokeLinecap="round" style={{ transformOrigin: i < 3 ? '300px 190px' : '70px 730px', animation: `spark 1.4s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
         ))}
       </svg>
-      <div className="absolute top-[210px] left-[46px] w-[310px]">
+      <div className="absolute top-[210px] left-[46px] w-[310px]" style={shrink(443)}>
         <div className="animate-tada drop-shadow-[0_6px_14px_rgba(0,0,0,0.2)]">
           <CardView card={card} />
         </div>
       </div>
-      <TextButton onClick={onChoose} className="absolute top-[734px] left-1/2 -translate-x-1/2 text-[21px]">
-        Choose a town to send
-      </TextButton>
+      <Bottom>
+        <TextButton onClick={onChoose} className="absolute top-[734px] left-1/2 -translate-x-1/2 text-[21px]">
+          Choose a town to send
+        </TextButton>
+      </Bottom>
     </div>
   )
 }

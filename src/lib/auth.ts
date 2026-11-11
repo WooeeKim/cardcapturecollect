@@ -15,6 +15,7 @@ const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 const sb: SupabaseClient | null = url && key ? createClient(url, key) : null
 export const usingSupabase = !!sb
+export const supabase = sb
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const norm = (email: string) => email.trim().toLowerCase()
@@ -137,7 +138,7 @@ export function saveRemote(user: User, state: State) {
   if (!sb) return
   clearTimeout(timer)
   timer = window.setTimeout(async () => {
-    const { error } = await sb!.from('user_states').upsert({ user_id: user.id, state, updated_at: new Date().toISOString() })
+    const { error } = await sb!.from('user_states').upsert({ user_id: user.id, email: user.username, state, updated_at: new Date().toISOString() })
     if (error) console.warn('user_states save failed', error.message)
   }, 800)
 }

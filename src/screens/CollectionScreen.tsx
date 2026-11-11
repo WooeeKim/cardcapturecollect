@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import crownIcon from '../assets/proto/crown.svg'
-import { CardView, CloseIcon, Header, Popup, TextButton, Thumb, type PopupAction } from '../components/ui'
-import { toLocal } from '../lib/frame'
+import { Bottom, CardView, CloseIcon, Header, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
+import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, townOf, type Card, type State } from '../lib/store'
 
 // Figma wireframe: 콜렉션 (town strip → selected town's deck → other towns' cards) + card detail overlay.
@@ -261,7 +261,7 @@ function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; 
       <button aria-label="Close" onClick={onClose} className="absolute top-[172px] left-[338px] p-[8px]">
         <CloseIcon size={16} />
       </button>
-      <div className="absolute top-[208px] left-[32px] w-[338px] [perspective:700px]">
+      <div className="absolute top-[208px] left-[32px] w-[338px] [perspective:700px]" style={shrink(483)}>
         <div
           className="animate-pop-in touch-none"
           style={{
@@ -269,15 +269,16 @@ function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; 
             transition: held ? 'none' : 'transform 0.5s var(--ease-spring)',
           }}
           onPointerDown={(e) => {
-            start.current = { x: e.clientX, y: e.clientY, moved: false }
+            start.current = { ...framePoint(e.clientX, e.clientY), moved: false }
             setHeld(true)
             e.currentTarget.setPointerCapture(e.pointerId)
           }}
           onPointerMove={(e) => {
             const s = start.current
             if (!s) return
-            const dx = e.clientX - s.x
-            const dy = e.clientY - s.y
+            const p = framePoint(e.clientX, e.clientY)
+            const dx = p.x - s.x
+            const dy = p.y - s.y
             if (Math.hypot(dx, dy) > 6) s.moved = true
             const lim = (v: number) => Math.max(-18, Math.min(18, v))
             setTilt({ x: lim(-dy / 6), y: lim(dx / 6) })
@@ -298,8 +299,10 @@ function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; 
           <CardView card={card} plain={plain} />
         </div>
       </div>
-      <TextButton onClick={onMigrate} className="absolute top-[713px] left-[40px] text-[19.5px]" light>Migration</TextButton>
-      <TextButton onClick={onDelete} className="absolute top-[713px] right-[40px] text-[19.5px]" light>Delete</TextButton>
+      <Bottom>
+        <TextButton onClick={onMigrate} className="absolute top-[713px] left-[40px] text-[19.5px]" light>Migration</TextButton>
+        <TextButton onClick={onDelete} className="absolute top-[713px] right-[40px] text-[19.5px]" light>Delete</TextButton>
+      </Bottom>
     </div>
   )
 }

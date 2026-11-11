@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { track } from '../lib/analytics'
 import { MIN_PASSWORD, changePassword, logIn, signUp, type User } from '../lib/auth'
 import { TextButton } from './ui'
 
 const field = 'h-[44px] w-full rounded-[6px] border-[2px] border-dashed border-[#555] bg-white px-[10px] text-[19px] outline-none placeholder:text-[#999]'
 
-function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="animate-fade-in absolute inset-0 z-50 flex items-center bg-black/35 px-[24px]" onClick={onClose}>
       <div role="dialog" className="animate-pop-in w-full rounded-[14px] bg-[#f0f0f0] px-[22px] pt-[26px] pb-[20px] font-hand" onClick={(e) => e.stopPropagation()}>
@@ -26,6 +27,7 @@ export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boole
     setError('')
     const res = kind === 'login' ? await logIn(id, pw) : await signUp(id, pw)
     setBusy(false)
+    track(kind === 'login' ? 'log_in' : 'sign_up', { ok: res.ok })
     if (res.ok) onDone(res.user)
     else setError(res.error)
   }
@@ -104,6 +106,46 @@ export function PasswordSheet({ user, onClose }: { user: User; onClose: () => vo
           </TextButton>
           <TextButton onClick={save}>Save</TextButton>
         </div>
+      </div>
+    </Sheet>
+  )
+}
+
+// Free-text feedback from testers → PostHog event "feedback" (with the screen it was sent from).
+export function FeedbackSheet({ onClose }: { onClose: () => void }) {
+  const [text, setText] = useState('')
+  const [sent, setSent] = useState(false)
+  return (
+    <Sheet onClose={onClose}>
+      <p className="text-center text-[24px] leading-[1.2]">Feedback</p>
+      {sent ? (
+        <p className="mt-[18px] text-center text-[18px]">Thanks! We read every note.</p>
+      ) : (
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="What was confusing, fun, or missing?"
+          aria-label="Feedback"
+          rows={5}
+          className="mt-[18px] w-full resize-none rounded-[6px] border-[2px] border-dashed border-[#555] bg-white px-[10px] py-[8px] text-[17px] leading-[1.3] outline-none placeholder:text-[#999]"
+        />
+      )}
+      <div className="mt-[16px] flex justify-around text-[20px]">
+        <TextButton dim onClick={onClose}>
+          Close
+        </TextButton>
+        {!sent && (
+          <TextButton
+            className={text.trim() ? '' : 'opacity-40'}
+            onClick={() => {
+              if (!text.trim()) return
+              track('feedback', { text: text.trim() })
+              setSent(true)
+            }}
+          >
+            Send
+          </TextButton>
+        )}
       </div>
     </Sheet>
   )

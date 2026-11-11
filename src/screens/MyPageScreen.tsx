@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import personIcon from '../assets/proto/person.svg'
-import { LoginSheet, PasswordSheet } from '../components/LoginSheet'
-import { Header, Popup } from '../components/ui'
+import { FeedbackSheet, LoginSheet, PasswordSheet } from '../components/LoginSheet'
+import { Bottom, Header, Popup } from '../components/ui'
 import { usingSupabase, type User } from '../lib/auth'
 
 // My Page (no Figma frame yet): same look as Town List — white page, hand-written rows.
@@ -21,10 +21,10 @@ export default function MyPageScreen({
   onLogout: () => void
   onReset: () => void
 }) {
-  const [sheet, setSheet] = useState<'login' | 'password' | null>(null)
+  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | null>(null)
   const [confirm, setConfirm] = useState<'reset' | 'logout' | null>(null)
 
-  const row = 'flex h-[58px] items-center justify-between border-b border-[#e2e2e2] text-[20px]'
+  const row = 'flex h-[52px] items-center justify-between border-b border-[#e2e2e2] text-[20px]'
   const soon = (label: string) => (
     <div key={label} className={`${row} text-[#9a9a9a]`}>
       {label}
@@ -67,6 +67,9 @@ export default function MyPageScreen({
         <button className={`${row} w-full`} onClick={() => setConfirm('reset')}>
           Reset
         </button>
+        <button className={`${row} w-full`} onClick={() => setSheet('feedback')}>
+          Feedback
+        </button>
         {soon('Developers')}
         {soon('Privacy Policy')}
         {user && (
@@ -76,7 +79,9 @@ export default function MyPageScreen({
         )}
       </div>
 
-      <p className="absolute inset-x-0 top-[780px] text-center text-[12px] text-[#b0b0b0]">{usingSupabase ? 'Accounts: Supabase' : 'Accounts: this browser only (no Supabase key)'}</p>
+      <Bottom>
+        <p className="absolute inset-x-0 top-[780px] text-center text-[12px] text-[#b0b0b0]">{usingSupabase ? 'Accounts: Supabase' : 'Accounts: this browser only (no Supabase key)'}</p>
+      </Bottom>
 
       {sheet === 'login' && (
         <LoginSheet
@@ -87,6 +92,7 @@ export default function MyPageScreen({
           }}
         />
       )}
+      {sheet === 'feedback' && <FeedbackSheet onClose={() => setSheet(null)} />}
       {sheet === 'password' && user && <PasswordSheet user={user} onClose={() => setSheet(null)} />}
 
       {confirm === 'reset' && (
