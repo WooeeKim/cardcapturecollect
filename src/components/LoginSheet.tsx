@@ -14,7 +14,7 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
   )
 }
 
-// ID + password. `prompt` = shown right after the first card moves in (closable with "Later").
+// Email + password (Supabase rules). `prompt` = shown right after the first card moves in (closable with "Later").
 export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boolean; onDone: (user: User) => void; onClose: () => void }) {
   const [id, setId] = useState('')
   const [pw, setPw] = useState('')
@@ -41,7 +41,7 @@ export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boole
           run('login')
         }}
       >
-        <input value={id} onChange={(e) => setId(e.target.value)} placeholder="ID" maxLength={20} autoComplete="username" aria-label="ID" className={field} />
+        <input value={id} onChange={(e) => setId(e.target.value)} type="email" inputMode="email" placeholder="Email" autoComplete="email" aria-label="Email" className={field} />
         <input
           value={pw}
           onChange={(e) => setPw(e.target.value)}
@@ -91,7 +91,7 @@ export function PasswordSheet({ user, onClose }: { user: User; onClose: () => vo
   return (
     <Sheet onClose={onClose}>
       <p className="text-center text-[24px] leading-[1.2]">Edit my info</p>
-      <p className="mt-[6px] text-center text-[16px] text-[#555]">ID: {user.username}</p>
+      <p className="mt-[6px] text-center text-[16px] text-[#555]">{user.username}</p>
       <div className="mt-[18px] flex flex-col gap-[10px]">
         <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder="New password" autoComplete="new-password" aria-label="New password" className={field} />
         <input value={again} onChange={(e) => setAgain(e.target.value)} type="password" placeholder="New password again" autoComplete="new-password" aria-label="New password again" className={field} />

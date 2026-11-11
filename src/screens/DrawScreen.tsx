@@ -4,7 +4,7 @@ import backIcon from '../assets/proto/back.svg'
 import { CardView, Popup, TextButton, type PopupAction } from '../components/ui'
 import { CheckMark, ColorIcon, EraserIcon, HighlighterIcon, PenIcon, RedoIcon, SizeBubble, TabUnderline, ToggleIcon, UndoIcon } from '../components/drawIcons'
 import { MOODS } from '../lib/moods'
-import { locatePlace } from '../lib/place'
+import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
 import type { Card } from '../lib/store'
 
 // Figma wireframe 그리기: Draw | Write tabs, guide toggle, pencil · highlighter · eraser, undo/redo, color.
@@ -36,16 +36,20 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const [open, setOpen] = useState<'size' | 'color' | null>(null)
   const [empty, setEmpty] = useState(true)
   const [mood, setMood] = useState('')
-  const [place, setPlace] = useState('')
+  // starts with the last place used, then switches to the nearest station once location arrives
+  const [place, setPlace] = useState(lastPlace)
+  const [locating, setLocating] = useState(true)
   const [nickname, setNickname] = useState('')
   const [memo, setMemo] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const typedPlace = useRef(false)
+  const memoRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     locatePlace().then((p) => {
       if (p && !typedPlace.current) setPlace(p)
+      setLocating(false)
     })
   }, [])
 
@@ -141,7 +145,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
               typedPlace.current = true
               setPlace(e.target.value)
             }}
-            placeholder="Where are you?"
+            placeholder={locating ? 'Finding where you are…' : 'Where are you?'}
             maxLength={30}
             aria-label="Place"
             className={`absolute top-[151px] left-[183px] h-[36px] w-[194px] rounded-[6px] border-[2px] border-dashed px-[9px] text-right text-[17px] outline-none placeholder:text-[#888] ${field('place')}`}
@@ -166,7 +170,8 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
               </button>
             )
           })}
-          <div className="absolute top-[402px] left-[21px] h-[152px] w-[360px] rounded-[10px] bg-[#e6e6e6]" />
+          {/* the whole grey box starts writing the memo */}
+          <div onClick={() => memoRef.current?.focus()} className="absolute top-[402px] left-[21px] h-[152px] w-[360px] cursor-text rounded-[10px] bg-[#e6e6e6]" />
           <input
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
@@ -177,6 +182,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           />
           <textarea
             value={memo}
+            ref={memoRef}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="Save the moment."
             maxLength={180}
@@ -279,7 +285,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           </div>
           <div className="animate-sheet-up absolute inset-x-0 top-[642px] bottom-0 bg-[#d9d9d9]">
             <p className="absolute inset-x-0 top-[56px] text-center text-[20px]">Once finished, this card can't be edited.</p>
-            <button onClick={() => onFinish(draft(preview))} className="absolute top-[134px] left-[114px] -translate-x-1/2 px-[12px] py-[6px] text-[21px]">
+            <button onClick={() => { rememberPlace(place.trim()); onFinish(draft(preview)) }} className="absolute top-[134px] left-[114px] -translate-x-1/2 px-[12px] py-[6px] text-[21px]">
               Finish
             </button>
             <button onClick={() => setPreview(null)} className="absolute top-[134px] left-[290px] -translate-x-1/2 px-[12px] py-[6px] text-[21px]">
