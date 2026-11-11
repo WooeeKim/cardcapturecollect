@@ -73,6 +73,20 @@ export function load(key = GUEST_KEY): State {
 // Throws on quota errors so the caller can tell the user instead of silently losing data.
 export function save(state: State, key = GUEST_KEY) {
   localStorage.setItem(key, JSON.stringify(state))
+  try {
+    localStorage.setItem(`${key}:savedAt`, String(Date.now()))
+  } catch {
+    // the state itself is saved; without a time the account copy wins on next login
+  }
+}
+
+// When this device last saved `key` (ms), 0 if never. Used to pick the newer of this device vs the account copy.
+export function savedAt(key = GUEST_KEY): number {
+  try {
+    return Number(localStorage.getItem(`${key}:savedAt`)) || 0
+  } catch {
+    return 0
+  }
 }
 
 // YYMMDD of a date in local time

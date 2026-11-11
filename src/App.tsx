@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
-import { currentUser, loadRemote, logOut, saveRemote, type User } from './lib/auth'
-import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, sendPending, townOf, type State } from './lib/store'
+import { currentUser, flushRemote, loadRemote, logOut, saveRemote, type User } from './lib/auth'
+import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import MainScreen from './screens/MainScreen'
@@ -57,9 +57,12 @@ export default function App() {
     userRef.current = u
     setUser(u)
     identify(u)
+    await flushRemote() // a batched save of the previous account goes out first
     let next = load(keyFor(u?.id ?? null))
     if (u) {
-      next = (await loadRemote(u)) ?? next
+      // newer copy wins: a save that never reached the server (tab closed, offline) must not be overwritten
+      const remote = await loadRemote(u)
+      if (remote && remote.updatedAt >= savedAt(keyFor(u.id))) next = remote.state
       const guest = load(GUEST_KEY)
       if (!flag(GUEST_OWNER) && hasContent(guest)) {
         next = mergeGuest(next, guest)
@@ -76,6 +79,13 @@ export default function App() {
     setState(next)
     setHomeId(next.towns[0].id)
     setRoute(startRoute(next))
+  }, [])
+
+  // leaving / hiding the page: send the batched account save instead of dropping it
+  useEffect(() => {
+    const flush = () => document.visibilityState === 'hidden' && flushRemote()
+    document.addEventListener('visibilitychange', flush)
+    return () => document.removeEventListener('visibilitychange', flush)
   }, [])
 
   useEffect(() => {
