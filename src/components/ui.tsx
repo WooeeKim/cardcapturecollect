@@ -99,7 +99,7 @@ export function Thumb({ image, size = 70, strong = false, grey = false }: { imag
       style={{ width: size, height: size, border: `${ring}px solid ${strong ? '#686868' : '#ccc'}` }}
     >
       {image ? (
-        <img src={image} alt="" className={`absolute top-[10%] left-[-8%] w-[116%] max-w-none ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
+        <img src={image} alt="" className={`absolute top-[6%] left-[-20%] w-[140%] max-w-none ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
       ) : (
         <span className="flex size-full items-center justify-center font-hand leading-none" style={{ fontSize: size * 0.55 }}>
           ?
