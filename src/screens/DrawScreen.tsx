@@ -62,12 +62,24 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
     })
   }
 
+  const [showMissing, setShowMissing] = useState(false)
+
   async function check() {
     if (canvas.current?.isEmpty()) {
       return setPopup({ message: 'Draw at least one line first.', actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
     }
+    // every Write field is required: jump to Write and mark what's empty
+    if (missing.length) {
+      setTab('write')
+      setOpen(null)
+      setShowMissing(true)
+      return
+    }
     setPreview(await toDataUrl(await canvas.current!.toBlob()))
   }
+
+  const missing = [!mood && 'mood', !place.trim() && 'place', !nickname.trim() && 'nickname', !memo.trim() && 'memo'].filter(Boolean)
+  const field = (name: string) => (showMissing && missing.includes(name) ? 'border-[#d9534f] bg-[#fdeceb]' : 'border-[#555] bg-[#f0f0f0]')
 
   function pickTool(t: Tool) {
     if (tool === t) setOpen(open === 'size' ? null : 'size')
@@ -122,7 +134,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
       {tab === 'write' && (
         <>
-          <span className="absolute top-[150px] left-[31px] flex h-[39px] w-[71px] items-center justify-center rounded-[6px] border-[2px] border-dashed border-[#555] bg-[#f0f0f0] text-[19px]">Mood</span>
+          <span className={`absolute top-[150px] left-[31px] flex h-[39px] w-[71px] items-center justify-center rounded-[6px] border-[2px] border-dashed text-[19px] ${field('mood')}`}>Mood</span>
           <input
             value={place}
             onChange={(e) => {
@@ -132,7 +144,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             placeholder="Where are you?"
             maxLength={30}
             aria-label="Place"
-            className="absolute top-[151px] left-[183px] h-[36px] w-[194px] rounded-[6px] border-[2px] border-dashed border-[#555] bg-[#f0f0f0] px-[9px] text-right text-[17px] outline-none placeholder:text-[#888]"
+            className={`absolute top-[151px] left-[183px] h-[36px] w-[194px] rounded-[6px] border-[2px] border-dashed px-[9px] text-right text-[17px] outline-none placeholder:text-[#888] ${field('place')}`}
           />
           {MOODS.map((m, i) => {
             const on = mood === m.name
@@ -161,7 +173,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             placeholder="Nickname"
             maxLength={24}
             aria-label="Nickname"
-            className="absolute top-[412px] left-[31px] h-[36px] w-[180px] rounded-[6px] border-[2px] border-dashed border-[#555] bg-[#f0f0f0] px-[9px] text-[18px] outline-none placeholder:text-black"
+            className={`absolute top-[412px] left-[31px] h-[36px] w-[180px] rounded-[6px] border-[2px] border-dashed px-[9px] text-[18px] outline-none placeholder:text-black ${field('nickname')}`}
           />
           <textarea
             value={memo}
@@ -169,7 +181,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             placeholder="Save the moment."
             maxLength={180}
             aria-label="Memo"
-            className="absolute top-[458px] left-[31px] h-[86px] w-[340px] resize-none rounded-[6px] border-[2px] border-dashed border-[#555] bg-[#f0f0f0] px-[9px] py-[7px] text-[15px] leading-[1.25] outline-none placeholder:text-black"
+            className={`absolute top-[458px] left-[31px] h-[86px] w-[340px] resize-none rounded-[6px] border-[2px] border-dashed px-[9px] py-[7px] text-[15px] leading-[1.25] outline-none placeholder:text-black ${field('memo')}`}
           />
         </>
       )}
