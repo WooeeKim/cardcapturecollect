@@ -43,7 +43,9 @@ export const TONES: { sky: string; ground: string }[] = [
   { sky: '#ecf0f0', ground: '#b4bfbf' },
 ]
 
-const KEY = 'subwayseal.proto.v1'
+// Guest data lives under GUEST_KEY; each account under `${GUEST_KEY}:${userId}`.
+export const GUEST_KEY = 'subwayseal.proto.v1'
+export const keyFor = (userId: string | null) => (userId ? `${GUEST_KEY}:${userId}` : GUEST_KEY)
 const today = () => new Date().toISOString()
 const uid = () => crypto.randomUUID()
 
@@ -53,14 +55,14 @@ export function newTown(state: Pick<State, 'towns'>, name: string, bio: string):
   return { id: uid(), name, bio, createdAt: today(), tone: tone < 0 ? 0 : tone, residents: [] }
 }
 
-function initial(): State {
+export function initial(): State {
   const base = { towns: [] as Town[] }
   return { towns: [newTown(base, 'Town 1', '')], cards: {}, pending: null, seq: { day: '', n: 0 } }
 }
 
-export function load(): State {
+export function load(key = GUEST_KEY): State {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(key)
     if (raw) return JSON.parse(raw) as State
   } catch {
     // private mode / broken data → start fresh
@@ -69,8 +71,8 @@ export function load(): State {
 }
 
 // Throws on quota errors so the caller can tell the user instead of silently losing data.
-export function save(state: State) {
-  localStorage.setItem(KEY, JSON.stringify(state))
+export function save(state: State, key = GUEST_KEY) {
+  localStorage.setItem(key, JSON.stringify(state))
 }
 
 // YYMMDD of a date in local time
@@ -83,6 +85,22 @@ export function ymd(d: Date) {
 export function dotDate(iso: string) {
   const s = ymd(new Date(iso))
   return `${s.slice(0, 2)}.${s.slice(2, 4)}.${s.slice(4)}`
+}
+
+export function hasContent(state: State) {
+  return Object.keys(state.cards).length > 0 || state.pending !== null || state.towns.length > 1 || state.towns.some((t) => t.name !== 'Town 1' || t.bio)
+}
+
+// Guest data joins an account: empty account → takes the guest data as is; otherwise guest towns/cards are added on.
+export function mergeGuest(account: State, guest: State): State {
+  if (!hasContent(guest)) return account
+  if (!hasContent(account)) return guest
+  return {
+    towns: [...account.towns, ...guest.towns],
+    cards: { ...account.cards, ...guest.cards },
+    pending: account.pending ?? guest.pending,
+    seq: account.seq.day >= guest.seq.day ? account.seq : guest.seq,
+  }
 }
 
 export function townOf(state: State, cardId: string) {
@@ -186,5 +204,15 @@ if (argv?.[1]?.endsWith('store.ts')) {
   assert(canDeleteTown(s, second.id) === 'ok', 'empty town deletable')
   s = deleteTown(s, second.id)
   assert(canDeleteTown(s, home) !== 'ok', 'last/inhabited town stays')
+  const oneCard = () => {
+    const g = initial()
+    return sendPending(makePending(g, { image: '', mood: 'Calm', place: '', nickname: '', memo: '' }), g.towns[0].id)
+  }
+  const guest = oneCard()
+  const g2 = oneCard()
+  assert(mergeGuest(initial(), g2) === g2, 'empty account takes guest data')
+  const merged = mergeGuest(s, guest)
+  assert(merged.towns.length === s.towns.length + 1 && Object.keys(merged.cards).length === Object.keys(s.cards).length + 1, 'merge keeps both')
+  assert(mergeGuest(s, initial()) === s, 'empty guest changes nothing')
   console.log('store ok')
 }

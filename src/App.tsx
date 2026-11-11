@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
-import { load, makePending, placeCard, save, sendPending, townOf, type State } from './lib/store'
+import { currentUser, loadRemote, logOut, saveRemote, type User } from './lib/auth'
+import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import MainScreen from './screens/MainScreen'
+import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
 
 type Route =
@@ -14,28 +17,85 @@ type Route =
   | { name: 'collection'; townId: string }
   | { name: 'draw' }
   | { name: 'tada' }
+  | { name: 'mypage' }
+
+// guest data goes to the first account that logs in on this device
+const GUEST_OWNER = 'subwayseal.guestOwner'
+// the "keep your town" login prompt shows once, after the first card moves in
+const PROMPTED = 'subwayseal.loginPrompted'
+const flag = (k: string) => {
+  try {
+    return localStorage.getItem(k)
+  } catch {
+    return null
+  }
+}
+const setFlag = (k: string, v: string) => {
+  try {
+    localStorage.setItem(k, v)
+  } catch {
+    /* private mode */
+  }
+}
+
+const startRoute = (s: State): Route => (s.pending ? { name: 'tada' } : { name: 'main', townId: s.towns[0].id, enter: 'center' })
 
 export default function App() {
-  const [state, setState] = useState<State>(load)
+  const [ready, setReady] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const userRef = useRef<User | null>(null)
+  const [state, setState] = useState<State>(() => load(GUEST_KEY))
   const [error, setError] = useState('')
-  const [route, setRoute] = useState<Route>(() => {
-    const s = load()
-    return s.pending ? { name: 'tada' } : { name: 'main', townId: s.towns[0].id, enter: 'center' }
-  })
+  const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
+  const [loginPrompt, setLoginPrompt] = useState(false)
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
 
-  // every change is saved; if storage is full the change is undone and the user is told
+  // switch the whole app to an account (or back to guest)
+  const enter = useCallback(async (u: User | null) => {
+    userRef.current = u
+    setUser(u)
+    let next = load(keyFor(u?.id ?? null))
+    if (u) {
+      next = (await loadRemote(u)) ?? next
+      const guest = load(GUEST_KEY)
+      if (!flag(GUEST_OWNER) && hasContent(guest)) {
+        next = mergeGuest(next, guest)
+        setFlag(GUEST_OWNER, u.id)
+        localStorage.removeItem(GUEST_KEY)
+      }
+      try {
+        save(next, keyFor(u.id))
+      } catch {
+        /* cache only */
+      }
+      saveRemote(u, next)
+    }
+    setState(next)
+    setHomeId(next.towns[0].id)
+    setRoute(startRoute(next))
+  }, [])
+
+  useEffect(() => {
+    currentUser().then(async (u) => {
+      if (u) await enter(u)
+      setReady(true)
+    })
+  }, [enter])
+
+  // every change is saved (this device + the account); if storage is full the change is undone and the user is told
   const commit = useCallback((fn: (s: State) => State) => {
     setState((prev) => {
       const next = fn(prev)
+      const u = userRef.current
       try {
-        save(next)
-        return next
+        save(next, keyFor(u?.id ?? null))
       } catch {
         setError('Storage is full. Delete some cards to save new ones.')
         return prev
       }
+      if (u) saveRemote(u, next)
+      return next
     })
   }, [])
 
@@ -64,6 +124,7 @@ export default function App() {
           focusId={route.focus ?? null}
           onTowns={() => setRoute({ name: 'towns' })}
           onCollection={() => setRoute({ name: 'collection', townId: town.id })}
+          onMyPage={() => setRoute({ name: 'mypage' })}
           onDraw={() => setRoute({ name: 'draw' })}
           onSwitch={(id, enter) => goMain(id, enter)}
           onMigrate={(cardId) => setRoute({ name: 'migrate', cardId, back: route, to: 'main' })}
@@ -107,6 +168,10 @@ export default function App() {
             const id = state.pending!.id
             commit((s) => sendPending(s, townId))
             goMain(townId, 'center', id)
+            if (!userRef.current && !flag(PROMPTED)) {
+              setFlag(PROMPTED, '1')
+              setTimeout(() => setLoginPrompt(true), 1200)
+            }
           }}
         />
       )
@@ -131,7 +196,8 @@ export default function App() {
             // save first: if storage is full, stay here so the drawing isn't lost
             const next = makePending(state, draft)
             try {
-              save(next)
+              save(next, keyFor(user?.id ?? null))
+              if (user) saveRemote(user, next)
             } catch {
               return setError('Storage is full. Delete some cards to save new ones.')
             }
@@ -144,11 +210,41 @@ export default function App() {
     case 'tada':
       screen = state.pending && <TadaScreen card={state.pending} onChoose={() => setRoute({ name: 'send' })} />
       break
+    case 'mypage':
+      screen = (
+        <MyPageScreen
+          user={user}
+          cardCount={Object.keys(state.cards).length}
+          onBack={() => goMain(existing(homeId))}
+          onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
+          onLogout={async () => {
+            await logOut()
+            await enter(null)
+            setRoute({ name: 'mypage' })
+          }}
+          onReset={() => {
+            const fresh = initial()
+            commit(() => fresh)
+            setHomeId(fresh.towns[0].id)
+          }}
+        />
+      )
+      break
   }
 
   return (
     <>
-      {screen}
+      {ready && screen}
+      {loginPrompt && (
+        <LoginSheet
+          prompt
+          onClose={() => setLoginPrompt(false)}
+          onDone={(u) => {
+            setLoginPrompt(false)
+            enter(u)
+          }}
+        />
+      )}
       <PhoneChrome />
       {error && <Popup message={error} actions={[{ label: 'Got it!', onClick: () => setError('') }]} />}
     </>

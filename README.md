@@ -204,3 +204,17 @@ git push
 - PC 미리보기: `npm run dev -- --mode http` → http://localhost:5173 (Figma 프레임 402×874 그대로, 창이 작으면 통째로 축소)
 - https가 필요하면(위치 권한): `npm run dev` → 인증서 경고에서 계속 진행
 - 역 이름 데이터 © OpenStreetMap contributors (ODbL), 폰트: 그리운 묘은흘림체 원본 파일
+
+### 로그인 (prototyping 브랜치)
+
+- 처음엔 게스트로 시작 → 첫 카드를 마을에 보내면 로그인 창(“Later”로 닫기 가능, 한 번만 뜸)
+- 게스트로 만든 마을·카드는 이 기기에서 처음 로그인한 계정으로 들어감. 이후 데이터는 계정별로 저장
+- 마이페이지(메인 오른쪽 위 사람 아이콘): 로그인/가입, 로그아웃, 비밀번호 변경, 그린 카드 수, 초기화 동작. 친구·개발자 정보·개인정보 처리방침은 목록만
+- `.env.local`에 키가 없으면 이 브라우저 안 가짜 계정으로 동작 (마이페이지 맨 아래에 표시)
+
+**Supabase로 진짜 계정 쓰기 (팀에서 한 번만)**
+
+1. `.env.local`에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`(퍼블릭 키) 입력 → 개발 서버 재시작. 시크릿 키는 절대 넣지 말 것
+2. Supabase 대시보드 → Authentication → Sign In / Providers → Email → **Confirm email 끄기** (아이디는 내부에서 가짜 이메일로 바뀌어 확인 메일을 못 받음)
+3. SQL Editor에서 `supabase/migrations/004_user_states.sql` 실행 (계정별 데이터 테이블 + 본인만 읽기/쓰기 규칙)
+

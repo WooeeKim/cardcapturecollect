@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import towersIcon from '../assets/proto/icon-towns.svg'
-import collectionIcon from '../assets/proto/icon-collection.svg'
+import menuIcon from '../assets/proto/menu.svg'
+import menuBubble from '../assets/proto/menu-bubble.svg'
+import menuTowns from '../assets/proto/menu-towns.svg'
+import menuCollection from '../assets/proto/menu-collection.svg'
+import personIcon from '../assets/proto/person.svg'
 import plusCard from '../assets/proto/plus-card.svg'
 import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
@@ -26,6 +29,7 @@ export default function MainScreen({
   focusId,
   onTowns,
   onCollection,
+  onMyPage,
   onDraw,
   onSwitch,
   onMigrate,
@@ -36,6 +40,7 @@ export default function MainScreen({
   focusId: string | null
   onTowns: () => void
   onCollection: () => void
+  onMyPage: () => void
   onDraw: () => void
   onSwitch: (townId: string, enter: 'left' | 'right') => void
   onMigrate: (cardId: string) => void
@@ -46,6 +51,7 @@ export default function MainScreen({
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [openId, setOpenId] = useState<string | null>(null) // card detail
   const [follow, setFollow] = useState<string | null>(focusId)
+  const [menu, setMenu] = useState(false)
   const [pull, setPull] = useState(0) // rubber-band overscroll (screen px, + = left edge)
   const target = openId ?? follow
   const targetRef = useRef(target)
@@ -370,12 +376,28 @@ export default function MainScreen({
       {/* header */}
       {!follow && (
         <>
-          <button aria-label="Town list" onClick={onTowns} className="absolute top-[75px] left-[24px] size-[50px]">
-            <img src={towersIcon} alt="" className="absolute top-[4px] left-[5px] h-[42px] w-[40px]" />
-          </button>
+          {/* Figma main 683:4633 (closed) / 683:4662 (menu open) */}
+          {menu ? (
+            <>
+              <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
+              <div className="animate-pop-in absolute top-[77px] left-0 z-20 h-[134px] w-[85px] origin-top-left">
+                <img src={menuBubble} alt="" className="absolute inset-0 size-full" />
+                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[16px] left-[26px] size-[45px]">
+                  <img src={menuCollection} alt="" className="size-full" />
+                </button>
+                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[71.8px] left-[26px] size-[45px]">
+                  <img src={menuTowns} alt="" className="size-full" />
+                </button>
+              </div>
+            </>
+          ) : (
+            <button aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(true)} className="absolute top-[86px] left-[14px] p-[10px]">
+              <img src={menuIcon} alt="" className="h-[17px] w-[26px]" />
+            </button>
+          )}
           <p className="pointer-events-none absolute inset-x-[90px] top-[89px] truncate text-center font-hand text-[24px] leading-[normal]">{town.name}</p>
-          <button aria-label="Collection" onClick={onCollection} className="absolute top-[82px] left-[331px] size-[50px]">
-            <img src={collectionIcon} alt="" className="absolute top-[6px] left-[5px] h-[37.8px] w-[40px]" />
+          <button aria-label="My page" onClick={onMyPage} className="absolute top-[78px] left-[348px] p-[8px]">
+            <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
       )}
