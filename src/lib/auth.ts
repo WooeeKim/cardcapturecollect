@@ -140,8 +140,17 @@ export async function loadRemote(user: User): Promise<Remote | null> {
 // device's local save time; a save that never reaches the server leaves the device copy newer.
 let timer = 0
 let queued: { user: User; state: State; at: string } | null = null
+// `email` comes from 005_admin_gallery.sql; without that migration, save without it instead of failing every time
+let withEmail = true
+
 async function push(job: { user: User; state: State; at: string }) {
-  const { error } = await sb!.from('user_states').upsert({ user_id: job.user.id, email: job.user.username, state: job.state, updated_at: job.at })
+  const row: Record<string, unknown> = { user_id: job.user.id, state: job.state, updated_at: job.at }
+  let { error } = await sb!.from('user_states').upsert(withEmail ? { ...row, email: job.user.username } : row)
+  if (error && withEmail && /email/i.test(error.message)) {
+    withEmail = false
+    console.warn('user_states has no email column (run supabase/migrations/005_admin_gallery.sql); saving without it')
+    ;({ error } = await sb!.from('user_states').upsert(row))
+  }
   if (error) console.warn('user_states save failed', error.message)
 }
 
