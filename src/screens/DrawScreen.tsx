@@ -17,8 +17,21 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const canvas = useRef<DrawingCanvasHandle>(null)
   const [tab, setTab] = useState<'draw' | 'write'>('draw')
   const [tool, setTool] = useState<Tool>('pen')
-  const [size, setSize] = useState(4)
-  const [color, setColor] = useState('#000000')
+  // each tool keeps its own color and thickness (eraser: thickness only)
+  const [settings, setSettings] = useState<Record<Tool, { color: string; size: number }>>({
+    pen: { color: '#000000', size: 4 },
+    highlighter: { color: '#f1c40f', size: 8 },
+    eraser: { color: '#000000', size: 14 },
+  })
+  const { size } = settings[tool]
+  const color = tool === 'eraser' ? settings.pen.color : settings[tool].color
+  const setSize = (v: number) => setSettings((p) => ({ ...p, [tool]: { ...p[tool], size: v } }))
+  // picking a color while erasing switches back to the pencil
+  const setColor = (v: string) => {
+    const target = tool === 'eraser' ? 'pen' : tool
+    setSettings((p) => ({ ...p, [target]: { ...p[target], color: v } }))
+    if (tool === 'eraser') setTool('pen')
+  }
   const [guide, setGuide] = useState(true)
   const [open, setOpen] = useState<'size' | 'color' | null>(null)
   const [empty, setEmpty] = useState(true)
@@ -185,7 +198,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 className="absolute transition-transform duration-300 ease-[var(--ease-spring)]"
                 style={{ left: g.left, top: g.top, width: g.w, height: g.h, transform: `translateY(${tool === t ? -LIFT : 0}px)` }}
               >
-                {t === 'pen' ? <PenIcon /> : t === 'highlighter' ? <HighlighterIcon color={color} /> : <EraserIcon />}
+                {t === 'pen' ? <PenIcon /> : t === 'highlighter' ? <HighlighterIcon color={settings.highlighter.color} /> : <EraserIcon />}
               </button>
             )
           })}
@@ -235,7 +248,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                   key={c}
                   aria-label={`Color ${c}`}
                   aria-pressed={color === c}
-                  onClick={() => { setColor(c); setOpen(null); if (tool === 'eraser') setTool('pen') }}
+                  onClick={() => { setColor(c); setOpen(null) }}
                   className={`size-[30px] rounded-full ${color === c ? 'outline-2 outline-offset-2 outline-black' : ''}`}
                   style={{ background: c, border: c === '#ffffff' ? '1px solid #999' : undefined }}
                 />
