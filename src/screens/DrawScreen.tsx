@@ -321,7 +321,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
-            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[682.5px] left-[305.5px] size-[99px]">
+            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[688.75px] left-[311.75px] size-[86.5px]">
               {/* Figma drawing 719:10468 Frame 128, no fill */}
               <img src={fitIcon} alt="" className="size-full" />
             </button>
