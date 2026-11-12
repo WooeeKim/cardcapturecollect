@@ -175,8 +175,9 @@ export default function TownListScreen({
     const editable = isNew || editing
     return (
       <>
-        {/* townList-detail variant 2: the box grows out of the grey line (its left stroke is cut off right at the line) */}
-        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[104px] h-[183px] w-[289px] max-w-none" style={{ clipPath: 'inset(-4px -4px -4px 12px)' }} />
+        {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
+            behind it (-z), so the line's wavy edge covers the box's left end with no gap. */}
+        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[64px] -z-10 h-[183px] w-[329px] max-w-none" />
         {editable ? (
           <input
             autoFocus
@@ -247,7 +248,7 @@ export default function TownListScreen({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[186px] bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0" />
 
       <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
-        <div className="relative min-h-full" style={{ height: listHeight }}>
+        <div className="relative isolate min-h-full" style={{ height: listHeight }}>
           {/* the grey line every town hangs on */}
           <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: `calc(100% - 37px)` }} />
 
