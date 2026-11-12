@@ -4,7 +4,7 @@ import type { State } from './store'
 // One-time follow-up: the repaired "Wolpyeong" card got its thumbnail cut from the stored (already trimmed)
 // drawing with the full-paper crop, so it zoomed into the cap. Re-cut it from the trimmed drawing:
 // a square as wide as the drawing, from the top (head + shoulders).
-const isRepaired = (c: State['cards'][string]) => c.serial === 'SN261112-04' && c.nickname === 'Wolpyeong' && c.mood === 'Sleepy'
+const isRepaired = (c: State['cards'][string]) => c.serial === 'SN261112-04' && c.mood === 'Sleepy' && [c.place, c.nickname].some((v) => v.includes('Wolpyeong'))
 
 export async function rethumbRepaired(s: State) {
   const out: Record<string, { thumb: string }> = {}

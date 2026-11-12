@@ -177,7 +177,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   // one-time: the repaired drawing's thumbnail is re-cut from its trimmed image
   useEffect(() => {
-    if (!ready || state.rethumbed) return
+    if (!ready || state.rethumbed2) return
     const who = userRef.current
     let stale = false
     rethumbRepaired(state).then((fixed) => {
@@ -185,14 +185,14 @@ export default function App({ onReady }: { onReady?: () => void }) {
       commit((s) => {
         const cards = { ...s.cards }
         for (const [id, f] of Object.entries(fixed)) if (cards[id]) cards[id] = { ...cards[id], ...f }
-        return { ...s, cards, rethumbed: true }
+        return { ...s, cards, rethumbed2: true }
       })
     })
     return () => {
       stale = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, state.rethumbed, commit])
+  }, [ready, user, state.rethumbed2, commit])
 
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {
