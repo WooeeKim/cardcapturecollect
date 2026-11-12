@@ -126,8 +126,8 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
   return (
     <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
-      {/* card-sized canvas (white paper) */}
-      <div className="absolute top-[145px] left-[21px] h-[515px] w-[360px] overflow-hidden rounded-[10px] bg-white transition-transform duration-300" style={tab === 'draw' ? shrink(515) : undefined}>
+      {/* card-sized paper: two fingers zoom, tilt and move the whole card (it can go past the screen) */}
+      <div className="absolute top-[145px] left-[21px] h-[515px] w-[360px] transition-transform duration-300" style={tab === 'draw' ? shrink(515) : undefined}>
         <DrawingCanvas
           ref={canvas}
           tool={tool}
@@ -141,8 +141,10 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           }}
           onZoom={setZoomed}
           onChange={() => setEmpty(!!canvas.current?.isEmpty())}
-        />
-        {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">A few lines will do!</p>}
+          paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+        >
+          {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">A few lines will do!</p>}
+        </DrawingCanvas>
       </div>
 
       {/* header */}
@@ -157,6 +159,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             setTab(t)
             setOpen(null)
             setPicking(false)
+            if (t === 'memo') canvas.current?.resetView()
           }}
           aria-pressed={tab === t}
           className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] ${tab === 'memo' && !preview ? 'text-white' : ''}`}

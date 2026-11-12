@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
+import { useEffect, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react'
 import FigureGuide from './FigureGuide'
 import { toLocal } from '../lib/frame'
 
@@ -6,8 +6,9 @@ export type Tool = 'pen' | 'highlighter' | 'eraser'
 
 type Point = { x: number; y: number }
 type Stroke = { tool: Tool; color: string; size: number; points: Point[] }
-// 확대 상태. 화면(CSS px) = 원래 좌표 × s + (x, y)
-type View = { s: number; x: number; y: number }
+// The whole card (paper) moves: scale s around its center, rotated r (rad), shifted (x, y) in host px.
+// It may grow past the screen edges.
+type View = { s: number; r: number; x: number; y: number }
 
 export type DrawingCanvasHandle = {
   undo: () => void
@@ -28,21 +29,24 @@ type Props = {
   picking?: boolean
   onPick?: (color: string) => void
   onZoom?: (zoomed: boolean) => void
+  paperClassName?: string
+  children?: ReactNode // drawn on the paper (moves with it)
   ref?: Ref<DrawingCanvasHandle>
 }
 
-// 툴바에 undo/redo 버튼이 없는 디자인이라 제스처로 대신한다: 두 손가락 탭 = 실행 취소, 세 손가락 탭 = 다시 실행
-// 두 손가락을 벌리거나 끌면 탭이 아니라 확대/이동으로 본다.
+// No undo/redo in some designs, so gestures too: two-finger tap = undo, three-finger tap = redo.
+// Two fingers spreading / turning / moving = zoom, tilt and move the card.
 const TAP_MS = 300
 const TAP_SLOP = 10
+const MIN_SCALE = 0.5
 const MAX_SCALE = 6
-const IDENTITY: View = { s: 1, x: 0, y: 0 }
+const IDENTITY: View = { s: 1, r: 0, x: 0, y: 0 }
+const isHome = (v: View) => v.s === 1 && v.r === 0 && v.x === 0 && v.y === 0
 
-function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[], view: View, dpr: number) {
+function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
   const { width: w, height: h } = ctx.canvas
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, w, h)
-  ctx.setTransform(view.s, 0, 0, view.s, view.x * dpr, view.y * dpr)
   for (const s of strokes) {
     ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
     ctx.globalAlpha = s.tool === 'highlighter' ? 0.35 : 1
@@ -55,100 +59,233 @@ function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[], view: View, dpr
     if (s.points.length === 1) ctx.lineTo(s.points[0].x * w + 0.01, s.points[0].y * h)
     ctx.stroke()
   }
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = 1
 }
 
-// 부모 크기를 꽉 채우는 캔버스. 좌표는 0~1 비율로 저장해 크기가 바뀌어도 다시 그릴 수 있게 한다.
-export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, ref }: Props) {
-  const zoomCb = useRef(onZoom)
-  zoomCb.current = onZoom
-  const wasZoomed = useRef(false)
+// Card-sized drawing paper. Points are stored as 0–1 fractions so the backing resolution can change.
+export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, paperClassName = '', children, ref }: Props) {
+  const hostRef = useRef<HTMLDivElement>(null)
+  const paperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const guideRef = useRef<HTMLDivElement>(null)
   const strokes = useRef<Stroke[]>([])
   const redoStack = useRef<Stroke[]>([])
   const current = useRef<Stroke | null>(null)
-  const pointers = useRef(new Map<number, Point>())
+  const pointers = useRef(new Map<number, Point>()) // host px
   const gesture = useRef({ maxTouches: 0, startedAt: 0, moved: false })
   const view = useRef<View>(IDENTITY)
-  const pinch = useRef<{ dist: number; mid: Point; view: View } | null>(null)
+  const pinch = useRef<{ dist: number; angle: number; mid: Point; view: View } | null>(null)
+  const res = useRef(1) // backing-store multiplier so zoomed lines stay sharp
+  const zoomed = useRef(false)
+  // latest props for the window listeners
+  const live = useRef({ tool, color, size, onChange, onZoom })
+  live.current = { tool, color, size, onChange, onZoom }
 
   function redraw() {
     const canvas = canvasRef.current
     if (!canvas) return
-    const all = current.current ? [...strokes.current, current.current] : strokes.current
-    paint(canvas.getContext('2d')!, all, view.current, window.devicePixelRatio)
-    const { s, x, y } = view.current
-    // CSS scale 을 쓰면 가이드 선까지 굵어지므로 박스 크기를 직접 키워 선 굵기는 그대로 둔다
-    const guide = guideRef.current
-    if (guide) Object.assign(guide.style, { left: `${x}px`, top: `${y}px`, width: `${s * 100}%`, height: `${s * 100}%` })
+    paint(canvas.getContext('2d')!, current.current ? [...strokes.current, current.current] : strokes.current)
   }
 
-  // 확대 배율을 1~MAX_SCALE 로, 이동은 그림 영역 밖이 보이지 않게 제한한다
-  function setView(next: View) {
-    const canvas = canvasRef.current!
-    const s = Math.min(MAX_SCALE, Math.max(1, next.s))
-    const clamp = (v: number, len: number) => Math.min(0, Math.max(len - len * s, v))
-    view.current = { s, x: clamp(next.x, canvas.clientWidth), y: clamp(next.y, canvas.clientHeight) }
+  function sizeCanvas() {
+    const c = canvasRef.current!
+    const k = window.devicePixelRatio * res.current
+    c.width = Math.round(c.clientWidth * k)
+    c.height = Math.round(c.clientHeight * k)
     redraw()
-    if (s > 1 !== wasZoomed.current) {
-      wasZoomed.current = s > 1
-      zoomCb.current?.(s > 1)
+  }
+
+  function apply(animate = false) {
+    const paper = paperRef.current!
+    const { s, r, x, y } = view.current
+    paper.style.transition = animate ? 'transform 0.3s var(--ease-spring)' : 'none'
+    paper.style.transform = `translate(${x}px, ${y}px) rotate(${r}rad) scale(${s})`
+    const z = !isHome(view.current)
+    if (z !== zoomed.current) {
+      zoomed.current = z
+      live.current.onZoom?.(z)
     }
   }
 
-  // 화면의 한 점(anchor)이 가리키는 그림 위치를 고정한 채로 배율을 바꾼다
-  function zoomAround(base: View, s: number, from: Point, to: Point) {
-    const cx = (from.x - base.x) / base.s
-    const cy = (from.y - base.y) / base.s
-    const ns = Math.min(MAX_SCALE, Math.max(1, s))
-    setView({ s: ns, x: to.x - cx * ns, y: to.y - cy * ns })
+  // sharper backing store once the gesture settles
+  function settleResolution() {
+    const want = Math.min(4, Math.max(1, Math.ceil(view.current.s)))
+    if (want !== res.current) {
+      res.current = want
+      sizeCanvas()
+    }
   }
 
+  // host px → paper px (undo the card's move / tilt / zoom around its center)
+  function toPaper(p: Point): Point {
+    const host = hostRef.current!
+    const cx = host.offsetWidth / 2
+    const cy = host.offsetHeight / 2
+    const { s, r, x, y } = view.current
+    const dx = p.x - cx - x
+    const dy = p.y - cy - y
+    const cos = Math.cos(-r)
+    const sin = Math.sin(-r)
+    return { x: cx + (dx * cos - dy * sin) / s, y: cy + (dx * sin + dy * cos) / s }
+  }
+  const hostPoint = (e: { clientX: number; clientY: number }) => toLocal(e.clientX, e.clientY, hostRef.current!)
+  const toFraction = (p: Point): Point => {
+    const host = hostRef.current!
+    const q = toPaper(p)
+    return { x: q.x / host.offsetWidth, y: q.y / host.offsetHeight }
+  }
+
+  // keep the paper point under `from` (at `base`) under `to` after scaling to s and turning to r
+  function moveTo(base: View, s: number, r: number, from: Point, to: Point) {
+    const host = hostRef.current!
+    const cx = host.offsetWidth / 2
+    const cy = host.offsetHeight / 2
+    const ns = Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
+    // paper point under `from`, relative to the center
+    const dx = from.x - cx - base.x
+    const dy = from.y - cy - base.y
+    const c0 = Math.cos(-base.r)
+    const s0 = Math.sin(-base.r)
+    const qx = (dx * c0 - dy * s0) / base.s
+    const qy = (dx * s0 + dy * c0) / base.s
+    const c1 = Math.cos(r)
+    const s1 = Math.sin(r)
+    view.current = { s: ns, r, x: to.x - cx - ns * (qx * c1 - qy * s1), y: to.y - cy - ns * (qx * s1 + qy * c1) }
+    apply()
+  }
+
+  function pinchState() {
+    const [a, b] = [...pointers.current.values()]
+    return { dist: Math.hypot(a.x - b.x, a.y - b.y), angle: Math.atan2(b.y - a.y, b.x - a.x), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
+  }
+
+  // nearly straight / nearly home snaps back
+  function snap() {
+    const v = { ...view.current }
+    if (Math.abs(v.r) < (4 * Math.PI) / 180) v.r = 0
+    if (v.r === 0 && Math.abs(v.s - 1) < 0.06 && Math.hypot(v.x, v.y) < 24) Object.assign(v, IDENTITY)
+    view.current = v
+    apply(true)
+    settleResolution()
+  }
+
+  function addPointer(id: number, p: Point, t: number) {
+    pointers.current.set(id, p)
+    if (pointers.current.size === 1) {
+      gesture.current = { maxTouches: 1, startedAt: t, moved: false }
+      const { tool, color, size } = live.current
+      current.current = { tool, color, size, points: [toFraction(p)] }
+    } else {
+      // another finger: drop the stroke in progress, it's a gesture
+      gesture.current.maxTouches = Math.max(gesture.current.maxTouches, pointers.current.size)
+      current.current = null
+      pinch.current = pointers.current.size === 2 ? { ...pinchState(), view: view.current } : null
+    }
+    redraw()
+  }
+
+  // move / up anywhere on screen (fingers may leave the paper while zooming)
   useEffect(() => {
-    const canvas = canvasRef.current!
-    const resize = () => {
-      canvas.width = Math.round(canvas.clientWidth * window.devicePixelRatio)
-      canvas.height = Math.round(canvas.clientHeight * window.devicePixelRatio)
-      view.current = IDENTITY
+    const onDown = (e: PointerEvent) => {
+      // a second finger outside the paper still joins the gesture
+      if (!pointers.current.size || paperRef.current!.contains(e.target as Node)) return
+      addPointer(e.pointerId, hostPoint(e), e.timeStamp)
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!pointers.current.has(e.pointerId)) return
+      pointers.current.set(e.pointerId, hostPoint(e))
+      if (pinch.current && pointers.current.size === 2) {
+        const start = pinch.current
+        const { dist, angle, mid } = pinchState()
+        let turn = angle - start.angle
+        if (turn > Math.PI) turn -= 2 * Math.PI
+        if (turn < -Math.PI) turn += 2 * Math.PI
+        if (Math.abs(dist - start.dist) > TAP_SLOP || Math.hypot(mid.x - start.mid.x, mid.y - start.mid.y) > TAP_SLOP || Math.abs(turn) > 0.08) {
+          gesture.current.moved = true
+        }
+        if (gesture.current.moved) moveTo(start.view, (start.view.s * dist) / start.dist, start.view.r + turn, start.mid, mid)
+        return
+      }
+      if (!current.current || pointers.current.size > 1) return
+      current.current.points.push(toFraction(hostPoint(e)))
       redraw()
     }
-    resize()
-    const observer = new ResizeObserver(resize)
+    const onUp = (e: PointerEvent) => {
+      if (!pointers.current.has(e.pointerId)) return
+      pointers.current.delete(e.pointerId)
+      pinch.current = null
+      if (e.type === 'pointercancel') {
+        current.current = null
+        redraw()
+      }
+      if (pointers.current.size > 0) return
+      const { maxTouches, startedAt, moved } = gesture.current
+      if (maxTouches > 1) {
+        if (!moved && e.timeStamp - startedAt < TAP_MS) (maxTouches === 2 ? undo : redo)()
+        snap()
+        return
+      }
+      if (!current.current) return
+      strokes.current.push(current.current)
+      redoStack.current = []
+      current.current = null
+      live.current.onChange?.()
+    }
+    window.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+
+    const canvas = canvasRef.current!
+    sizeCanvas()
+    const observer = new ResizeObserver(sizeCanvas)
     observer.observe(canvas)
 
-    // 트랙패드 핀치(ctrl+휠)·ctrl+휠 = 확대, 확대 중 일반 휠 = 이동. 페이지 확대를 막으려고 passive: false 로 단다.
+    // trackpad pinch (ctrl+wheel) zooms, shift+wheel tilts, plain wheel moves the card once zoomed
+    const host = hostRef.current!
     const onWheel = (e: WheelEvent) => {
-      const at = toLocal(e.clientX, e.clientY, canvas)
+      const at = hostPoint(e)
+      const v = view.current
       if (e.ctrlKey) {
         e.preventDefault()
-        zoomAround(view.current, view.current.s * Math.exp(-e.deltaY * 0.01), at, at)
-      } else if (view.current.s > 1) {
+        moveTo(v, v.s * Math.exp(-e.deltaY * 0.01), v.r, at, at)
+      } else if (e.shiftKey) {
         e.preventDefault()
-        setView({ ...view.current, x: view.current.x - e.deltaX, y: view.current.y - e.deltaY })
+        moveTo(v, v.s, v.r + (e.deltaY || e.deltaX) * 0.003, at, at)
+      } else if (!isHome(v)) {
+        e.preventDefault()
+        view.current = { ...v, x: v.x - e.deltaX, y: v.y - e.deltaY }
+        apply()
       }
+      clearTimeout(wheelTimer)
+      wheelTimer = window.setTimeout(snap, 250)
     }
-    canvas.addEventListener('wheel', onWheel, { passive: false })
+    let wheelTimer = 0
+    host.addEventListener('wheel', onWheel, { passive: false })
     return () => {
+      window.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
       observer.disconnect()
-      canvas.removeEventListener('wheel', onWheel)
+      host.removeEventListener('wheel', onWheel)
+      clearTimeout(wheelTimer)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function undo() {
     const s = strokes.current.pop()
     if (s) redoStack.current.push(s)
     redraw()
-    onChange?.()
+    live.current.onChange?.()
   }
 
   function redo() {
     const s = redoStack.current.pop()
     if (s) strokes.current.push(s)
     redraw()
-    onChange?.()
+    live.current.onChange?.()
   }
 
   useImperativeHandle(ref, () => ({
@@ -158,115 +295,57 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       strokes.current = []
       redoStack.current = []
       view.current = IDENTITY
+      apply()
       redraw()
     },
     isEmpty: () => strokes.current.length === 0,
-    resetView: () => setView(IDENTITY),
-    // 확대 상태와 상관없이 전체 그림을 원래 배율로 내보낸다
+    resetView: () => {
+      view.current = IDENTITY
+      apply(true)
+      settleResolution()
+    },
+    // whole drawing at the normal size, whatever the zoom
     toBlob: () => {
       const src = canvasRef.current!
       const out = document.createElement('canvas')
-      out.width = src.width
-      out.height = src.height
-      paint(out.getContext('2d')!, strokes.current, IDENTITY, window.devicePixelRatio)
+      out.width = Math.round(src.clientWidth * window.devicePixelRatio)
+      out.height = Math.round(src.clientHeight * window.devicePixelRatio)
+      paint(out.getContext('2d')!, strokes.current)
       return new Promise((resolve, reject) => out.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'))
     },
   }))
 
-  function screenPoint(e: React.PointerEvent<HTMLCanvasElement>): Point {
-    return toLocal(e.clientX, e.clientY, e.currentTarget)
-  }
-
-  function toPoint(e: React.PointerEvent<HTMLCanvasElement>): Point {
-    const p = screenPoint(e)
-    const { s, x, y } = view.current
-    const { clientWidth: w, clientHeight: h } = e.currentTarget
-    return { x: (p.x - x) / s / w, y: (p.y - y) / s / h }
-  }
-
-  function pinchState() {
-    const [a, b] = [...pointers.current.values()]
-    return { dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } }
-  }
-
   return (
-    <div className="relative size-full overflow-hidden">
-      <div ref={guideRef} className={`pointer-events-none absolute top-0 left-0 size-full ${guide ? '' : 'hidden'}`}>
-        <div className="absolute inset-[9.2%_0]">
+    <div ref={hostRef} className="relative size-full">
+      <div ref={paperRef} className={`absolute inset-0 origin-center overflow-hidden ${paperClassName}`}>
+        <div className={`pointer-events-none absolute inset-[9.2%_0] ${guide ? '' : 'hidden'}`}>
           <FigureGuide />
         </div>
-      </div>
-      <canvas
-        ref={canvasRef}
-        className="relative block size-full touch-none"
-        onPointerDown={(e) => {
-          if (picking) {
-            const c = e.currentTarget
-            const p = screenPoint(e)
-            const k = c.width / c.clientWidth
-            const [r, g, b, a] = c.getContext('2d')!.getImageData(Math.round(p.x * k), Math.round(p.y * k), 1, 1).data
-            // empty paper reads as white
-            const mix = (v: number) => Math.round(v * (a / 255) + 255 * (1 - a / 255)).toString(16).padStart(2, '0')
-            onPick?.(`#${mix(r)}${mix(g)}${mix(b)}`)
-            return
-          }
-          pointers.current.set(e.pointerId, screenPoint(e))
-          try {
-            e.currentTarget.setPointerCapture(e.pointerId)
-          } catch {
-            // 이미 끝난 포인터면 캡처 실패 — 그리기에는 지장 없음
-          }
-          if (pointers.current.size === 1) {
-            gesture.current = { maxTouches: 1, startedAt: e.timeStamp, moved: false }
-            current.current = { tool, color, size, points: [toPoint(e)] }
-          } else {
-            // 손가락이 하나 더 닿으면 그리던 획은 버리고 제스처로 본다
-            gesture.current.maxTouches = Math.max(gesture.current.maxTouches, pointers.current.size)
-            current.current = null
-            pinch.current = pointers.current.size === 2 ? { ...pinchState(), view: view.current } : null
-          }
-          redraw()
-        }}
-        onPointerMove={(e) => {
-          if (!pointers.current.has(e.pointerId)) return
-          pointers.current.set(e.pointerId, screenPoint(e))
-          if (pinch.current && pointers.current.size === 2) {
-            const start = pinch.current
-            const { dist, mid } = pinchState()
-            if (Math.abs(dist - start.dist) > TAP_SLOP || Math.hypot(mid.x - start.mid.x, mid.y - start.mid.y) > TAP_SLOP) {
-              gesture.current.moved = true
+        {children}
+        <canvas
+          ref={canvasRef}
+          className={`relative block size-full touch-none ${picking ? 'cursor-crosshair' : ''}`}
+          onPointerDown={(e) => {
+            const p = hostPoint(e)
+            if (picking) {
+              const c = e.currentTarget
+              const q = toPaper(p)
+              const k = c.width / c.clientWidth
+              const [r, g, b, a] = c.getContext('2d')!.getImageData(Math.round(q.x * k), Math.round(q.y * k), 1, 1).data
+              // empty paper reads as white
+              const mix = (v: number) => Math.round(v * (a / 255) + 255 * (1 - a / 255)).toString(16).padStart(2, '0')
+              onPick?.(`#${mix(r)}${mix(g)}${mix(b)}`)
+              return
             }
-            if (gesture.current.moved) zoomAround(start.view, (start.view.s * dist) / start.dist, start.mid, mid)
-            return
-          }
-          if (!current.current || pointers.current.size > 1) return
-          current.current.points.push(toPoint(e))
-          redraw()
-        }}
-        onPointerUp={(e) => {
-          pointers.current.delete(e.pointerId)
-          pinch.current = null
-          if (pointers.current.size > 0) return
-          const { maxTouches, startedAt, moved } = gesture.current
-          if (maxTouches > 1) {
-            if (!moved && e.timeStamp - startedAt < TAP_MS) (maxTouches === 2 ? undo : redo)()
-            // 거의 원래 크기까지 줄였으면 딱 맞춰 되돌린다
-            if (view.current.s < 1.05) setView(IDENTITY)
-            return
-          }
-          if (!current.current) return
-          strokes.current.push(current.current)
-          redoStack.current = []
-          current.current = null
-          onChange?.()
-        }}
-        onPointerCancel={(e) => {
-          pointers.current.delete(e.pointerId)
-          pinch.current = null
-          current.current = null
-          redraw()
-        }}
-      />
+            try {
+              e.currentTarget.setPointerCapture(e.pointerId)
+            } catch {
+              // pointer already gone: drawing still works
+            }
+            addPointer(e.pointerId, p, e.timeStamp)
+          }}
+        />
+      </div>
     </div>
   )
 }
