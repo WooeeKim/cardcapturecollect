@@ -29,7 +29,7 @@ import type { Card } from '../lib/store'
 
 // New Figma GUI (prototyping › 그리기): Drawing | Memo tabs, hand-drawn toolbar, Colors panel with
 // eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "Choose a village" (719:11320).
-const SIZES = [2, 4, 8, 14, 22]
+const SIZES = [1, 4, 8, 14, 22]
 // toolbar geometry in Figma frame px; `up` = how far the picked tool lifts
 const TOOLS = {
   pen: { left: 29, top: 793, w: 30, h: 150.5, up: 36, bubble: 18 },

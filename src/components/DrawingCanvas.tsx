@@ -45,13 +45,30 @@ const MAX_SCALE = 6
 const IDENTITY: View = { s: 1, r: 0, x: 0, y: 0 }
 const isHome = (v: View) => v.s === 1 && v.r === 0 && v.x === 0 && v.y === 0
 
+// Fill (highlighter) strokes sit on their own layer under the pen lines, so filling never covers a line.
+// The eraser cuts both layers. Opacity comes only from the color (100% = solid fill).
+let fillLayer: HTMLCanvasElement | null = null
 function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
+  const { width: w, height: h } = ctx.canvas
+  fillLayer ??= document.createElement('canvas')
+  if (fillLayer.width !== w || fillLayer.height !== h) {
+    fillLayer.width = w
+    fillLayer.height = h
+  }
+  const fill = fillLayer.getContext('2d')!
+  strokeAll(fill, strokes.filter((s) => s.tool !== 'pen'))
+  strokeAll(ctx, strokes.filter((s) => s.tool !== 'highlighter'))
+  ctx.globalCompositeOperation = 'destination-over'
+  ctx.drawImage(fillLayer, 0, 0)
+  ctx.globalCompositeOperation = 'source-over'
+}
+
+function strokeAll(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
   const { width: w, height: h } = ctx.canvas
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, w, h)
   for (const s of strokes) {
     ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
-    ctx.globalAlpha = s.tool === 'highlighter' ? 0.35 : 1
     ctx.strokeStyle = s.color
     ctx.lineWidth = (s.tool === 'highlighter' ? s.size * 3 : s.size) * (w / 300)
     ctx.lineCap = 'round'
@@ -62,7 +79,6 @@ function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
     ctx.stroke()
   }
   ctx.globalCompositeOperation = 'source-over'
-  ctx.globalAlpha = 1
 }
 
 // Card-sized drawing paper. Points are stored as 0–1 fractions so the backing resolution can change.
