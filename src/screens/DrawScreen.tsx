@@ -210,9 +210,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 return (
                   <button key={m.name} aria-pressed={on} onClick={() => setMood(on ? '' : m.name)} className="relative h-[40px] transition-transform active:scale-95">
                     <span className="absolute inset-[-2.5%_-1%]">
-                      {on ? <ChipShape on i={i} /> : <img src={i % 3 === 1 ? chipW2 : chipW1} alt="" className="size-full" />}
+                      {on ? <ChipShape on i={i} color={m.color} /> : <img src={i % 3 === 1 ? chipW2 : chipW1} alt="" className="size-full" />}
                     </span>
-                    <span className={`relative text-[19px] leading-[1.1] ${on ? 'text-[#f3f3f3]' : 'text-[#3d3d3d]'}`}>{m.name}</span>
+                    <span className={`relative text-[19px] leading-[1.1] ${on ? '' : 'text-[#3d3d3d]'}`} style={on ? { color: m.ink } : undefined}>{m.name}</span>
                   </button>
                 )
               })}
@@ -321,7 +321,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
-            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[688.75px] left-[311.75px] size-[86.5px]">
+            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
               {/* Figma drawing 719:10468 Frame 128, no fill */}
               <img src={fitIcon} alt="" className="size-full" />
             </button>

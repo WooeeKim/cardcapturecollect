@@ -47,6 +47,7 @@ export const PillBack = () => <Raw svg={pillBack} />
 export const PillVillage = () => <Raw svg={pillVillage} />
 
 // mood chip outline: selected = filled dark, others = light (two hand-drawn variants alternate)
-export function ChipShape({ on, i }: { on: boolean; i: number }) {
-  return <Raw svg={on ? chipOn : i % 3 === 1 ? chipA : chipB} />
+export function ChipShape({ on, i, color = 'black' }: { on: boolean; i: number; color?: string }) {
+  // selected chip lights up in its mood's own color
+  return <Raw svg={on ? chipOn.replace('fill="black"', `fill="${color}"`) : i % 3 === 1 ? chipA : chipB} />
 }
