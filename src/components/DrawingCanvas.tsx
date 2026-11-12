@@ -70,7 +70,8 @@ function strokeAll(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
   for (const s of strokes) {
     ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
     ctx.strokeStyle = s.color
-    ctx.lineWidth = (s.tool === 'highlighter' ? s.size * 3 : s.size) * (w / 300)
+    // pen lines at half the step size (thinnest = 1), fill 3×, eraser as is
+    ctx.lineWidth = s.size * (s.tool === 'highlighter' ? 3 : s.tool === 'pen' ? 0.5 : 1) * (w / 300)
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.beginPath()
