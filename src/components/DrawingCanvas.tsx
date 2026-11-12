@@ -15,6 +15,7 @@ export type DrawingCanvasHandle = {
   clear: () => void
   isEmpty: () => boolean
   toBlob: () => Promise<Blob>
+  resetView: () => void
 }
 
 type Props = {
@@ -23,6 +24,10 @@ type Props = {
   size: number
   guide?: boolean
   onChange?: () => void
+  // eyedropper: next touch reads the color under the finger instead of drawing
+  picking?: boolean
+  onPick?: (color: string) => void
+  onZoom?: (zoomed: boolean) => void
   ref?: Ref<DrawingCanvasHandle>
 }
 
@@ -56,7 +61,10 @@ function paint(ctx: CanvasRenderingContext2D, strokes: Stroke[], view: View, dpr
 }
 
 // 부모 크기를 꽉 채우는 캔버스. 좌표는 0~1 비율로 저장해 크기가 바뀌어도 다시 그릴 수 있게 한다.
-export default function DrawingCanvas({ tool, color, size, guide = true, onChange, ref }: Props) {
+export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, ref }: Props) {
+  const zoomCb = useRef(onZoom)
+  zoomCb.current = onZoom
+  const wasZoomed = useRef(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const guideRef = useRef<HTMLDivElement>(null)
   const strokes = useRef<Stroke[]>([])
@@ -85,6 +93,10 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
     const clamp = (v: number, len: number) => Math.min(0, Math.max(len - len * s, v))
     view.current = { s, x: clamp(next.x, canvas.clientWidth), y: clamp(next.y, canvas.clientHeight) }
     redraw()
+    if (s > 1 !== wasZoomed.current) {
+      wasZoomed.current = s > 1
+      zoomCb.current?.(s > 1)
+    }
   }
 
   // 화면의 한 점(anchor)이 가리키는 그림 위치를 고정한 채로 배율을 바꾼다
@@ -149,6 +161,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       redraw()
     },
     isEmpty: () => strokes.current.length === 0,
+    resetView: () => setView(IDENTITY),
     // 확대 상태와 상관없이 전체 그림을 원래 배율로 내보낸다
     toBlob: () => {
       const src = canvasRef.current!
@@ -187,6 +200,16 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
         ref={canvasRef}
         className="relative block size-full touch-none"
         onPointerDown={(e) => {
+          if (picking) {
+            const c = e.currentTarget
+            const p = screenPoint(e)
+            const k = c.width / c.clientWidth
+            const [r, g, b, a] = c.getContext('2d')!.getImageData(Math.round(p.x * k), Math.round(p.y * k), 1, 1).data
+            // empty paper reads as white
+            const mix = (v: number) => Math.round(v * (a / 255) + 255 * (1 - a / 255)).toString(16).padStart(2, '0')
+            onPick?.(`#${mix(r)}${mix(g)}${mix(b)}`)
+            return
+          }
           pointers.current.set(e.pointerId, screenPoint(e))
           try {
             e.currentTarget.setPointerCapture(e.pointerId)

@@ -220,6 +220,13 @@ git push
 2. SQL Editor에서 `supabase/migrations/004_user_states.sql` 실행 (계정별 데이터 테이블 + 본인만 읽기/쓰기 규칙)
 3. 이메일 확인(Confirm email)은 Supabase 기본으로 켜져 있음 → 가입 후 메일 링크를 눌러야 로그인 가능. 테스트 편하게 하려면 Authentication → Sign In / Providers → Email 에서 꺼도 됨
 
+### Collection · Draw (새 GUI, Figma prototyping 725:* / 705·719·745:*)
+
+- Collection: 마을 줄(진한 테두리 = 선택) → 덱 3×2(첫 칸 Head, 10명 = 2페이지) → 다른 마을 카드. 꾹 눌러 끌기: 덱 빈 곳에 넣기, 다른 칸 카드 위에 놓으면 서로 자리 바꿈, 덱 안에서 순서 바꾸기. 상세는 Delete만
+- Draw: Drawing | Memo 탭, 손그림 툴바(펜·형광펜·지우개, 도구마다 색·굵기 따로), Colors 패널(스펙트럼·투명도·스포이드), 핀치 확대 후 버튼으로 원래 크기
+- Memo: 무드 9개(Silent, Joyful, Lively, Elegant, Shy, Sleepy, Busy, Scattered, Gentle), 장소는 역 이름만, 전부 필수
+- 마무리: 말풍선 "Ready to finish?" → Finish / Go Back → "Choose a village"
+
 ### 사용성 테스트 로그 (PostHog)
 
 - 화면 녹화(세션 리플레이), 히트맵, 화면별 체류시간, 주요 행동 이벤트, 피드백을 PostHog로 보냄. 키가 없으면 아무것도 안 보냄

@@ -13,7 +13,7 @@ export function nearestStation(lat: number, lng: number): string {
       best = name
     }
   }
-  return best ? `${best} Station` : ''
+  return best
 }
 
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -24,11 +24,12 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   return 12742 * Math.asin(Math.sqrt(h))
 }
 
+// (station name only, no "Station")
 // Last place used on a card: the starting value when location is denied or no station is near.
 const LAST = 'subwayseal.lastPlace'
 export function lastPlace() {
   try {
-    return localStorage.getItem(LAST) ?? ''
+    return (localStorage.getItem(LAST) ?? '').replace(/ Station$/, '')
   } catch {
     return ''
   }
@@ -57,9 +58,9 @@ export function locatePlace(): Promise<string> {
 const argv = (globalThis as { process?: { argv: string[] } }).process?.argv
 if (argv?.[1]?.endsWith('place.ts')) {
   const got = nearestStation(37.5495, 126.9139)
-  if (got !== 'Hapjeong Station') throw new Error(`expected Hapjeong Station, got ${got}`)
+  if (got !== 'Hapjeong') throw new Error(`expected Hapjeong, got ${got}`)
   const kaist = nearestStation(36.3721, 127.3604)
-  if (kaist !== 'Wolpyeong Station') throw new Error(`expected Wolpyeong Station near KAIST, got ${kaist}`)
+  if (kaist !== 'Wolpyeong') throw new Error(`expected Wolpyeong near KAIST, got ${kaist}`)
   if (nearestStation(33.0, 125.0) !== '') throw new Error('open sea should be out of range')
   console.log('place ok')
 }

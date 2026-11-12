@@ -90,9 +90,9 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
 
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
-export function Thumb({ image, size = 70, strong = false, grey = false }: { image?: string; size?: number; strong?: boolean; grey?: boolean }) {
+export function Thumb({ image, size = 70, strong = false, grey = false, ring: ringW }: { image?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number }) {
   // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body
-  const ring = strong ? 8.5 : 9
+  const ring = ringW ?? (strong ? 8.5 : 9)
   return (
     <span
       className="relative block shrink-0 overflow-hidden rounded-full bg-white"
@@ -125,7 +125,7 @@ export function MoodChip({ mood, size = 21 }: { mood: string; size?: number }) {
 
 export function CardView({ card, plain = false, onImage }: { card: Card; plain?: boolean; onImage?: () => void }) {
   return (
-    <div className="relative aspect-[360/515] w-full overflow-hidden rounded-[12px] bg-[#f0f0f0] font-hand text-black [container-type:inline-size]">
+    <div className="relative aspect-[360/515] w-full overflow-hidden rounded-[10px] bg-white font-hand text-black [container-type:inline-size]">
       <button aria-label="Show drawing only" onClick={onImage} className="absolute inset-[3%_4%_6%] block">
         <img src={card.image} alt={card.nickname || 'drawing'} className="size-full object-contain" />
       </button>
@@ -136,9 +136,9 @@ export function CardView({ card, plain = false, onImage }: { card: Card; plain?:
               <ChipCq mood={card.mood} />
             </span>
           )}
-          {card.place && <span className="absolute top-[5.5cqw] right-[5cqw] text-[3.9cqw] leading-[1.1]">{card.place}</span>}
+          {card.place && <span className="absolute top-[5.5cqw] right-[4.2cqw] text-[5.5cqw] leading-[1.1] tracking-[-0.02em]">{card.place}</span>}
           {(card.nickname || card.memo) && (
-            <div className="absolute inset-x-[2.8cqw] bottom-[8.5cqw] rounded-[2.8cqw] bg-white/70 p-[2.8cqw] backdrop-blur-[2px]">
+            <div className="absolute inset-x-[2.8cqw] bottom-[8.9cqw] rounded-[2.8cqw] bg-white/30 p-[2.8cqw] backdrop-blur-[2px]">
               {card.nickname && <p className="text-[5.9cqw] leading-[1.1]">{card.nickname}</p>}
               {card.memo && <p className="mt-[2cqw] line-clamp-4 text-[4.7cqw] leading-[1.2] break-words">{card.memo}</p>}
             </div>

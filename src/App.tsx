@@ -190,7 +190,6 @@ export default function App() {
           townId={existing(route.townId)}
           onTown={(id) => setRoute({ name: 'collection', townId: id })}
           onBack={() => goMain(existing(homeId))}
-          onMigrate={(cardId) => setRoute({ name: 'migrate', cardId, back: route, to: 'collection' })}
         />
       )
       break

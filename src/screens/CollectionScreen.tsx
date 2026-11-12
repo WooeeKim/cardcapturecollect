@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import crownIcon from '../assets/proto/crown.svg'
-import { Bottom, CardView, CloseIcon, Header, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
+import backIcon from '../assets/proto/v2/back40.svg'
+import closeIcon from '../assets/proto/v2/close.svg'
+import deleteLine from '../assets/proto/v2/delete-line.svg'
+import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
-import { MAX_RESIDENTS, deleteCard, placeCard, townOf, type Card, type State } from '../lib/store'
+import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
 
-// Figma wireframe: 콜렉션 (town strip → selected town's deck → other towns' cards) + card detail overlay.
-// Long-press a card to move it: into the deck (moves in) or to another deck slot (reorder). Slot 1 = chief.
+// New Figma GUI (prototyping › 콜렉션 725:*): town strip → selected town's deck (3×2 pages, slot 1 = Head)
+// → other towns' cards. Long-press to drag: into the deck (moves in), onto a card (the two swap), or
+// within the deck (reorder). Detail overlay with Delete.
 const PER_PAGE = 6
 const HOLD_MS = 350
 
@@ -17,19 +20,18 @@ export default function CollectionScreen({
   townId,
   onTown,
   onBack,
-  onMigrate,
 }: {
   state: State
   commit: (fn: (s: State) => State) => void
   townId: string
   onTown: (id: string) => void
   onBack: () => void
-  onMigrate: (cardId: string) => void
 }) {
   const [newest, setNewest] = useState(true)
   const [page, setPage] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
   const [drag, setDrag] = useState<Drag | null>(null)
+  const [overDeck, setOverDeck] = useState(false)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const root = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
@@ -84,12 +86,14 @@ export default function CollectionScreen({
       return
     }
     setDrag((d) => d && { ...d, x: p.x, y: p.y })
+    setOverDeck(!!(document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest('[data-deck]'))
   }
   function cancelPress() {
     if (press.current) clearTimeout(press.current.timer)
     press.current = null
     dragging.current = false
     setDrag(null)
+    setOverDeck(false)
   }
   function onUp(e: React.PointerEvent) {
     const pr = press.current
@@ -105,12 +109,16 @@ export default function CollectionScreen({
 
   function drop(cx: number, cy: number, id: string, from: Drag['from']) {
     const hit = document.elementFromPoint(cx, cy) as HTMLElement | null
+    // dropped on another card in the other area → the two trade places (no card ever loses its town)
+    const other = hit?.closest<HTMLElement>('[data-card]')?.dataset.card
+    const otherFrom = hit?.closest<HTMLElement>('[data-from]')?.dataset.from
+    if (other && other !== id && otherFrom !== from) return commit((s) => swapCards(s, id, other))
     const slot = hit?.closest<HTMLElement>('[data-slot]')
     const inDeck = slot || hit?.closest('[data-deck]')
     if (!inDeck) return // cards can't be taken out of a town by dragging
     const at = slot ? Number(slot.dataset.slot) : deck.length
     if (from === 'rest' && deck.length >= MAX_RESIDENTS) {
-      return setPopup({ message: 'This town is full.', actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
+      return setPopup({ message: 'This town is full. Drop it on a card to swap.', actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
     }
     commit((s) => placeCard(s, id, town.id, at))
   }
@@ -133,33 +141,47 @@ export default function CollectionScreen({
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
   })
 
-  // Figma wireframe 콜렉션 geometry (frame px)
-  const SLOT_X = [26, 151, 275]
-  const SLOT_Y = [20.5, 137]
-  const PITCH = 82
+  // Figma Collection geometry (frame px): 90px tiles, 125 apart, rows 116 apart
+  const TILE = 90
+  const COL = 125
+  const PITCH = 105
+
+  // drawing zoomed on the upper body, like the Figma tiles
+  const tile = (c: Card, from: Drag['from'], label: string) => (
+    <button
+      aria-label={label}
+      data-card={c.id}
+      data-from={from}
+      {...cardProps(c, from)}
+      className={`relative size-full overflow-hidden rounded-[3px] border-2 border-black bg-white ${from === 'deck' ? 'touch-pan-x' : ''} ${drag?.id === c.id ? 'opacity-30' : ''}`}
+    >
+      <img src={c.image} alt="" draggable={false} className="pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none" />
+    </button>
+  )
 
   return (
-    <div ref={root} className="relative h-full overflow-hidden bg-white font-hand">
-      <Header
-        title="Collection"
-        onBack={onBack}
-        right={
-          <TextButton onClick={() => setNewest(!newest)} className="absolute top-[82px] right-[24px] z-20 text-[18px]">
-            {newest ? 'Newest' : 'Oldest'}
-          </TextButton>
-        }
-      />
+    <div ref={root} className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+      <button aria-label="Back" onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
+        <img src={backIcon} alt="" className="size-full" />
+      </button>
+      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">Collection</p>
+      <TextButton onClick={() => setNewest(!newest)} className="absolute top-[93px] right-[24px] z-20 text-[17px]">
+        {newest ? 'Newest' : 'Oldest'}
+      </TextButton>
 
-      {/* towns on one grey line, like Town List laid sideways */}
-      <div className="absolute inset-x-0 top-[117px] h-[106px] overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
-        <div className="relative h-full" style={{ width: Math.max(402, 28 + state.towns.length * PITCH + 20) }}>
-          <div className="absolute top-0 h-[79px] bg-[#ccc]" style={{ left: 63, width: Math.max(0, (state.towns.length - 1) * PITCH) }} />
+      {/* towns on one grey band; the picked one gets the dark ring */}
+      <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
+        <div className="relative h-full" style={{ width: Math.max(402, 61 + (state.towns.length - 1) * PITCH + 60) }}>
+          <div className="absolute top-[7px] h-[56px] bg-[#ccc]" style={{ left: 60, width: Math.max(402, (state.towns.length - 1) * PITCH + 60) }} />
           {state.towns.map((t, i) => {
             const on = t.id === town.id
+            const size = on ? 60 : 55
             return (
-              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} className="absolute top-[4px] w-[70px]" style={{ left: 28 + i * PITCH }}>
-                <Thumb image={state.cards[t.residents[0] ?? '']?.image} size={70} strong={on} />
-                <span className={`absolute top-[81px] left-1/2 w-[80px] -translate-x-1/2 truncate text-center text-[12px] leading-[normal] ${on ? '' : 'text-[#777]'}`}>{t.name}</span>
+              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: 61 + i * PITCH - size / 2, marginTop: on ? 0 : 3, width: size }}>
+                <Thumb image={state.cards[t.residents[0] ?? '']?.image} size={size} strong={on} ring={on ? 7 : 6.6} />
+                <span className="absolute left-1/2 w-[96px] -translate-x-1/2 truncate text-center text-[14px] leading-[normal]" style={{ top: on ? 70 : 67 }}>
+                  {t.name}
+                </span>
               </button>
             )
           })}
@@ -167,7 +189,7 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <div data-deck className="absolute inset-x-0 top-[228px] h-[260px] bg-[#d9d9d9]">
+      <div data-deck className={`absolute inset-x-0 top-[243px] h-[257px] transition-colors ${overDeck ? 'bg-[#8a8a8a]' : 'bg-[#e0e0e0]'}`}>
         <div
           className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
           onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
@@ -179,18 +201,16 @@ export default function CollectionScreen({
                 if (at >= MAX_RESIDENTS) return null
                 const c = deck[at]
                 return (
-                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute size-[100px]" style={{ left: SLOT_X[k % 3], top: SLOT_Y[Math.floor(k / 3)] }}>
-                    {at === 0 && c && <img src={crownIcon} alt="Chief" className="absolute -top-[20.5px] left-[36px] h-[22px] w-[26.4px]" />}
+                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: 31 + (k % 3) * COL, top: 20 + Math.floor(k / 3) * 116, width: TILE, height: TILE }}>
                     {c ? (
-                      <button
-                        aria-label={`${c.nickname || 'Card'}${at === 0 ? ', chief' : ''}`}
-                        {...cardProps(c, 'deck')}
-                        className={`size-full touch-pan-x border-[5px] border-black bg-white p-[4px] ${drag?.id === c.id ? 'opacity-30' : ''}`}
-                      >
-                        <img src={c.image} alt="" draggable={false} className="pointer-events-none size-full object-contain" />
-                      </button>
+                      <>
+                        {tile(c, 'deck', `${c.nickname || 'Card'}${at === 0 ? ', head' : ''}`)}
+                        {at === 0 && (
+                          <span className="pointer-events-none absolute inset-x-[2px] top-[67px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]">Head</span>
+                        )}
+                      </>
                     ) : (
-                      <span className="block size-full border-[3px] border-dashed border-[#a5a5a5]" />
+                      <span className="block size-full rounded-[3px] border-2 border-dashed border-[#686868]" />
                     )}
                   </div>
                 )
@@ -198,70 +218,60 @@ export default function CollectionScreen({
             </div>
           ))}
         </div>
-        {Array.from({ length: pages }, (_, p) => (
-          <span key={p} className={`absolute top-[243px] size-[10px] rounded-full ${p === page ? 'bg-[#5f5f5f]' : 'bg-[#b3b3b3]'}`} style={{ left: 188 + p * 15.7 }} />
-        ))}
+        <div className="pointer-events-none absolute top-[240px] left-1/2 flex -translate-x-1/2 gap-[8px]">
+          {Array.from({ length: pages }, (_, p) => (
+            <span key={p} className={`size-[5px] rounded-full ${p === page ? 'bg-black' : 'bg-[#ccc]'}`} />
+          ))}
+        </div>
       </div>
 
       {/* everyone else (only this part scrolls) */}
-      <div className="absolute inset-x-0 top-[488px] bottom-0 overflow-y-auto [scrollbar-width:none]">
+      <div className="absolute inset-x-0 top-[500px] bottom-0 overflow-y-auto [scrollbar-width:none]">
         {rest.length === 0 ? (
           <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">Cards in other towns show up here.</p>
         ) : (
-          <div className="grid grid-cols-[repeat(3,100px)] gap-x-[25px] gap-y-[16.6px] pt-[22px] pb-[60px] pl-[23.3px]">
+          <div className="grid grid-cols-[repeat(3,90px)] gap-x-[35px] gap-y-[25px] pt-[25px] pb-[70px] pl-[31px]">
             {rest.map((c) => (
-              <button
-                key={c.id}
-                aria-label={c.nickname || 'Card'}
-                {...cardProps(c, 'rest')}
-                className={`size-[100px] border-[5px] border-[#b3b3b3] bg-white p-[4px] ${drag?.id === c.id ? 'opacity-30' : ''}`}
-              >
-                <img src={c.image} alt="" draggable={false} className="pointer-events-none size-full object-contain" />
-              </button>
+              <div key={c.id} className="size-[90px]">
+                {tile(c, 'rest', c.nickname || 'Card')}
+              </div>
             ))}
           </div>
         )}
       </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[63px] bg-gradient-to-t from-[#e0e0e0]/70 to-[#e0e0e0]/0" />
 
       {/* card following the finger */}
       {drag && (
         <div
-          className="pointer-events-none absolute z-40 size-[100px] -translate-x-1/2 -translate-y-1/2 rotate-[-6deg] border-[5px] border-black bg-white p-[4px] shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
+          className="pointer-events-none absolute z-40 size-[74px] -translate-x-1/2 -translate-y-1/2 scale-[1.2] overflow-hidden rounded-[3.7px] border-[2.4px] border-black bg-white shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
           style={{ left: drag.x, top: drag.y }}
         >
-          <img src={state.cards[drag.id]?.image} alt="" className="size-full object-contain" />
+          <img src={state.cards[drag.id]?.image} alt="" className="absolute top-[5%] left-[-15%] w-[130%] max-w-none" />
         </div>
       )}
 
-      {open && (
-        <Detail
-          card={open}
-          townName={townOf(state, open.id)?.name ?? ''}
-          onClose={() => setOpenId(null)}
-          onMigrate={() => onMigrate(open.id)}
-          onDelete={() => askDelete(open)}
-        />
-      )}
+      {open && <Detail card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} />}
 
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
   )
 }
 
-// card overlay: tap the drawing to hide the card text, drag to tilt it around
-function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; townName: string; onClose: () => void; onMigrate: () => void; onDelete: () => void }) {
+// card overlay (Figma 725:13761): tap the drawing to hide the card text, drag to tilt it around
+function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: string; onClose: () => void; onDelete: () => void }) {
   const [plain, setPlain] = useState(false)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const start = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const [held, setHeld] = useState(false)
 
   return (
-    <div className="animate-fade-in absolute inset-0 z-30 bg-black/55 text-white">
-      <p className="absolute top-[180px] left-[40px] text-[18px] leading-[normal]">{townName}</p>
-      <button aria-label="Close" onClick={onClose} className="absolute top-[172px] left-[338px] p-[8px]">
-        <CloseIcon size={16} />
+    <div className="animate-fade-in absolute inset-0 z-30 bg-black/35 text-white backdrop-blur-[1.5px]">
+      <p className="absolute top-[175px] left-[21px] text-[21px] leading-[1.1]">{townName}</p>
+      <button aria-label="Close" onClick={onClose} className="absolute top-[167px] left-[355px] flex size-[28px] items-center justify-center">
+        <img src={closeIcon} alt="" className="h-[14.8px] w-[12.3px]" />
       </button>
-      <div className="absolute top-[208px] left-[32px] w-[338px] [perspective:700px]" style={shrink(483)}>
+      <div className="absolute top-[210px] left-[21px] w-[360px] [perspective:700px]" style={shrink(515)}>
         <div
           className="animate-pop-in touch-none"
           style={{
@@ -300,8 +310,10 @@ function Detail({ card, townName, onClose, onMigrate, onDelete }: { card: Card; 
         </div>
       </div>
       <Bottom>
-        <TextButton onClick={onMigrate} className="absolute top-[713px] left-[40px] text-[19.5px]" light>Migration</TextButton>
-        <TextButton onClick={onDelete} className="absolute top-[713px] right-[40px] text-[19.5px]" light>Delete</TextButton>
+        <button onClick={onDelete} className="absolute top-[730px] left-[322px] px-[6px] py-[4px] text-[20px] leading-[1.3] text-[#ededed]">
+          Delete
+          <img src={deleteLine} alt="" className="absolute top-[31px] left-[8px] h-[3px] w-[53px]" />
+        </button>
       </Bottom>
     </div>
   )

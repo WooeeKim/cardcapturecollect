@@ -156,6 +156,15 @@ export function placeCard(state: State, cardId: string, townId: string, index?: 
   return { ...state, towns }
 }
 
+// Two cards trade places (each takes the other's town and slot). Used by Collection drag.
+export function swapCards(state: State, a: string, b: string): State {
+  if (a === b) return state
+  const towns = state.towns.map((t) =>
+    t.residents.includes(a) || t.residents.includes(b) ? { ...t, residents: t.residents.map((id) => (id === a ? b : id === b ? a : id)) } : t,
+  )
+  return { ...state, towns }
+}
+
 export function deleteCard(state: State, cardId: string): State {
   const cards = { ...state.cards }
   delete cards[cardId]
@@ -198,6 +207,11 @@ if (argv?.[1]?.endsWith('store.ts')) {
   s = placeCard(s, chief, second.id)
   assert(s.towns[1].residents[0] === chief && s.towns[0].residents.length === 9, 'migration moves card')
   assert(canDeleteTown(s, second.id) === 'residents', 'cannot delete inhabited town')
+  {
+    const a = s.towns[0].residents[1]
+    const sw = swapCards(s, a, chief)
+    assert(sw.towns[0].residents[1] === chief && sw.towns[1].residents[0] === a, 'swap trades town + slot')
+  }
   s = placeCard(s, s.towns[0].residents[3], home, 0)
   assert(s.towns[0].residents.length === 9, 'reorder keeps count')
   s = deleteCard(s, chief)
