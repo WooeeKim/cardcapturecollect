@@ -274,7 +274,7 @@ export default function TownListScreen({
                 ) : (
                   <>
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
-                      <Thumb image={chiefImage(t)} size={70} grey={dimmed} />
+                      <Thumb image={chiefImage(t)} size={70} grey={dimmed} outline />
                     </button>
                     <button onClick={() => toggle(t)} className="absolute top-[23px] left-[121px] max-w-[220px] truncate text-left text-[21px] leading-[1.1]">
                       {t.name}

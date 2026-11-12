@@ -105,7 +105,7 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
 
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
-export function Thumb({ image, size = 70, strong = false, grey = false, ring: ringW }: { image?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number }) {
+export function Thumb({ image, size = 70, strong = false, grey = false, ring: ringW, outline = false }: { image?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number; outline?: boolean }) {
   // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body.
   // The ring is drawn as a slightly wobbly hand-drawn stroke, like the rest of the sketchy UI.
   const ring = ringW ?? (strong ? 8.5 : 9)
@@ -122,6 +122,10 @@ export function Thumb({ image, size = 70, strong = false, grey = false, ring: ri
       </span>
       <svg viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
         <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring / 2, size)} fill="none" stroke={strong ? '#686868' : '#ccc'} strokeWidth={ring} strokeLinecap="round" strokeLinejoin="round" />
+        {/* townList-detail (right): thin black hand-drawn line around the white circle */}
+        {outline && (
+          <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring * 0.75, size + 3)} fill="none" stroke="#000" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+        )}
       </svg>
     </span>
   )
