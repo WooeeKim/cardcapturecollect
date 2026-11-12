@@ -2,9 +2,9 @@
 
 > 지하철에서 마주친 사람을 사진 대신 손그림 카드로 남기고, 마을에 모으는 웹앱
 
-KAIST ID304 UX Design (2026 Fall) 팀 프로젝트. 배포 주소: **https://subwayseal.vercel.app**
+KAIST ID304 UX Design (2026 Fall) 팀 프로젝트. 배포 주소: **https://cardcapturecollect.vercel.app**
 
-(저장소 이름 `subwayseal`과 브라우저 저장 키 `subwayseal.*`는 예전 이름 "찌부씰 · Subway Seal" 때 그대로예요. 바꾸면 기존 사용자 데이터가 사라지니 그대로 둡니다.)
+(브라우저 저장 키 `subwayseal.*`와 Vercel 프로젝트 이름 `subwayseal`은 예전 이름 "찌부씰 · Subway Seal" 때 그대로예요. 저장 키를 바꾸면 기존 사용자 데이터가 사라지니 그대로 둡니다.)
 
 ## 컨셉
 
@@ -110,8 +110,8 @@ git config --global user.email "내이메일@example.com"
 
 ```bash
 cd ~/Documents
-git clone https://github.com/WooeeKim/subwayseal.git
-cd subwayseal
+git clone https://github.com/WooeeKim/cardcapturecollect.git
+cd cardcapturecollect
 ```
 
 ### 6. 의존성 설치
@@ -174,7 +174,7 @@ npm run dev -- --host
 
 ## 매일 작업하는 법
 
-`main`이 배포 기준이에요. **main에 올라가면 바로 https://subwayseal.vercel.app 에 배포**되니, main에 직접 올리지 말고 브랜치 → PR로 작업합니다.
+`main`이 배포 기준이에요. **main에 올라가면 바로 https://cardcapturecollect.vercel.app 에 배포**되니, main에 직접 올리지 말고 브랜치 → PR로 작업합니다.
 
 ```bash
 # 1. 최신 main에서 브랜치 만들기
@@ -216,7 +216,7 @@ Supabase 대시보드 → **SQL Editor**에서 [supabase/migrations/](supabase/m
 
 대시보드 설정:
 
-- **Authentication → URL Configuration → Site URL**: `https://subwayseal.vercel.app` (가입 확인 메일 링크가 이 주소로 열림)
+- **Authentication → URL Configuration → Site URL**: `https://cardcapturecollect.vercel.app` (가입 확인 메일 링크가 이 주소로 열림)
 - **Authentication → Sign In / Providers → Email → Confirm email**: 테스터가 메일 확인 없이 바로 로그인하게 하려면 끄기
 - 로그인 규칙은 Supabase 기본값: **이메일 + 비밀번호 6자 이상**
 
@@ -224,8 +224,9 @@ Supabase 대시보드 → **SQL Editor**에서 [supabase/migrations/](supabase/m
 
 ## Vercel 배포
 
-- 프로젝트: Vercel `subwayseal` (GitHub `WooeeKim/subwayseal` 연결), **Production Branch = `main`**
-- main에 머지되면 자동으로 https://subwayseal.vercel.app 에 배포되고, 다른 브랜치·PR은 미리보기 주소로 배포돼요
+- 프로젝트: Vercel `subwayseal` (GitHub `WooeeKim/cardcapturecollect` 연결), **Production Branch = `main`**
+- 주소: https://cardcapturecollect.vercel.app (예전 주소 https://subwayseal.vercel.app 도 같은 앱으로 계속 열려요)
+- main에 머지되면 자동으로 https://cardcapturecollect.vercel.app 에 배포되고, 다른 브랜치·PR은 미리보기 주소로 배포돼요
 - 환경 변수(Vercel → Settings → Environment Variables): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (시크릿 키 금지). 바꾼 뒤에는 다시 배포해야 적용돼요
 
 ## 사용성 테스트 로그 (PostHog)
