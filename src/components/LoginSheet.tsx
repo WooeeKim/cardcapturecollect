@@ -150,3 +150,31 @@ export function FeedbackSheet({ onClose }: { onClose: () => void }) {
     </Sheet>
   )
 }
+
+// Nickname used inside the app (towns, gallery …); separate from the login email.
+export function NicknameSheet({ value, onSave, onClose }: { value: string; onSave: (name: string) => void; onClose: () => void }) {
+  const [name, setName] = useState(value)
+  return (
+    <Sheet onClose={onClose}>
+      <p className="text-center text-[24px] leading-[1.2]">Nickname</p>
+      <p className="mt-[6px] text-center text-[16px] text-[#555]">The name you go by in the app.</p>
+      <form
+        className="mt-[18px] flex flex-col gap-[10px]"
+        onSubmit={(e) => {
+          e.preventDefault()
+          onSave(name)
+        }}
+      >
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={20} placeholder="Nickname" aria-label="Nickname" className={field} />
+        <p className="text-right text-[13px] text-[#8a8a8a]">{name.trim().length}/20</p>
+        <div className="flex justify-around text-[20px]">
+          <TextButton dim onClick={onClose}>
+            Close
+          </TextButton>
+          <TextButton onClick={() => onSave(name)}>Save</TextButton>
+        </div>
+        <button type="submit" className="hidden" />
+      </form>
+    </Sheet>
+  )
+}

@@ -75,7 +75,10 @@ export default function AdminPage() {
       )}
       {testers.map((r) => (
         <section key={r.user_id} className="mb-10">
-          <h2 className="mb-1 text-xl">{r.email ?? r.user_id}</h2>
+          <h2 className="mb-1 text-xl">
+            {r.state.nickname ? `${r.state.nickname} · ` : ''}
+            {r.email ?? r.user_id}
+          </h2>
           <p className="mb-3 text-sm text-neutral-500">last saved {new Date(r.updated_at).toLocaleString()}</p>
           {r.state.towns.map((t) => (
             <div key={t.id} className="mb-4">

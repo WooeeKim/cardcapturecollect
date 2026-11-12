@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import personIcon from '../assets/proto/person.svg'
-import { FeedbackSheet, LoginSheet, PasswordSheet } from '../components/LoginSheet'
+import { FeedbackSheet, LoginSheet, NicknameSheet, PasswordSheet } from '../components/LoginSheet'
 import { Bottom, Header, Popup } from '../components/ui'
 import { usingSupabase, type User } from '../lib/auth'
 
@@ -9,6 +9,8 @@ import { usingSupabase, type User } from '../lib/auth'
 export default function MyPageScreen({
   user,
   cardCount,
+  nickname,
+  onNickname,
   onBack,
   onLogin,
   onLogout,
@@ -16,12 +18,14 @@ export default function MyPageScreen({
 }: {
   user: User | null
   cardCount: number
+  nickname: string
+  onNickname: (name: string) => void
   onBack: () => void
   onLogin: (user: User) => void
   onLogout: () => void
   onReset: () => void
 }) {
-  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | null>(null)
+  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | 'nickname' | null>(null)
   const [confirm, setConfirm] = useState<'reset' | 'logout' | null>(null)
 
   const row = 'flex h-[52px] items-center justify-between border-b border-[#e2e2e2] text-[20px]'
@@ -42,8 +46,13 @@ export default function MyPageScreen({
           <img src={personIcon} alt="" className="h-[32px] w-[20px]" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[24px] leading-[1.2]">{user ? user.username : 'Guest'}</p>
-          <p className="mt-[4px] text-[16px] text-[#8a8a8a]">Cards drawn {cardCount}</p>
+          {/* nickname = the name used in the app; the email is only the login id */}
+          <button onClick={() => setSheet('nickname')} className="flex max-w-full items-baseline gap-[8px] text-left" aria-label="Edit nickname">
+            <span className={`truncate text-[24px] leading-[1.2] ${nickname ? '' : 'text-[#9a9a9a]'}`}>{nickname || 'Set a nickname'}</span>
+            <span className="shrink-0 text-[14px] text-[#8a8a8a] underline underline-offset-2">Edit</span>
+          </button>
+          <p className="mt-[2px] truncate text-[14px] text-[#8a8a8a]">{user ? user.username : 'Guest'}</p>
+          <p className="mt-[2px] text-[16px] text-[#8a8a8a]">Cards drawn {cardCount}</p>
         </div>
       </div>
       {!user && (
@@ -93,6 +102,16 @@ export default function MyPageScreen({
         />
       )}
       {sheet === 'feedback' && <FeedbackSheet onClose={() => setSheet(null)} />}
+      {sheet === 'nickname' && (
+        <NicknameSheet
+          value={nickname}
+          onSave={(name) => {
+            onNickname(name)
+            setSheet(null)
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
       {sheet === 'password' && user && <PasswordSheet user={user} onClose={() => setSheet(null)} />}
 
       {confirm === 'reset' && (

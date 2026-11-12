@@ -256,6 +256,8 @@ export default function App({ onReady }: { onReady?: () => void }) {
         <MyPageScreen
           user={user}
           cardCount={Object.keys(state.cards).length}
+          nickname={state.nickname ?? ''}
+          onNickname={(name) => commit((s) => ({ ...s, nickname: name.trim() || undefined }))}
           onBack={() => goMain(existing(homeId))}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {

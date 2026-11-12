@@ -27,6 +27,7 @@ export type State = {
   cards: Record<string, Card>
   pending: Card | null // finished drawing not yet sent to a town
   seq: { day: string; n: number } // serial counter for the day
+  nickname?: string // name shown in the app (separate from the login email)
 }
 
 // Ground / sky per town: same two-band look, each town a slightly different tint.
@@ -180,7 +181,7 @@ export function mergeGuest(account: State, guest: State): { state: State; unplac
   const day = account.seq.day >= guest.seq.day ? account.seq.day : guest.seq.day
   const seq = { day, n: Math.max(top.get(day) ?? 0, account.seq.day === day ? account.seq.n : 0, guest.seq.day === day ? guest.seq.n : 0) }
 
-  let state: State = { towns, cards, pending, seq }
+  let state: State = { towns, cards, pending, seq, nickname: account.nickname || guest.nickname }
   let unplaced = 0
   for (const id of homeless) {
     const room = state.towns.find((t) => t.residents.length < MAX_RESIDENTS)
