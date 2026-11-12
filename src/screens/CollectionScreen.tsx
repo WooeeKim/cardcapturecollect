@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import backIcon from '../assets/proto/v2/back40.svg'
-import closeIcon from '../assets/proto/v2/close.svg'
-import deleteLine from '../assets/proto/v2/delete-line.svg'
+import closeRing from '../assets/proto/v2/detail-close-ring.svg'
+import closeX from '../assets/proto/v2/detail-close-x.svg'
+import deckBox from '../assets/proto/v2/deck-box.svg'
+import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import tlBar from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
@@ -174,8 +176,8 @@ export default function CollectionScreen({
       <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
         <div className="relative h-full" style={{ width: Math.max(402, 61 + (state.towns.length - 1) * PITCH + 60) }}>
           {/* the same hand-drawn grey band as Town List, laid sideways */}
-          <div className="pointer-events-none absolute top-[7px] h-[56px]" style={{ left: 52, width: Math.max(410, (state.towns.length - 1) * PITCH + 68) }}>
-            <img src={tlBar} alt="" className="absolute top-0 left-0 w-[56px] max-w-none origin-top-left" style={{ height: Math.max(410, (state.towns.length - 1) * PITCH + 68), transform: 'translateY(56px) rotate(-90deg)' }} />
+          <div className="pointer-events-none absolute top-[11px] h-[48px]" style={{ left: 52, width: Math.max(410, (state.towns.length - 1) * PITCH + 68) }}>
+            <img src={tlBar} alt="" className="absolute top-0 left-0 w-[48px] max-w-none origin-top-left" style={{ height: Math.max(410, (state.towns.length - 1) * PITCH + 68), transform: 'translateY(48px) rotate(-90deg)' }} />
           </div>
           {state.towns.map((t, i) => {
             const on = t.id === town.id
@@ -193,7 +195,9 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <div data-deck className={`absolute inset-x-0 top-[243px] h-[257px] transition-colors ${overDeck ? 'bg-[#8a8a8a]' : 'bg-[#e0e0e0]'}`}>
+      <div data-deck className="absolute inset-x-0 top-[243px] h-[257px]">
+        {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
+        <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] left-[10px] h-[256px] w-[382px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} />
         <div
           className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
           onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
@@ -214,7 +218,7 @@ export default function CollectionScreen({
                         )}
                       </>
                     ) : (
-                      <span className="block size-full rounded-[3px] border-2 border-dashed border-[#686868]" />
+                      <span className="block size-full rounded-[3px] border-2 border-[#efefef] bg-[#e7e7e7]" />
                     )}
                   </div>
                 )
@@ -271,9 +275,10 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
 
   return (
     <div className="animate-fade-in absolute inset-0 z-30 bg-black/35 text-white backdrop-blur-[1.5px]">
-      <p className="absolute top-[175px] left-[21px] text-[21px] leading-[1.1]">{townName}</p>
-      <button aria-label="Close" onClick={onClose} className="absolute top-[167px] left-[355px] flex size-[28px] items-center justify-center">
-        <img src={closeIcon} alt="" className="h-[14.8px] w-[12.3px]" />
+      <p className="absolute top-[170.5px] left-[21px] text-[25px] leading-[1.1]">{townName}</p>
+      <button aria-label="Close" onClick={onClose} className="absolute top-[166px] left-[349px] flex h-[37px] w-[35px] items-center justify-center">
+        <img src={closeRing} alt="" className="absolute inset-0 size-full" />
+        <img src={closeX} alt="" className="relative h-[14.8px] w-[12.3px]" />
       </button>
       <div className="absolute top-[210px] left-[21px] w-[360px] [perspective:700px]" style={shrink(515)}>
         <div
@@ -314,9 +319,9 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
         </div>
       </div>
       <Bottom>
-        <button onClick={onDelete} className="absolute top-[730px] left-[322px] px-[6px] py-[4px] text-[20px] leading-[1.3] text-[#ededed]">
-          Delete
-          <img src={deleteLine} alt="" className="absolute top-[31px] left-[8px] h-[3px] w-[53px]" />
+        <button onClick={onDelete} className="absolute top-[735px] left-[280px] flex h-[43px] w-[102px] items-center justify-center">
+          <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
+          <span className="relative text-[23px] leading-[1.1] text-[#686868]">Discard</span>
         </button>
       </Bottom>
     </div>
