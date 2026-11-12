@@ -1,23 +1,24 @@
-import type { Stroke } from '../components/DrawingCanvas'
-
 // The paper is white while drawing, so unpainted spots inside a figure (face, shirt) look white —
 // but they'd be see-through on the town ground. This fills "inside the drawing" with white under the lines.
 //
-// Outlines are rarely closed. Instead of a fixed gap size, each loose pen-stroke end looks *ahead along its own
-// direction* for another line, and an invisible bridge closes the gap when it finds one:
-//  - reach grows with the end's own run since its last sharp corner: after a long smooth arc (a circle) a big
-//    gap is forgiven; a short piece after a corner (a ㄹ tail) only bridges a tiny one
-//  - only within a cone ahead, so ends that point away (a ㄹ tail, arms, legs) don't get joined
-// Then whatever the paper's edge can't reach through lines + bridges is inside.
+// Outlines are rarely closed (and the eraser opens them too), so it works from the picture itself:
+//  1. the ink is thinned to 1-cell centre lines; their free tips are the loose line ends
+//  2. each tip looks *ahead along its own direction* for another line and, if one is close enough,
+//     an invisible bridge closes the gap. "Close enough" grows with the tip's run since its last sharp
+//     corner: after a long smooth arc (a circle) a big gap is forgiven, a short piece after a corner
+//     (a ㄹ tail) only bridges a tiny one — the same for big and small drawings.
+//     Tips pointing at nothing (arms, legs, open letters) stay open.
+//  3. whatever the paper's edge can't reach through lines + bridges is inside.
 const W = 400 // working width (the mask is smoothed when scaled back up)
-const REACH = 0.25 // bridge reach, fraction of the end's run since the last sharp corner
+const REACH = 0.25 // bridge reach, fraction of the tip's run since the last sharp corner
+const MAX_REACH = 0.12 // …but never more than this fraction of the width
+const CONE = (40 * Math.PI) / 180 // how far off the line's direction a bridge may go
 const CORNER = (50 * Math.PI) / 180 // a turn sharper than this (over ~5 cells each side) is a corner
-const MAX_REACH = 0.12 // …but never more than this fraction of the paper width
-const CONE = (40 * Math.PI) / 180 // how far off the stroke's direction a bridge may go
+const SPUR = 6 // thinning leaves little side twigs at line ends; shorter ones are dropped
 
 type P = { x: number; y: number }
 
-// cells reachable from the paper's edge without crossing `wall`
+// cells reachable from the edge without crossing `wall`
 function floodOutside(wall: Uint8Array, w: number, h: number) {
   const outside = new Uint8Array(w * h)
   const stack: number[] = []
@@ -40,99 +41,179 @@ function floodOutside(wall: Uint8Array, w: number, h: number) {
   return outside
 }
 
-// points every ~1 cell along the line, with the running length
-function resample(pts: P[]) {
-  const out: { x: number; y: number; s: number }[] = [{ ...pts[0], s: 0 }]
-  let s = 0
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1]
-    const b = pts[i]
-    const d = Math.hypot(b.x - a.x, b.y - a.y)
-    const n = Math.max(1, Math.ceil(d))
-    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n, s: s + (d * k) / n })
-    s += d
+// Zhang–Suen thinning: ink → 1-cell-wide centre lines (needs a 1-cell empty border)
+function thin(m: Uint8Array, w: number) {
+  const p = new Array<number>(8)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const pass of [0, 1]) {
+      const kill: number[] = []
+      for (let i = w + 1; i < m.length - w - 1; i++) {
+        if (!m[i]) continue
+        // P2..P9 clockwise from north
+        p[0] = m[i - w]; p[1] = m[i - w + 1]; p[2] = m[i + 1]; p[3] = m[i + w + 1]
+        p[4] = m[i + w]; p[5] = m[i + w - 1]; p[6] = m[i - 1]; p[7] = m[i - w - 1]
+        const b = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + p[6] + p[7]
+        if (b < 2 || b > 6) continue
+        let a = 0
+        for (let k = 0; k < 8; k++) if (!p[k] && p[(k + 1) % 8]) a++
+        if (a !== 1) continue
+        if (pass === 0 ? p[0] * p[2] * p[4] || p[2] * p[4] * p[6] : p[0] * p[2] * p[6] || p[0] * p[4] * p[6]) continue
+        kill.push(i)
+      }
+      for (const i of kill) m[i] = 0
+      if (kill.length) changed = true
+    }
+  }
+  return m
+}
+
+const around = (w: number) => [-w - 1, -w, -w + 1, -1, 1, w - 1, w, w + 1]
+
+// how many separate line pieces meet at a skeleton cell: 1 = a tip, 2 = a line, 3+ = a crossing
+function branches(sk: Uint8Array, w: number, i: number) {
+  const ring = [i - w, i - w + 1, i + 1, i + w + 1, i + w, i + w - 1, i - 1, i - w - 1]
+  let n = 0
+  for (let k = 0; k < 8; k++) if (!sk[ring[k]] && sk[ring[(k + 1) % 8]]) n++
+  if (!n && ring.some((j) => sk[j])) n = 1 // fully surrounded blob cell
+  return n
+}
+
+// drop short twigs: tip → junction runs shorter than SPUR
+function prune(sk: Uint8Array, w: number) {
+  const off = around(w)
+  const nb = (i: number) => off.map((o) => i + o).filter((j) => sk[j])
+  for (let round = 0; round < 2; round++) {
+    for (let i = 0; i < sk.length; i++) {
+      if (!sk[i] || branches(sk, w, i) !== 1) continue
+      const path = [i]
+      let prev = -1
+      let cur = i
+      while (path.length <= SPUR) {
+        const next = nb(cur).filter((j) => j !== prev && !path.includes(j))
+        if (next.length !== 1) break
+        prev = cur
+        cur = next[0]
+        if (branches(sk, w, cur) > 2) break // reached a junction
+        path.push(cur)
+      }
+      if (path.length <= SPUR && branches(sk, w, cur) > 2) for (const j of path) sk[j] = 0
+    }
+  }
+}
+
+// from a tip, follow the line back the straightest way (through crossings), up to `max` cells
+function trace(sk: Uint8Array, w: number, tip: number, max: number) {
+  const off = around(w)
+  const seen = new Set([tip])
+  const path = [tip]
+  let cur = tip
+  while (path.length < max) {
+    const next = off.map((o) => cur + o).filter((j) => sk[j] && !seen.has(j))
+    if (!next.length) break
+    let pick = next[0]
+    if (next.length > 1) {
+      const from = path[Math.max(0, path.length - 6)]
+      const dx = (cur % w) - (from % w)
+      const dy = Math.floor(cur / w) - Math.floor(from / w)
+      let bestDot = -Infinity
+      for (const j of next) {
+        const ex = (j % w) - (cur % w)
+        const ey = Math.floor(j / w) - Math.floor(cur / w)
+        const dot = (ex * dx + ey * dy) / (Math.hypot(ex, ey) * (Math.hypot(dx, dy) || 1))
+        if (dot > bestDot) (bestDot = dot), (pick = j)
+      }
+    }
+    for (const j of next) seen.add(j) // don't wander back into side branches
+    path.push(pick)
+    cur = pick
+  }
+  return path
+}
+
+// bridges from every free tip to the line it points at
+// w: mask row width; paper: the paper's width in cells (sets the reach cap and direction window)
+function bridges(sk: Uint8Array, w: number, paper = w) {
+  const pts: number[] = []
+  for (let i = 0; i < sk.length; i++) if (sk[i]) pts.push(i)
+  const xy = (i: number): P => ({ x: i % w, y: Math.floor(i / w) })
+  const out: [P, P][] = []
+  for (const tip of pts) {
+    if (branches(sk, w, tip) !== 1) continue
+    const path = trace(sk, w, tip, Math.ceil((MAX_REACH / REACH) * paper)).map(xy)
+    // running length along the traced line
+    const s = [0]
+    for (let i = 1; i < path.length; i++) s.push(s[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y))
+    const len = s[s.length - 1]
+    if (len < 3) continue
+    const end = path[0]
+    const ref = path[s.findIndex((v) => v >= Math.min(len / 3, paper * 0.04))]
+    const dx = end.x - ref.x
+    const dy = end.y - ref.y
+    const dl = Math.hypot(dx, dy)
+    if (dl < 1) continue
+    // run: how far back from the tip the line goes before a sharp corner
+    const K = 5
+    let run = len
+    for (let i = K; i < path.length - K; i++) {
+      const a = path[i - K]
+      const b = path[i]
+      const c = path[i + K]
+      const cos = ((b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y)) / (Math.hypot(b.x - a.x, b.y - a.y) * Math.hypot(c.x - b.x, c.y - b.y) || 1)
+      if (Math.acos(Math.max(-1, Math.min(1, cos))) > CORNER) {
+        run = s[i]
+        break
+      }
+    }
+    const reach = Math.min(MAX_REACH * paper, Math.max(3, REACH * run))
+    // own line: only parts far along it count (not the stretch right behind the tip)
+    const along = new Map<number, number>()
+    path.forEach((p, i) => along.set(p.y * w + p.x, s[i]))
+    let best: P | null = null
+    let bestScore = Infinity
+    for (const j of pts) {
+      const q = xy(j)
+      const vx = q.x - end.x
+      const vy = q.y - end.y
+      const d = Math.hypot(vx, vy)
+      if (d < 1.5 || d > reach) continue
+      const sj = along.get(j)
+      if (sj !== undefined && sj < 2.5 * d + 6) continue
+      const ang = Math.acos(Math.max(-1, Math.min(1, (vx * dx + vy * dy) / (d * dl))))
+      if (ang > CONE) continue
+      const score = d * (1 + ang / CONE)
+      if (score < bestScore) (bestScore = score), (best = q)
+    }
+    if (best) out.push([end, best])
   }
   return out
 }
 
-// bridges between loose stroke ends and the line they point at (in mask cells)
-export function bridges(strokes: P[][], w: number) {
-  const lines = strokes.filter((p) => p.length > 1).map(resample)
-  const out: [P, P][] = []
-  lines.forEach((line, li) => {
-    const len = line[line.length - 1].s
-    if (len < 3) return
-    for (const atEnd of [false, true]) {
-      const end = atEnd ? line[line.length - 1] : line[0]
-      // direction: from a little way back along the stroke to its end
-      const back = Math.min(len / 3, w * 0.04)
-      const ref = atEnd ? line.find((q) => q.s >= len - back)! : [...line].reverse().find((q) => q.s <= back)!
-      const dx = end.x - ref.x
-      const dy = end.y - ref.y
-      const dl = Math.hypot(dx, dy)
-      if (dl < 1) continue
-      // run: how far back from this end the line goes before a sharp corner
-      const K = 5
-      let run = len
-      const n = line.length
-      for (let step = K; step < n - K; step++) {
-        const i = atEnd ? n - 1 - step : step
-        const a = line[i - K]
-        const b = line[i]
-        const c = line[i + K]
-        const t = Math.acos(
-          Math.max(-1, Math.min(1, ((b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y)) / (Math.hypot(b.x - a.x, b.y - a.y) * Math.hypot(c.x - b.x, c.y - b.y) || 1))),
-        )
-        if (t > CORNER) {
-          run = Math.abs(end.s - b.s)
-          break
-        }
-      }
-      const reach = Math.min(MAX_REACH * w, Math.max(3, REACH * run))
-      let best: P | null = null
-      let bestScore = Infinity
-      lines.forEach((other, oi) => {
-        for (const q of other) {
-          const vx = q.x - end.x
-          const vy = q.y - end.y
-          const d = Math.hypot(vx, vy)
-          if (d < 1.5 || d > reach) continue
-          // on its own stroke, only parts far along the line count (not the stretch right behind the end)
-          if (oi === li && Math.abs(q.s - end.s) < 2.5 * d + 6) continue
-          const ang = Math.acos(Math.max(-1, Math.min(1, (vx * dx + vy * dy) / (d * dl))))
-          if (ang > CONE) continue
-          const score = d * (1 + ang / CONE)
-          if (score < bestScore) {
-            bestScore = score
-            best = q
-          }
-        }
-      })
-      if (best) out.push([end, best])
-    }
-  })
-  return out
-}
-
-export async function fillInside(blob: Blob, strokes: Stroke[] = []): Promise<Blob> {
-  const bmp = await createImageBitmap(blob)
-  const w = W
-  const h = Math.round((bmp.height / bmp.width) * W)
+// picture → same picture with white inside (as a canvas)
+async function fill(src: Blob, trimmed = false) {
+  const bmp = await createImageBitmap(src)
+  const pad = 4 // stored drawings are trimmed to the ink: give the outside room to flow around
+  const w = Math.min(W, bmp.width) + pad * 2
+  const k = (w - pad * 2) / bmp.width
+  const h = Math.round(bmp.height * k) + pad * 2
   const small = document.createElement('canvas')
   small.width = w
   small.height = h
   const sctx = small.getContext('2d')!
-  sctx.drawImage(bmp, 0, 0, w, h)
-  const ink = new Uint8Array(w * h)
+  sctx.drawImage(bmp, pad, pad, w - pad * 2, h - pad * 2)
   let px = sctx.getImageData(0, 0, w, h)
+  const ink = new Uint8Array(w * h)
   for (let i = 0; i < ink.length; i++) ink[i] = px.data[i * 4 + 3] > 20 ? 1 : 0
-
+  const sk = thin(ink.slice(), w)
+  prune(sk, w)
   // invisible bridges, drawn into the mask only
   sctx.strokeStyle = '#000'
   sctx.lineWidth = 2
   sctx.lineCap = 'round'
-  const lines = strokes.filter((s) => s.tool !== 'eraser').map((s) => s.points.map((p) => ({ x: p.x * w, y: p.y * h })))
-  for (const [a, b] of bridges(lines, w)) {
+  // a stored picture is cut to the drawing; the paper was at least as wide as 0.7 × the drawing's height
+  const paper = trimmed ? Math.max(w - pad * 2, (h - pad * 2) * 0.7) : w - pad * 2
+  for (const [a, b] of bridges(sk, w, paper)) {
     sctx.beginPath()
     sctx.moveTo(a.x, a.y)
     sctx.lineTo(b.x, b.y)
@@ -150,7 +231,18 @@ export async function fillInside(blob: Blob, strokes: Stroke[] = []): Promise<Bl
   out.height = bmp.height
   const ctx = out.getContext('2d')!
   ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(small, 0, 0, out.width, out.height) // white inside
+  ctx.drawImage(small, pad, pad, w - pad * 2, h - pad * 2, 0, 0, out.width, out.height) // white inside
   ctx.drawImage(bmp, 0, 0) // drawing on top
+  return out
+}
+
+// a finished drawing (the whole paper)
+export async function fillInside(blob: Blob): Promise<Blob> {
+  const out = await fill(blob)
   return new Promise((resolve, reject) => out.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'))
+}
+
+// a stored card picture (data URL) → PNG data URL
+export async function fillInsideImage(src: string) {
+  return (await fill(await (await fetch(src)).blob(), true)).toDataURL('image/png')
 }

@@ -4,8 +4,8 @@ import { toLocal } from '../lib/frame'
 
 export type Tool = 'pen' | 'highlighter' | 'eraser'
 
-export type Point = { x: number; y: number }
-export type Stroke = { tool: Tool; color: string; size: number; points: Point[] }
+type Point = { x: number; y: number }
+type Stroke = { tool: Tool; color: string; size: number; points: Point[] }
 // The whole card (paper) moves: scale s around its center, rotated r (rad), shifted (x, y) in host px.
 // It may grow past the screen edges.
 type View = { s: number; r: number; x: number; y: number }
@@ -15,7 +15,6 @@ export type DrawingCanvasHandle = {
   redo: () => void
   clear: () => void
   isEmpty: () => boolean
-  strokes: () => Stroke[] // points as 0–1 fractions of the paper
   canUndo: () => boolean
   canRedo: () => boolean
   toBlob: () => Promise<Blob>
@@ -319,7 +318,6 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       redraw()
     },
     isEmpty: () => strokes.current.length === 0,
-    strokes: () => strokes.current,
     canUndo: () => strokes.current.length > 0,
     canRedo: () => redoStack.current.length > 0,
     resetView: () => {

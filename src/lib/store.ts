@@ -30,6 +30,7 @@ export type State = {
   seq: { day: string; n: number } // serial counter for the day
   nickname?: string // name shown in the app (separate from the login email)
   intro?: string // short self-introduction on My Page
+  insideFilled?: boolean // one-time: old drawings got their unpainted insides filled white (App.tsx)
 }
 
 // Ground / sky per town: same two-band look, each town a slightly different tint.
