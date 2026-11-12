@@ -2,9 +2,10 @@
 // but they'd be see-through on the town ground. This fills "inside the drawing" with white under the lines.
 // Outlines are rarely closed, so plain flood fill won't do: the lines are first thickened so small gaps close,
 // the outside is flood-filled from the paper's edge, then grown back by the same amount.
-// Whatever the outside doesn't reach (and isn't ink) is inside. Gaps up to ~2·GAP of the width get bridged.
-const W = 240 // working width (the mask is smoothed when scaled back up)
-const GAP = 0.015 // closing radius, fraction of the paper width
+// Whatever the outside doesn't reach (and isn't ink) is inside. Small gaps get bridged (see GAP).
+const W = 400 // working width (the mask is smoothed when scaled back up)
+const GAP = 0.015 // closing radius, fraction of the paper width (bridges gaps up to ~3.5% between line edges)
+const FAT = 0.014 // a bridged piece must be wider than 2·FAT somewhere (sealed V tips never are)
 
 // distance from every cell to the nearest set cell of `m`: two-pass chamfer (near-round), linear time
 function dist(m: Uint8Array, w: number, h: number) {
@@ -47,8 +48,8 @@ function grow(m: Uint8Array, w: number, h: number, r: number) {
 }
 
 // 1 = inside the figure (pure: unit-checkable)
-export function insideMask(ink: Uint8Array, w: number, h: number, r: number) {
-  const wall = grow(ink, w, h, r)
+// cells reachable from the paper's edge without crossing `wall`
+function floodOutside(wall: Uint8Array, w: number, h: number) {
   const outside = new Uint8Array(w * h)
   const stack: number[] = []
   const push = (i: number) => {
@@ -67,11 +68,20 @@ export function insideMask(ink: Uint8Array, w: number, h: number, r: number) {
     if (i >= w) push(i - w)
     if (i < w * (h - 1)) push(i + w)
   }
+  return outside
+}
+
+export function insideMask(ink: Uint8Array, w: number, h: number, r: number, fatR = r) {
+  // areas the lines already close by themselves (grid cells, crossed shapes): always white, whatever their size
+  const rawOut = floodOutside(grow(ink, w, h, 1), w, h)
+  // with small gaps bridged
+  const outside = floodOutside(grow(ink, w, h, r), w, h)
   const back = grow(outside, w, h, r)
   // candidate white = not outside, not ink
   const cand = new Uint8Array(w * h)
   for (let i = 0; i < cand.length; i++) cand[i] = !back[i] && !ink[i] ? 1 : 0
-  // drop thin pieces (sealed tips of armpits, between legs…): keep a piece only if somewhere it's wider than 3r
+  // a piece that exists only because a gap was bridged must be wider than 2r somewhere —
+  // a sealed V tip (armpit, between legs) never is
   const notCand = new Uint8Array(w * h)
   for (let i = 0; i < cand.length; i++) notCand[i] = cand[i] ? 0 : 1
   const depth = dist(notCand, w, h)
@@ -84,7 +94,7 @@ export function insideMask(ink: Uint8Array, w: number, h: number, r: number) {
     let fat = false
     for (let k = 0; k < piece.length; k++) {
       const i = piece[k]
-      if (depth[i] > 1.5 * r) fat = true
+      if (depth[i] > fatR) fat = true
       const x = i % w
       const visit = (j: number) => {
         if (cand[j] && !seen[j]) {
@@ -99,9 +109,7 @@ export function insideMask(ink: Uint8Array, w: number, h: number, r: number) {
     }
     if (fat) for (const i of piece) out[i] = 1
   }
-  // tuck the white a little under the lines so no see-through hairline shows at the edge
-  const tuck = grow(out, w, h, 1.5)
-  for (let i = 0; i < out.length; i++) if (tuck[i] && ink[i]) out[i] = 1
+  for (let i = 0; i < out.length; i++) if (!rawOut[i] && !ink[i]) out[i] = 1
   return out
 }
 
@@ -117,7 +125,7 @@ export async function fillInside(blob: Blob): Promise<Blob> {
   const px = sctx.getImageData(0, 0, w, h)
   const ink = new Uint8Array(w * h)
   for (let i = 0; i < ink.length; i++) ink[i] = px.data[i * 4 + 3] > 20 ? 1 : 0
-  const inside = insideMask(ink, w, h, Math.max(1, Math.round(GAP * w)))
+  const inside = insideMask(ink, w, h, Math.max(1, GAP * w), FAT * w)
   for (let i = 0; i < inside.length; i++) {
     px.data.set(inside[i] ? [255, 255, 255, 255] : [0, 0, 0, 0], i * 4)
   }
