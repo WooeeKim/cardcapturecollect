@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import backIcon from '../assets/proto/v2/back40.svg'
 import closeIcon from '../assets/proto/v2/close.svg'
 import deleteLine from '../assets/proto/v2/delete-line.svg'
+import tlBar from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
@@ -172,7 +173,10 @@ export default function CollectionScreen({
       {/* towns on one grey band; the picked one gets the dark ring */}
       <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
         <div className="relative h-full" style={{ width: Math.max(402, 61 + (state.towns.length - 1) * PITCH + 60) }}>
-          <div className="absolute top-[7px] h-[56px] bg-[#ccc]" style={{ left: 60, width: Math.max(402, (state.towns.length - 1) * PITCH + 60) }} />
+          {/* the same hand-drawn grey band as Town List, laid sideways */}
+          <div className="pointer-events-none absolute top-[7px] h-[56px]" style={{ left: 52, width: Math.max(410, (state.towns.length - 1) * PITCH + 68) }}>
+            <img src={tlBar} alt="" className="absolute top-0 left-0 w-[56px] max-w-none origin-top-left" style={{ height: Math.max(410, (state.towns.length - 1) * PITCH + 68), transform: 'translateY(56px) rotate(-90deg)' }} />
+          </div>
           {state.towns.map((t, i) => {
             const on = t.id === town.id
             const size = on ? 60 : 55
