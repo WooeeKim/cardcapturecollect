@@ -105,6 +105,7 @@ export async function logIn(username: string, password: string): Promise<AuthRes
 }
 
 export async function logOut() {
+  await flushRemote() // while the session still allows writing this account's row
   if (sb) await sb.auth.signOut()
   localStorage.removeItem(SESSION)
 }
@@ -123,22 +124,47 @@ export async function changePassword(user: User, password: string): Promise<{ ok
 
 // ---------- per-account data in Supabase (local cache is always kept too) ----------
 
-export async function loadRemote(user: User): Promise<State | null> {
+export type Remote = { state: State; updatedAt: number }
+
+export async function loadRemote(user: User): Promise<Remote | null> {
   if (!sb) return null
-  const { data, error } = await sb.from('user_states').select('state').eq('user_id', user.id).maybeSingle()
+  const { data, error } = await sb.from('user_states').select('state, updated_at').eq('user_id', user.id).maybeSingle()
   if (error) {
     console.warn('user_states load failed (run supabase/migrations/004_user_states.sql?)', error.message)
     return null
   }
-  return (data?.state as State) ?? null
+  return data ? { state: data.state as State, updatedAt: Date.parse(data.updated_at) || 0 } : null
 }
 
+// Saves are batched (800ms). The time is taken when the change happens, so it matches this
+// device's local save time; a save that never reaches the server leaves the device copy newer.
 let timer = 0
+let queued: { user: User; state: State; at: string } | null = null
+// `email` comes from 005_admin_gallery.sql; without that migration, save without it instead of failing every time
+let withEmail = true
+
+async function push(job: { user: User; state: State; at: string }) {
+  const row: Record<string, unknown> = { user_id: job.user.id, state: job.state, updated_at: job.at }
+  let { error } = await sb!.from('user_states').upsert(withEmail ? { ...row, email: job.user.username } : row)
+  if (error && withEmail && /email/i.test(error.message)) {
+    withEmail = false
+    console.warn('user_states has no email column (run supabase/migrations/005_admin_gallery.sql); saving without it')
+    ;({ error } = await sb!.from('user_states').upsert(row))
+  }
+  if (error) console.warn('user_states save failed', error.message)
+}
+
 export function saveRemote(user: User, state: State) {
   if (!sb) return
   clearTimeout(timer)
-  timer = window.setTimeout(async () => {
-    const { error } = await sb!.from('user_states').upsert({ user_id: user.id, email: user.username, state, updated_at: new Date().toISOString() })
-    if (error) console.warn('user_states save failed', error.message)
-  }, 800)
+  queued = { user, state, at: new Date().toISOString() }
+  timer = window.setTimeout(flushRemote, 800)
+}
+
+// Send the batched save now (log out, account switch, leaving the page).
+export async function flushRemote() {
+  clearTimeout(timer)
+  const job = queued
+  queued = null
+  if (job) await push(job)
 }
