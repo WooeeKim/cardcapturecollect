@@ -3,6 +3,7 @@ import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
 import { fixOldFills } from './lib/fixFills'
+import { repairCards } from './lib/repairCard'
 import { loadImage } from './lib/preload'
 import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
@@ -173,6 +174,25 @@ export default function App({ onReady }: { onReady?: () => void }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, state.fillsFixed, commit])
+
+  // one-time: a drawing the first fill fix flattened gets its colors back from the drawer's screenshot
+  useEffect(() => {
+    if (!ready || !state.fillsFixed || state.repaired) return
+    const who = userRef.current
+    let stale = false
+    repairCards(state).then((fixed) => {
+      if (stale || userRef.current !== who) return
+      commit((s) => {
+        const cards = { ...s.cards }
+        for (const [id, f] of Object.entries(fixed)) if (cards[id]) cards[id] = { ...cards[id], ...f }
+        return { ...s, cards, repaired: true }
+      })
+    })
+    return () => {
+      stale = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, user, state.fillsFixed, state.repaired, commit])
 
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {

@@ -3,7 +3,7 @@ import type { State } from './store'
 
 // One-time data fix: cards drawn before 2026-11-12 had the fill tool painted at 35% opacity.
 // Those pixels are made solid in the light tint they showed on the white card, so walkers no longer show through each other.
-const CUTOFF = '2026-11-12T12:40:00.000Z' // fill became solid after this deploy
+export const CUTOFF = '2026-11-12T12:40:00.000Z' // fill became solid after this deploy
 const OLD_ALPHA = 89 / 255 // 35% as stored in the PNG
 
 async function solidify(src: string, force = false): Promise<string | null> {
