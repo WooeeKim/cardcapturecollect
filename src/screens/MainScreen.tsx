@@ -5,7 +5,6 @@ import menuBox from '../assets/proto/v2/menu-box2.svg'
 import menuTowns from '../assets/proto/menu-towns.svg'
 import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
-import plusCard from '../assets/proto/plus-card.svg'
 import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
 import { moodOf } from '../lib/moods'
@@ -427,7 +426,12 @@ export default function MainScreen({
       {/* draw a new card */}
       {!open && !follow && (
         <button aria-label="Draw a card" onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
-          <img src={plusCard} alt="" className="absolute top-1/2 left-1/2 h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg]" />
+          {/* the Figma + card, with rounded corners */}
+          <span className="absolute top-1/2 left-1/2 flex h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg] items-center justify-center rounded-[9px] border-[2.6px] border-[#222] bg-white">
+            <svg viewBox="0 0 28 28" className="size-[28px]" aria-hidden>
+              <path d="M14 2v24M2 14h24" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
+          </span>
         </button>
       )}
 
