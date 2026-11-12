@@ -1,53 +1,22 @@
+import type { Stroke } from '../components/DrawingCanvas'
+
 // The paper is white while drawing, so unpainted spots inside a figure (face, shirt) look white —
 // but they'd be see-through on the town ground. This fills "inside the drawing" with white under the lines.
-// Outlines are rarely closed, so plain flood fill won't do: the lines are first thickened so small gaps close,
-// the outside is flood-filled from the paper's edge, then grown back by the same amount.
-// Whatever the outside doesn't reach (and isn't ink) is inside. Small gaps get bridged (see GAP).
+//
+// Outlines are rarely closed. Instead of a fixed gap size, each loose pen-stroke end looks *ahead along its own
+// direction* for another line, and an invisible bridge closes the gap when it finds one:
+//  - reach grows with the end's own run since its last sharp corner: after a long smooth arc (a circle) a big
+//    gap is forgiven; a short piece after a corner (a ㄹ tail) only bridges a tiny one
+//  - only within a cone ahead, so ends that point away (a ㄹ tail, arms, legs) don't get joined
+// Then whatever the paper's edge can't reach through lines + bridges is inside.
 const W = 400 // working width (the mask is smoothed when scaled back up)
-const GAP = 0.015 // closing radius, fraction of the paper width (bridges gaps up to ~3.5% between line edges)
-const FAT = 0.014 // a bridged piece must be wider than 2·FAT somewhere (sealed V tips never are)
+const REACH = 0.25 // bridge reach, fraction of the end's run since the last sharp corner
+const CORNER = (50 * Math.PI) / 180 // a turn sharper than this (over ~5 cells each side) is a corner
+const MAX_REACH = 0.12 // …but never more than this fraction of the paper width
+const CONE = (40 * Math.PI) / 180 // how far off the stroke's direction a bridge may go
 
-// distance from every cell to the nearest set cell of `m`: two-pass chamfer (near-round), linear time
-function dist(m: Uint8Array, w: number, h: number) {
-  const D = 1.4142
-  const d = new Float32Array(m.length)
-  for (let i = 0; i < m.length; i++) d[i] = m[i] ? 0 : 1e9
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x
-      let v = d[i]
-      if (x > 0) v = Math.min(v, d[i - 1] + 1)
-      if (y > 0) {
-        v = Math.min(v, d[i - w] + 1)
-        if (x > 0) v = Math.min(v, d[i - w - 1] + D)
-        if (x < w - 1) v = Math.min(v, d[i - w + 1] + D)
-      }
-      d[i] = v
-    }
-  for (let y = h - 1; y >= 0; y--)
-    for (let x = w - 1; x >= 0; x--) {
-      const i = y * w + x
-      let v = d[i]
-      if (x < w - 1) v = Math.min(v, d[i + 1] + 1)
-      if (y < h - 1) {
-        v = Math.min(v, d[i + w] + 1)
-        if (x < w - 1) v = Math.min(v, d[i + w + 1] + D)
-        if (x > 0) v = Math.min(v, d[i + w - 1] + D)
-      }
-      d[i] = v
-    }
-  return d
-}
+type P = { x: number; y: number }
 
-// grows `m` by radius r
-function grow(m: Uint8Array, w: number, h: number, r: number) {
-  const d = dist(m, w, h)
-  const out = new Uint8Array(m.length)
-  for (let i = 0; i < m.length; i++) out[i] = d[i] <= r ? 1 : 0
-  return out
-}
-
-// 1 = inside the figure (pure: unit-checkable)
 // cells reachable from the paper's edge without crossing `wall`
 function floodOutside(wall: Uint8Array, w: number, h: number) {
   const outside = new Uint8Array(w * h)
@@ -71,49 +40,81 @@ function floodOutside(wall: Uint8Array, w: number, h: number) {
   return outside
 }
 
-export function insideMask(ink: Uint8Array, w: number, h: number, r: number, fatR = r) {
-  // areas the lines already close by themselves (grid cells, crossed shapes): always white, whatever their size
-  const rawOut = floodOutside(grow(ink, w, h, 1), w, h)
-  // with small gaps bridged
-  const outside = floodOutside(grow(ink, w, h, r), w, h)
-  const back = grow(outside, w, h, r)
-  // candidate white = not outside, not ink
-  const cand = new Uint8Array(w * h)
-  for (let i = 0; i < cand.length; i++) cand[i] = !back[i] && !ink[i] ? 1 : 0
-  // a piece that exists only because a gap was bridged must be wider than 2r somewhere —
-  // a sealed V tip (armpit, between legs) never is
-  const notCand = new Uint8Array(w * h)
-  for (let i = 0; i < cand.length; i++) notCand[i] = cand[i] ? 0 : 1
-  const depth = dist(notCand, w, h)
-  const seen = new Uint8Array(w * h)
-  const out = new Uint8Array(w * h)
-  for (let start = 0; start < cand.length; start++) {
-    if (!cand[start] || seen[start]) continue
-    const piece = [start]
-    seen[start] = 1
-    let fat = false
-    for (let k = 0; k < piece.length; k++) {
-      const i = piece[k]
-      if (depth[i] > fatR) fat = true
-      const x = i % w
-      const visit = (j: number) => {
-        if (cand[j] && !seen[j]) {
-          seen[j] = 1
-          piece.push(j)
-        }
-      }
-      if (x > 0) visit(i - 1)
-      if (x < w - 1) visit(i + 1)
-      if (i >= w) visit(i - w)
-      if (i < cand.length - w) visit(i + w)
-    }
-    if (fat) for (const i of piece) out[i] = 1
+// points every ~1 cell along the line, with the running length
+function resample(pts: P[]) {
+  const out: { x: number; y: number; s: number }[] = [{ ...pts[0], s: 0 }]
+  let s = 0
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1]
+    const b = pts[i]
+    const d = Math.hypot(b.x - a.x, b.y - a.y)
+    const n = Math.max(1, Math.ceil(d))
+    for (let k = 1; k <= n; k++) out.push({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n, s: s + (d * k) / n })
+    s += d
   }
-  for (let i = 0; i < out.length; i++) if (!rawOut[i] && !ink[i]) out[i] = 1
   return out
 }
 
-export async function fillInside(blob: Blob): Promise<Blob> {
+// bridges between loose stroke ends and the line they point at (in mask cells)
+export function bridges(strokes: P[][], w: number) {
+  const lines = strokes.filter((p) => p.length > 1).map(resample)
+  const out: [P, P][] = []
+  lines.forEach((line, li) => {
+    const len = line[line.length - 1].s
+    if (len < 3) return
+    for (const atEnd of [false, true]) {
+      const end = atEnd ? line[line.length - 1] : line[0]
+      // direction: from a little way back along the stroke to its end
+      const back = Math.min(len / 3, w * 0.04)
+      const ref = atEnd ? line.find((q) => q.s >= len - back)! : [...line].reverse().find((q) => q.s <= back)!
+      const dx = end.x - ref.x
+      const dy = end.y - ref.y
+      const dl = Math.hypot(dx, dy)
+      if (dl < 1) continue
+      // run: how far back from this end the line goes before a sharp corner
+      const K = 5
+      let run = len
+      const n = line.length
+      for (let step = K; step < n - K; step++) {
+        const i = atEnd ? n - 1 - step : step
+        const a = line[i - K]
+        const b = line[i]
+        const c = line[i + K]
+        const t = Math.acos(
+          Math.max(-1, Math.min(1, ((b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y)) / (Math.hypot(b.x - a.x, b.y - a.y) * Math.hypot(c.x - b.x, c.y - b.y) || 1))),
+        )
+        if (t > CORNER) {
+          run = Math.abs(end.s - b.s)
+          break
+        }
+      }
+      const reach = Math.min(MAX_REACH * w, Math.max(3, REACH * run))
+      let best: P | null = null
+      let bestScore = Infinity
+      lines.forEach((other, oi) => {
+        for (const q of other) {
+          const vx = q.x - end.x
+          const vy = q.y - end.y
+          const d = Math.hypot(vx, vy)
+          if (d < 1.5 || d > reach) continue
+          // on its own stroke, only parts far along the line count (not the stretch right behind the end)
+          if (oi === li && Math.abs(q.s - end.s) < 2.5 * d + 6) continue
+          const ang = Math.acos(Math.max(-1, Math.min(1, (vx * dx + vy * dy) / (d * dl))))
+          if (ang > CONE) continue
+          const score = d * (1 + ang / CONE)
+          if (score < bestScore) {
+            bestScore = score
+            best = q
+          }
+        }
+      })
+      if (best) out.push([end, best])
+    }
+  })
+  return out
+}
+
+export async function fillInside(blob: Blob, strokes: Stroke[] = []): Promise<Blob> {
   const bmp = await createImageBitmap(blob)
   const w = W
   const h = Math.round((bmp.height / bmp.width) * W)
@@ -122,13 +123,26 @@ export async function fillInside(blob: Blob): Promise<Blob> {
   small.height = h
   const sctx = small.getContext('2d')!
   sctx.drawImage(bmp, 0, 0, w, h)
-  const px = sctx.getImageData(0, 0, w, h)
   const ink = new Uint8Array(w * h)
+  let px = sctx.getImageData(0, 0, w, h)
   for (let i = 0; i < ink.length; i++) ink[i] = px.data[i * 4 + 3] > 20 ? 1 : 0
-  const inside = insideMask(ink, w, h, Math.max(1, GAP * w), FAT * w)
-  for (let i = 0; i < inside.length; i++) {
-    px.data.set(inside[i] ? [255, 255, 255, 255] : [0, 0, 0, 0], i * 4)
+
+  // invisible bridges, drawn into the mask only
+  sctx.strokeStyle = '#000'
+  sctx.lineWidth = 2
+  sctx.lineCap = 'round'
+  const lines = strokes.filter((s) => s.tool !== 'eraser').map((s) => s.points.map((p) => ({ x: p.x * w, y: p.y * h })))
+  for (const [a, b] of bridges(lines, w)) {
+    sctx.beginPath()
+    sctx.moveTo(a.x, a.y)
+    sctx.lineTo(b.x, b.y)
+    sctx.stroke()
   }
+  px = sctx.getImageData(0, 0, w, h)
+  const wall = new Uint8Array(w * h)
+  for (let i = 0; i < wall.length; i++) wall[i] = px.data[i * 4 + 3] > 20 ? 1 : 0
+  const outside = floodOutside(wall, w, h)
+  for (let i = 0; i < wall.length; i++) px.data.set(!outside[i] && !ink[i] ? [255, 255, 255, 255] : [0, 0, 0, 0], i * 4)
   sctx.putImageData(px, 0, 0)
 
   const out = document.createElement('canvas')
