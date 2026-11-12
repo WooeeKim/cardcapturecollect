@@ -4,10 +4,10 @@
 // the outside is flood-filled from the paper's edge, then grown back by the same amount.
 // Whatever the outside doesn't reach (and isn't ink) is inside. Gaps up to ~2·GAP of the width get bridged.
 const W = 240 // working width (the mask is smoothed when scaled back up)
-const GAP = 0.03 // closing radius, fraction of the paper width
+const GAP = 0.015 // closing radius, fraction of the paper width
 
-// grows `m` by radius r: two-pass chamfer distance (near-round), linear time
-function grow(m: Uint8Array, w: number, h: number, r: number) {
+// distance from every cell to the nearest set cell of `m`: two-pass chamfer (near-round), linear time
+function dist(m: Uint8Array, w: number, h: number) {
   const D = 1.4142
   const d = new Float32Array(m.length)
   for (let i = 0; i < m.length; i++) d[i] = m[i] ? 0 : 1e9
@@ -35,6 +35,12 @@ function grow(m: Uint8Array, w: number, h: number, r: number) {
       }
       d[i] = v
     }
+  return d
+}
+
+// grows `m` by radius r
+function grow(m: Uint8Array, w: number, h: number, r: number) {
+  const d = dist(m, w, h)
   const out = new Uint8Array(m.length)
   for (let i = 0; i < m.length; i++) out[i] = d[i] <= r ? 1 : 0
   return out
@@ -61,8 +67,41 @@ export function insideMask(ink: Uint8Array, w: number, h: number, r: number) {
     if (i >= w) push(i - w)
     if (i < w * (h - 1)) push(i + w)
   }
-  const out = grow(outside, w, h, r)
-  for (let i = 0; i < out.length; i++) out[i] = out[i] ? 0 : 1
+  const back = grow(outside, w, h, r)
+  // candidate white = not outside, not ink
+  const cand = new Uint8Array(w * h)
+  for (let i = 0; i < cand.length; i++) cand[i] = !back[i] && !ink[i] ? 1 : 0
+  // drop thin pieces (sealed tips of armpits, between legs…): keep a piece only if somewhere it's wider than 3r
+  const notCand = new Uint8Array(w * h)
+  for (let i = 0; i < cand.length; i++) notCand[i] = cand[i] ? 0 : 1
+  const depth = dist(notCand, w, h)
+  const seen = new Uint8Array(w * h)
+  const out = new Uint8Array(w * h)
+  for (let start = 0; start < cand.length; start++) {
+    if (!cand[start] || seen[start]) continue
+    const piece = [start]
+    seen[start] = 1
+    let fat = false
+    for (let k = 0; k < piece.length; k++) {
+      const i = piece[k]
+      if (depth[i] > 1.5 * r) fat = true
+      const x = i % w
+      const visit = (j: number) => {
+        if (cand[j] && !seen[j]) {
+          seen[j] = 1
+          piece.push(j)
+        }
+      }
+      if (x > 0) visit(i - 1)
+      if (x < w - 1) visit(i + 1)
+      if (i >= w) visit(i - w)
+      if (i < cand.length - w) visit(i + w)
+    }
+    if (fat) for (const i of piece) out[i] = 1
+  }
+  // tuck the white a little under the lines so no see-through hairline shows at the edge
+  const tuck = grow(out, w, h, 1.5)
+  for (let i = 0; i < out.length; i++) if (tuck[i] && ink[i]) out[i] = 1
   return out
 }
 
