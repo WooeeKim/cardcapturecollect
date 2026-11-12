@@ -1,8 +1,9 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import AdminPage from './AdminPage'
 import App from './App'
+import { Splash } from './components/Splash'
 import { setFrameMatrix } from './lib/frame'
 import { preloadAssets } from './lib/preload'
 
@@ -49,7 +50,20 @@ else {
   addEventListener('orientationchange', () => setTimeout(fit, 100))
 }
 
-// the app starts once the handwriting font and every icon are ready, so screens never pop in piece by piece
-const start = () => createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <App />}</StrictMode>)
-if (admin) start()
-else preloadAssets().then(start)
+// The app name (Splash) shows right away while the handwriting font and every icon load, so the wait never
+// looks blank. The app itself mounts once they're ready (screens never pop in piece by piece) and the splash
+// blurs away after the app has also loaded the account.
+function Boot() {
+  const [loaded, setLoaded] = useState(false)
+  const [appReady, setAppReady] = useState(false)
+  useEffect(() => {
+    preloadAssets().then(() => setLoaded(true))
+  }, [])
+  return (
+    <>
+      {loaded && <App onReady={() => setAppReady(true)} />}
+      <Splash ready={loaded && appReady} />
+    </>
+  )
+}
+createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <Boot />}</StrictMode>)

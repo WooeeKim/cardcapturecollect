@@ -41,7 +41,7 @@ const setFlag = (k: string, v: string) => {
 
 const startRoute = (s: State): Route => (s.pending ? { name: 'tada' } : { name: 'main', townId: s.towns[0].id, enter: 'center' })
 
-export default function App() {
+export default function App({ onReady }: { onReady?: () => void }) {
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const userRef = useRef<User | null>(null)
@@ -116,6 +116,7 @@ export default function App() {
     currentUser().then(async (u) => {
       if (u) await enter(u)
       setReady(true)
+      onReady?.()
     })
   }, [enter])
 
