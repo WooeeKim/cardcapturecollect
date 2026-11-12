@@ -140,6 +140,7 @@ export default function TownListScreen({
   function onHandleMove(e: React.PointerEvent) {
     if (dragIdx === null) return
     let dy = framePoint(e.clientX, e.clientY).y - dragStart.current
+    let dragIdxNow = dragIdx
     const steps = Math.trunc(dy / ROW + Math.sign(dy) * 0.5)
     const to = Math.max(0, Math.min(state.towns.length - 1, dragIdx + steps))
     if (to !== dragIdx) {
@@ -147,8 +148,10 @@ export default function TownListScreen({
       dragStart.current += (to - dragIdx) * ROW
       dy -= (to - dragIdx) * ROW
       setDragIdx(to)
+      dragIdxNow = to
     }
-    setDragDy(dy)
+    // stay on the grey bar: the first town can't go above the top slot, the last can't go below the bottom one
+    setDragDy(Math.max(-dragIdxNow * ROW, Math.min((state.towns.length - 1 - dragIdxNow) * ROW, dy)))
   }
   function onHandleUp() {
     setDragIdx(null)
