@@ -1,6 +1,6 @@
 // Prototype data: towns + cards, kept in this browser's localStorage only.
 export const MAX_TOWNS = 10
-export const MAX_RESIDENTS = 10
+export const MAX_RESIDENTS = 18
 
 export type Card = {
   id: string
@@ -288,13 +288,14 @@ if (argv?.[1]?.endsWith('store.ts')) {
   const second = newTown(s, 'Two', '')
   s = addTown(s, second)
   const draw = (st: State) => sendPending(makePending(st, { image: '', mood: 'Calm', place: '', nickname: '', memo: '' }), home)
-  for (let i = 0; i < 12; i++) s = draw(s)
-  assert(s.towns[0].residents.length === MAX_RESIDENTS, 'town caps at 10')
+  const over = MAX_RESIDENTS + 2
+  for (let i = 0; i < over; i++) s = draw(s)
+  assert(s.towns[0].residents.length === MAX_RESIDENTS, `town caps at ${MAX_RESIDENTS}`)
   assert(s.pending !== null, 'overflow stays pending')
-  assert(s.seq.n === 12 && s.pending!.serial.endsWith('-12'), 'serial counts per day')
+  assert(s.seq.n === over && s.pending!.serial.endsWith(`-${over}`), 'serial counts per day')
   const chief = s.towns[0].residents[0]
   s = placeCard(s, chief, second.id)
-  assert(s.towns[1].residents[0] === chief && s.towns[0].residents.length === 9, 'migration moves card')
+  assert(s.towns[1].residents[0] === chief && s.towns[0].residents.length === MAX_RESIDENTS - 1, 'migration moves card')
   assert(canDeleteTown(s, second.id) === 'residents', 'cannot delete inhabited town')
   {
     const a = s.towns[0].residents[1]
@@ -302,7 +303,7 @@ if (argv?.[1]?.endsWith('store.ts')) {
     assert(sw.towns[0].residents[1] === chief && sw.towns[1].residents[0] === a, 'swap trades town + slot')
   }
   s = placeCard(s, s.towns[0].residents[3], home, 0)
-  assert(s.towns[0].residents.length === 9, 'reorder keeps count')
+  assert(s.towns[0].residents.length === MAX_RESIDENTS - 1, 'reorder keeps count')
   s = deleteCard(s, chief)
   assert(canDeleteTown(s, second.id) === 'ok', 'empty town deletable')
   s = deleteTown(s, second.id)
