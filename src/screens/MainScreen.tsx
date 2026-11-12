@@ -402,12 +402,14 @@ export default function MainScreen({
               </div>
             </>
           ) : (
-            <button aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(true)} className="absolute top-[86px] left-[14px] p-[10px]">
+            <button aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(true)} className="absolute top-[68.6px] left-[32px] p-[10px]">
+              {/* ≡ sits where the open menu's ^ is (center 55, 96.5) */}
               <img src={menuIcon} alt="" className="h-[17px] w-[26px]" />
             </button>
           )}
           <p className="pointer-events-none absolute inset-x-[90px] top-[89px] truncate text-center font-hand text-[24px] leading-[normal]">{town.name}</p>
-          <button aria-label="My page" onClick={onMyPage} className="absolute top-[78px] left-[348px] p-[8px]">
+          {/* same 42px from the right edge as ≡ from the left, same center line */}
+          <button aria-label="My page" onClick={onMyPage} className="absolute top-[59.1px] left-[326.6px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
