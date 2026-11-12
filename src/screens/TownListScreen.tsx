@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, TextButton, Thumb, XIcon, type PopupAction } from '../components/ui'
+import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, Thumb, type PopupAction } from '../components/ui'
 import { framePoint } from '../lib/frame'
+import tlBox from '../assets/proto/v2/tl-box.svg'
+import tlBar from '../assets/proto/v2/tl-bar.svg'
+import tlClose from '../assets/proto/v2/tl-close.svg'
+import tlPill from '../assets/proto/v2/tl-edit.svg'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
 
 // Figma prototyping: townList · townList-detail · townList for migration · 마을 추가
@@ -9,8 +13,8 @@ import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, 
 // send    = place a newly drawn card ("Send")
 export type ListMode = 'browse' | 'migrate' | 'send'
 
-const ROW = 124
-const OPEN_EXTRA = 100 // open row is 224 tall
+const ROW = 130
+const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
 
 export default function TownListScreen({
   state,
@@ -75,7 +79,7 @@ export default function TownListScreen({
   }
   function askSave(then: () => void) {
     setPopup({
-      message: "There's unsaved changes. Do you wanna save?",
+      message: "There's unsaved changes.\nDo you wanna save?",
       actions: [
         { label: 'Discard', onClick: () => { setPopup(null); setEditing(false); then() } },
         { label: 'Save', onClick: () => { setPopup(null); save(); then() } },
@@ -157,12 +161,21 @@ export default function TownListScreen({
   const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
   const listHeight = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0) + 120
 
+  // hand-drawn pill button (Figma Vector 406); grey label for the "leave it" side
+  const pill = (label: string, onClick: () => void, left: number, grey = false) => (
+    <button onClick={onClick} className="absolute top-[147px] flex h-[41px] items-center justify-center" style={{ left, width: label.length > 4 ? 84 : 69 }}>
+      <img src={tlPill} alt="" className="absolute inset-[-2.5%_-1.5%] size-[calc(100%+3%)] max-w-none" />
+      <span className={`relative text-[20px] leading-[1.3] ${grey ? 'text-[#686868]' : ''}`}>{label}</span>
+    </button>
+  )
+
+  // open town (Figma townList-detail 787:1012): hand-drawn box, Go tag, Edit pill
   const detail = (t: Town | null) => {
     const isNew = !t
     const editable = isNew || editing
     return (
       <>
-        <div className="absolute top-[5px] left-[80px] h-[178px] w-[307px] rounded-[12px] bg-[#ededed]" />
+        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[112px] h-[183px] w-[281px] max-w-none" />
         {editable ? (
           <input
             autoFocus
@@ -171,15 +184,15 @@ export default function TownListScreen({
             maxLength={20}
             placeholder={isNew ? `New Town ${state.towns.length + 1}` : ''}
             aria-label="Town name"
-            className="absolute top-[14px] left-[127px] w-[210px] bg-transparent text-[24px] leading-[normal] outline-none placeholder:text-[#5f5f5f]"
+            className="absolute top-[20px] left-[135px] w-[205px] bg-transparent text-[21px] leading-[1.3] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
-          <p className="absolute top-[18px] left-[127px] w-[215px] truncate text-[24px] leading-[normal]">{t!.name}</p>
+          <p className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{t!.name}</p>
         )}
-        <button aria-label="Close" onClick={isNew ? () => setAdding(null) : close} className="absolute top-[20px] left-[347px] p-[8px]">
-          <XIcon />
+        <button aria-label="Close" onClick={isNew ? () => setAdding(null) : close} className="absolute top-[14px] left-[344px] flex size-[28px] items-center justify-center">
+          <img src={tlClose} alt="" className="h-[14.8px] w-[12.3px]" />
         </button>
-        <p className="absolute top-[50px] left-[133px] text-[11px] leading-[normal] text-[#8a8a8a]">
+        <p className="absolute top-[54px] left-[135px] text-[14px] leading-[normal] text-[#8e8e8e]">
           Residents {t ? t.residents.length : 0}/{MAX_RESIDENTS}
         </p>
         {editable ? (
@@ -187,44 +200,39 @@ export default function TownListScreen({
             value={draft.bio}
             onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
             maxLength={100}
-            rows={3}
+            rows={2}
             placeholder="Write your town biography."
             aria-label="Town biography"
-            className="absolute top-[74px] left-[133px] w-[230px] resize-none bg-transparent text-[12px] leading-[normal] outline-none placeholder:text-black"
+            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-black"
           />
         ) : (
-          <p className="absolute top-[76px] left-[133px] line-clamp-3 w-[230px] text-[12px] leading-[normal] break-words">{t!.bio}</p>
+          <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{t!.bio}</p>
         )}
-        <p className="absolute top-[120px] left-[133px] text-[9px] leading-[normal]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
+        <p className="absolute top-[127px] left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
         {isNew ? (
           <>
-            <TextButton dim onClick={() => setAdding(null)} className="absolute top-[142px] left-[136px] text-[19.5px]">Discard</TextButton>
-            <TextButton onClick={create} className="absolute top-[142px] right-[38px] text-[19.5px]">Create</TextButton>
+            {pill('Discard', () => setAdding(null), 133, true)}
+            {pill('Create', create, 296)}
           </>
         ) : editing ? (
           <>
-            <TextButton dim onClick={() => askDelete(t!)} className="absolute top-[142px] left-[136px] text-[19.5px]">Delete</TextButton>
-            <TextButton onClick={save} className="absolute top-[142px] right-[38px] text-[19.5px]">Done</TextButton>
+            {pill('Delete', () => askDelete(t!), 133, true)}
+            {pill('Done', save, 311)}
           </>
         ) : action ? (
-          <TextButton onClick={() => place(t!)} className="absolute top-[142px] right-[38px] text-[19.5px]">{action}</TextButton>
+          pill(action, () => place(t!), action.length > 4 ? 296 : 311)
         ) : (
-          <TextButton
-            onClick={() => {
-              setDraft({ name: t!.name, bio: t!.bio })
-              setEditing(true)
-            }}
-            className="absolute top-[142px] right-[38px] text-[19.5px]"
-          >
-            Edit
-          </TextButton>
+          pill('Edit', () => {
+            setDraft({ name: t!.name, bio: t!.bio })
+            setEditing(true)
+          }, 311)
         )}
         {t && !editing && mode === 'browse' && (
-          <button aria-label={`Go to ${t.name}`} onClick={() => onGo(t.id)} className="absolute top-[74px] left-[43px]">
+          <button aria-label={`Go to ${t.name}`} onClick={() => onGo(t.id)} className="absolute top-[73px] left-[43px]">
             <GoTag />
           </button>
         )}
-        <span data-thumb className="pointer-events-none absolute top-[1px] left-[24px]">
+        <span data-thumb className="pointer-events-none absolute top-0 left-[24px]">
           <Thumb image={t ? chiefImage(t) : undefined} size={84} strong />
         </span>
       </>
@@ -232,14 +240,14 @@ export default function TownListScreen({
   }
 
   return (
-    <div className="relative h-full overflow-hidden bg-white font-hand">
+    <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <Header title="Town List" onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label="Add town" onClick={startAdd} />} />
-      <div className="absolute inset-x-0 top-0 z-10 h-[149px] bg-white" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[186px] bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0" />
 
       <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
         <div className="relative min-h-full" style={{ height: listHeight }}>
           {/* the grey line every town hangs on */}
-          <div className="absolute top-[79px] bottom-0 left-[27px] w-[79px] bg-[#ccc]" />
+          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: `calc(100% - 37px)` }} />
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id
@@ -262,12 +270,12 @@ export default function TownListScreen({
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
                       <Thumb image={chiefImage(t)} size={70} grey={dimmed} />
                     </button>
-                    <button onClick={() => toggle(t)} className="absolute top-[26px] left-[124px] max-w-[220px] truncate text-left text-[20px] leading-[normal]">
+                    <button onClick={() => toggle(t)} className="absolute top-[23px] left-[121px] max-w-[220px] truncate text-left text-[21px] leading-[1.1]">
                       {t.name}
                     </button>
                     <span
                       aria-label="Reorder"
-                      className="absolute top-[31px] left-[352px] touch-none p-[10px]"
+                      className="absolute top-[20px] left-[352px] flex size-[30px] touch-none items-center justify-center"
                       onPointerDown={(e) => onHandleDown(e, i)}
                       onPointerMove={onHandleMove}
                       onPointerUp={onHandleUp}

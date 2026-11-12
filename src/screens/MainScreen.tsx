@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import menuIcon from '../assets/proto/menu.svg'
-import menuBubble from '../assets/proto/menu-bubble.svg'
+import menuBox from '../assets/proto/v2/menu-box.svg'
+import menuUp from '../assets/proto/v2/menu-up.svg'
 import menuTowns from '../assets/proto/menu-towns.svg'
 import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
@@ -9,7 +10,11 @@ import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
 import { moodOf } from '../lib/moods'
 import { TONES, type Card, type State, type Town } from '../lib/store'
-import { fromBottom } from '../components/ui'
+import { Bottom } from '../components/ui'
+import cardPanel from '../assets/proto/v2/card-panel.svg'
+import chipPanel from '../assets/proto/v2/chip-panel.svg'
+import pillFollow from '../assets/proto/v2/pill-follow.svg'
+import pillMigration from '../assets/proto/v2/pill-migration.svg'
 import { framePoint, toLocal } from '../lib/frame'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
@@ -377,16 +382,19 @@ export default function MainScreen({
       {/* header */}
       {!follow && (
         <>
-          {/* Figma main 683:4633 (closed) / 683:4662 (menu open) */}
+          {/* Figma main 683:4633 (closed) / 683:4589 (menu open: box with ^ to fold it back) */}
           {menu ? (
             <>
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
-              <div className="animate-pop-in absolute top-[77px] left-0 z-20 h-[134px] w-[85px] origin-top-left">
-                <img src={menuBubble} alt="" className="absolute inset-0 size-full" />
-                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[16px] left-[26px] size-[45px]">
+              <div className="animate-pop-in absolute top-[73px] left-[15px] z-20 h-[169px] w-[81px] origin-top">
+                <img src={menuBox} alt="" className="absolute inset-[-0.59%_-1.23%] size-[calc(100%+2.46%)] max-w-none" />
+                <button aria-label="Close menu" aria-expanded onClick={() => setMenu(false)} className="absolute top-[8px] left-[21px] flex h-[31px] w-[38px] items-center justify-center">
+                  <img src={menuUp} alt="" className="h-[18px] w-[11px] rotate-90" />
+                </button>
+                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[51px] left-[18px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
-                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[71.8px] left-[26px] size-[45px]">
+                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[106px] left-[18px] size-[45px]">
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>
@@ -428,51 +436,50 @@ export default function MainScreen({
   )
 }
 
-// card info under the zoomed character (main-carddeatail)
+// card info under the zoomed character (Figma main-carddeatail 787:759: hand-drawn panel + Follow / Migration pills)
 function Detail({ card, onClose, onFollow, onMigrate }: { card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void }) {
   const [drag, setDrag] = useState(0)
   const start = useRef<number | null>(null)
   return (
-    <div
-      className="animate-sheet-up absolute inset-x-0 bottom-0 z-10 bg-[rgba(238,238,238,0.9)] font-hand backdrop-blur-[5px]"
-      style={{ top: fromBottom(577), transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
-    >
-      {/* handle: pull down to close */}
+    <Bottom>
       <div
-        className="absolute inset-x-0 top-0 flex h-[28px] touch-none justify-center pt-[8px]"
-        onPointerDown={(e) => {
-          start.current = framePoint(e.clientX, e.clientY).y
-          e.currentTarget.setPointerCapture(e.pointerId)
-        }}
-        onPointerMove={(e) => start.current !== null && setDrag(Math.max(0, framePoint(e.clientX, e.clientY).y - start.current))}
-        onPointerUp={() => {
-          start.current = null
-          if (drag > 70) onClose()
-          else setDrag(0)
-        }}
+        className="animate-sheet-up absolute top-[565px] left-[11px] z-10 h-[285px] w-[380px] font-hand"
+        style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
       >
-        <span className="h-[4px] w-[74px] rounded-full bg-black" />
+        <img src={cardPanel} alt="" className="pointer-events-none absolute top-[-1px] left-[-1px] h-[256px] w-[382px] max-w-none" />
+        {/* top edge: pull down to close */}
+        <div
+          className="absolute inset-x-0 top-0 h-[24px] touch-none"
+          onPointerDown={(e) => {
+            start.current = framePoint(e.clientX, e.clientY).y
+            e.currentTarget.setPointerCapture(e.pointerId)
+          }}
+          onPointerMove={(e) => start.current !== null && setDrag(Math.max(0, framePoint(e.clientX, e.clientY).y - start.current))}
+          onPointerUp={() => {
+            start.current = null
+            if (drag > 70) onClose()
+            else setDrag(0)
+          }}
+        />
+        {card.mood && (
+          <span className="absolute top-[25px] left-[20px] flex h-[35px] w-[70.4px] items-center justify-center">
+            <img src={chipPanel} alt="" className="absolute inset-[-2.85%_-1.42%] size-[calc(100%+2.84%)] max-w-none" />
+            <span className="relative text-[19px] leading-[1.1]">{card.mood}</span>
+          </span>
+        )}
+        {card.place && <p className="absolute top-[33px] right-[20px] text-[17px] leading-[1.1]">{card.place}</p>}
+        {card.nickname && <p className="absolute top-[78px] left-[20px] text-[21px] leading-[1.1]">{card.nickname}</p>}
+        {card.memo && <p className="absolute top-[116px] left-[20px] line-clamp-4 w-[340px] text-[17px] leading-[1.2] break-words">{card.memo}</p>}
+        <p className="absolute top-[207px] right-[20px] text-[14px] leading-[1.1] text-[#8e8e8e]">{card.serial}</p>
+        <button onClick={onFollow} className="absolute top-[225px] left-[44px] flex h-[55px] w-[113px] items-center justify-center">
+          <img src={pillFollow} alt="" className="absolute inset-0 size-full" />
+          <span className="relative text-[24.3px] leading-[1.1]">Follow</span>
+        </button>
+        <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
+          <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
+          <span className="relative text-[24.3px] leading-[1.1]">Migration</span>
+        </button>
       </div>
-      {card.mood && (
-        <span className="absolute top-[15px] left-[23px] flex h-[35px] min-w-[73px] items-center justify-center rounded-[50px] px-[10px] text-[21px] tracking-[-0.63px]" style={{ background: moodOf(card.mood).color, color: moodOf(card.mood).ink }}>
-          {card.mood}
-        </span>
-      )}
-      {card.place && <p className="absolute top-[18.5px] right-[22px] text-[14px] leading-[1.1] tracking-[-0.28px]">{card.place}</p>}
-      {(card.nickname || card.memo) && (
-        <div className="absolute bottom-[95px] left-[23px] flex max-h-[150px] w-[361px] flex-col gap-[10.6px] overflow-hidden rounded-[10.6px] bg-white/70 p-[10.6px] backdrop-blur-[2px]">
-          {card.nickname && <p className="text-[21.25px] leading-[1.1] tracking-[-0.43px]">{card.nickname}</p>}
-          {card.memo && <p className="text-[17px] leading-[1.2] tracking-[-0.34px] break-words">{card.memo}</p>}
-        </div>
-      )}
-      <p className="absolute top-[210px] right-[22px] text-[14px] leading-[1.1] tracking-[-0.28px]">{card.serial}</p>
-      <button onClick={onFollow} className="absolute top-[240px] left-[114px] -translate-x-1/2 px-[16px] py-[8px] text-[23px] leading-[1.1] tracking-[-0.46px]">
-        Follow
-      </button>
-      <span className="absolute top-[247px] left-[201px] h-[28px] w-px bg-black" />
-      <button onClick={onMigrate} className="absolute top-[240px] left-[295.5px] -translate-x-1/2 px-[16px] py-[8px] text-[23px] leading-[1.1] tracking-[-0.46px]">
-        Migration
-      </button>
-    </div>
+    </Bottom>
   )
 }

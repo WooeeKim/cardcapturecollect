@@ -1,4 +1,5 @@
 import xIcon from '../assets/proto/x.svg'
+import { ConfirmBubble, PillBack, PillFinish } from './v2'
 import handleIcon from '../assets/proto/handle.svg'
 import goBox from '../assets/proto/gobox.svg'
 import backIcon from '../assets/proto/back.svg'
@@ -71,16 +72,30 @@ export function PlusButton({ onClick, label }: { onClick: () => void; label: str
 
 export type PopupAction = { label: string; onClick: () => void }
 
+// Speech-bubble popup (Figma townList-detail 787:1229 / 787:1304 …): first action = grey left pill
+// (Discard / Delete), second = black right pill (Save / Cancel); one action = one pill in the middle.
 export function Popup({ message, actions }: { message: ReactNode; actions: PopupAction[] }) {
+  const pills = actions.length === 1 ? [{ ...actions[0], x: 134, w: 133.6, h: 58.3, grey: false, rot: -177.79, shape: 'back' as const }] : [
+    { ...actions[0], x: 46, w: 113, h: 54.8, grey: true, rot: -178.73, shape: 'finish' as const },
+    { ...actions[1], x: 203, w: 133.6, h: 58.3, grey: false, rot: -177.79, shape: 'back' as const },
+  ]
   return (
-    <div className="animate-fade-in absolute inset-0 z-50 flex items-center bg-black/35 px-[24px]">
-      <div role="dialog" className="animate-pop-in w-full rounded-[14px] bg-[#f0f0f0] px-[20px] pt-[26px] pb-[18px] text-center">
-        <p className="font-hand text-[22px] leading-[1.35]">{message}</p>
-        <div className="mt-[18px] flex justify-around">
-          {actions.map((a) => (
-            <TextButton key={a.label} onClick={a.onClick} className="text-[19px]">
-              {a.label}
-            </TextButton>
+    <div className="animate-fade-in absolute inset-0 z-50 flex items-center justify-center bg-black/35 font-hand">
+      <div role="dialog" className="animate-pop-in relative w-[368px] pb-[30px]">
+        <div className="relative flex min-h-[122px] items-center justify-center px-[34px] pt-[18px] pb-[34px]">
+          <span className="absolute inset-[-0.87%_-0.29%]">
+            <ConfirmBubble />
+          </span>
+          <p className="relative w-[300px] text-center text-[23px] leading-[1.2] whitespace-pre-line">{message}</p>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-[58px]">
+          {pills.map((b) => (
+            <button key={b.label} onClick={b.onClick} className="absolute bottom-0 flex items-center justify-center" style={{ left: b.x, width: b.w, height: b.h }}>
+              <span className="absolute inset-0" style={{ transform: `rotate(${b.rot}deg)` }}>
+                {b.shape === 'finish' ? <PillFinish /> : <PillBack />}
+              </span>
+              <span className={`relative text-[23px] leading-[1.1] ${b.grey ? 'text-[#686868]' : ''}`}>{b.label}</span>
+            </button>
           ))}
         </div>
       </div>

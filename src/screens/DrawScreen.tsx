@@ -7,6 +7,9 @@ import lineMemo from '../assets/proto/v2/tab-line-memo.svg'
 import closeDark from '../assets/proto/v2/close-dark.svg'
 import eyedropper from '../assets/proto/v2/eyedropper.svg'
 import checker from '../assets/proto/v2/checker.png'
+import moodBox from '../assets/proto/v2/mood-box.svg'
+import chipW1 from '../assets/proto/v2/chip-w1.svg'
+import chipW2 from '../assets/proto/v2/chip-w2.svg'
 import spark391 from '../assets/proto/v2/spark-391.svg'
 import spark392 from '../assets/proto/v2/spark-392.svg'
 import spark393 from '../assets/proto/v2/spark-393.svg'
@@ -156,7 +159,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             setPicking(false)
           }}
           aria-pressed={tab === t}
-          className="absolute top-[86px] z-10 -translate-x-1/2 text-[24px] leading-[1.3]"
+          className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] ${tab === 'memo' && !preview ? 'text-white' : ''}`}
           style={{ left: t === 'draw' ? 154 : 242.5 }}
         >
           {t === 'draw' ? 'Drawing' : 'Memo'}
@@ -172,7 +175,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         <>
           <div className="animate-fade-in pointer-events-none absolute inset-0 z-10 bg-black/35 backdrop-blur-[1.5px]" />
           <div className="absolute inset-0 top-[140px] z-20">
-            <span className={`absolute top-[11px] left-[29px] flex h-[33px] items-center rounded-[50px] border-2 border-dashed px-[13px] pt-[2px] text-[17px] tracking-[-0.5px] text-[#3d3d3d] ${dashed('mood')}`}>Mood</span>
+            {/* folder-tab box around the moods (Figma 787:3578 Vector 413) */}
+            <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
+            <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>Mood</span>
             <label className={`absolute top-[11px] right-[25px] flex rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
               <input
                 value={place}
@@ -187,13 +192,13 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 className="max-w-[220px] bg-transparent text-right text-[17px] leading-[1.1] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#777]"
               />
             </label>
-            <div className="absolute top-[57px] left-[31px] grid w-[346px] grid-cols-3 gap-x-[9.35px] gap-y-[13.36px]">
+            <div className="absolute top-[69px] left-[36px] grid w-[327px] grid-cols-3 gap-x-[9.35px] gap-y-[13.36px]">
               {MOODS.map((m, i) => {
                 const on = mood === m.name
                 return (
                   <button key={m.name} aria-pressed={on} onClick={() => setMood(on ? '' : m.name)} className="relative h-[40px] transition-transform active:scale-95">
-                    <span className="absolute inset-[-2.5%_-0.92%]">
-                      <ChipShape on={on} i={i} />
+                    <span className="absolute inset-[-2.5%_-1%]">
+                      {on ? <ChipShape on i={i} /> : <img src={i % 3 === 1 ? chipW2 : chipW1} alt="" className="size-full" />}
                     </span>
                     <span className={`relative text-[19px] leading-[1.1] ${on ? 'text-[#f3f3f3]' : 'text-[#3d3d3d]'}`}>{m.name}</span>
                   </button>
