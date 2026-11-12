@@ -3,8 +3,8 @@ import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
 import { loadImage } from './lib/preload'
-import { currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
-import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
+import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
+import { GUEST_KEY, hasContent, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import MainScreen from './screens/MainScreen'
@@ -45,6 +45,14 @@ const startRoute = (s: State): Route => (s.pending ? { name: 'tada' } : { name: 
 async function decodeAll(srcs: string[]) {
   const jobs = srcs.filter(Boolean).map((src) => loadImage(new Image(), src))
   await Promise.race([Promise.all(jobs), new Promise((r) => setTimeout(r, 5000))])
+}
+
+// 'Since' on My Page: the day of the first card (today if there is none yet), as YY.MM.DD
+function sinceOf(s: State) {
+  const first = Object.values(s.cards).reduce<string | null>((m, c) => (!m || c.createdAt < m ? c.createdAt : m), null)
+  const d = first ? new Date(first) : new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getFullYear() % 100)}.${p(d.getMonth() + 1)}.${p(d.getDate())}`
 }
 
 export default function App({ onReady }: { onReady?: () => void }) {
@@ -265,8 +273,11 @@ export default function App({ onReady }: { onReady?: () => void }) {
         <MyPageScreen
           user={user}
           cardCount={Object.keys(state.cards).length}
+          townCount={state.towns.length}
+          since={sinceOf(state)}
           nickname={state.nickname ?? ''}
-          onNickname={(name) => commit((s) => ({ ...s, nickname: name.trim() || undefined }))}
+          intro={state.intro ?? ''}
+          onProfile={(nickname, intro) => commit((s) => ({ ...s, nickname: nickname || undefined, intro: intro || undefined }))}
           onBack={() => goMain(existing(homeId))}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
@@ -274,11 +285,19 @@ export default function App({ onReady }: { onReady?: () => void }) {
             await enter(null)
             setRoute({ name: 'mypage' })
           }}
-          onReset={() => {
-            const fresh = initial()
-            track('reset')
-            commit(() => fresh)
-            setHomeId(fresh.towns[0].id)
+          onDeleteAccount={async () => {
+            const u = userRef.current
+            if (!u) return
+            const res = await deleteAccount(u)
+            try {
+              localStorage.removeItem(keyFor(u.id))
+            } catch {
+              /* private mode */
+            }
+            track('delete_account', { ok: res.ok })
+            await enter(null)
+            setRoute({ name: 'mypage' })
+            return res.note
           }}
         />
       )

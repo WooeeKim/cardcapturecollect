@@ -248,3 +248,8 @@ Supabase 대시보드 → **SQL Editor**에서 [supabase/migrations/](supabase/m
 ## 문서
 
 - 개발 흐름 설계: [docs/superpowers/specs/2026-10-29-dev-pipeline-design.md](docs/superpowers/specs/2026-10-29-dev-pipeline-design.md)
+
+### 계정 삭제 (마이페이지 → Delete Account)
+
+- Supabase SQL Editor에서 `supabase/migrations/006_delete_account.sql`을 한 번 실행해야 로그인 계정까지 지워짐
+- 실행 전에는 저장된 마을·카드만 지우고 로그아웃, 계정은 남아 있다고 안내

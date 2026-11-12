@@ -110,6 +110,30 @@ export async function logOut() {
   localStorage.removeItem(SESSION)
 }
 
+// Delete the signed-in account and everything saved for it (My Page → Delete Account).
+// Supabase: needs supabase/migrations/006_delete_account.sql. Without it the saved towns/cards are still
+// removed and the user is logged out, and the reply says the login itself is still there.
+export async function deleteAccount(user: User): Promise<{ ok: boolean; note?: string }> {
+  if (sb) {
+    await flushRemote()
+    const { error } = await sb.rpc('delete_my_account')
+    if (error) {
+      await sb.from('user_states').delete().eq('user_id', user.id)
+      await sb.auth.signOut()
+      localStorage.removeItem(SESSION)
+      return { ok: false, note: 'Your towns and cards were deleted, but the login could not be removed yet. Ask the team to run 006_delete_account.sql.' }
+    }
+    await sb.auth.signOut()
+    localStorage.removeItem(SESSION)
+    return { ok: true }
+  }
+  const users = readUsers()
+  delete users[user.username]
+  localStorage.setItem(USERS, JSON.stringify(users))
+  localStorage.removeItem(SESSION)
+  return { ok: true }
+}
+
 export async function changePassword(user: User, password: string): Promise<{ ok: boolean; error?: string }> {
   if (password.length < MIN_PASSWORD) return { ok: false, error: `Password needs at least ${MIN_PASSWORD} characters.` }
   if (sb) {
