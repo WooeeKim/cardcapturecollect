@@ -169,13 +169,16 @@ export default function TownListScreen({
     </button>
   )
 
-  // open town (Figma townList-detail 787:1012): hand-drawn box, Go tag, Edit pill
+  // open town (Figma townList-detail 787:1012): hand-drawn box, Go tag, Edit pill.
+  // Edit mode uses the same size and position as view mode.
   const detail = (t: Town | null) => {
     const isNew = !t
     const editable = isNew || editing
     return (
       <>
-        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[112px] h-[183px] w-[281px] max-w-none" />
+        {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
+            behind it (-z), so the line's wavy edge covers the box's left end with no gap. */}
+        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[64px] -z-10 h-[183px] w-[329px] max-w-none" />
         {editable ? (
           <input
             autoFocus
@@ -184,7 +187,7 @@ export default function TownListScreen({
             maxLength={20}
             placeholder={isNew ? `New Town ${state.towns.length + 1}` : ''}
             aria-label="Town name"
-            className="absolute top-[20px] left-[135px] w-[205px] bg-transparent text-[21px] leading-[1.3] outline-none placeholder:text-[#5f5f5f]"
+            className="absolute top-[22px] left-[135px] h-[27.3px] w-[205px] bg-transparent text-[21px] leading-[1.3] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
           <p className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{t!.name}</p>
@@ -246,7 +249,7 @@ export default function TownListScreen({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[186px] bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0" />
 
       <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
-        <div className="relative min-h-full" style={{ height: listHeight }}>
+        <div className="relative isolate min-h-full" style={{ height: listHeight }}>
           {/* the grey line every town hangs on */}
           <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: `calc(100% - 37px)` }} />
 

@@ -148,6 +148,11 @@ export default function CollectionScreen({
   const TILE = 90
   const COL = 125
   const PITCH = 105
+  const stripW = Math.max(402, 61 + (state.towns.length - 1) * PITCH + 60)
+  const bandW = stripW - 52 + 40
+  // deck pages scroll inside the hand-drawn box only (box: left 10, 382 wide; clip just inside its stroke)
+  const CLIP_L = 13
+  const CLIP_W = 376
 
   // drawing zoomed on the upper body, like the Figma tiles
   const tile = (c: Card, from: Drag['from'], label: string) => (
@@ -173,11 +178,12 @@ export default function CollectionScreen({
       </TextButton>
 
       {/* towns on one grey band; the picked one gets the dark ring */}
-      <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden [scrollbar-width:none]">
-        <div className="relative h-full" style={{ width: Math.max(402, 61 + (state.towns.length - 1) * PITCH + 60) }}>
-          {/* the same hand-drawn grey band as Town List, laid sideways */}
-          <div className="pointer-events-none absolute top-[11px] h-[48px]" style={{ left: 52, width: Math.max(410, (state.towns.length - 1) * PITCH + 68) }}>
-            <img src={tlBar} alt="" className="absolute top-0 left-0 w-[48px] max-w-none origin-top-left" style={{ height: Math.max(410, (state.towns.length - 1) * PITCH + 68), transform: 'translateY(48px) rotate(-90deg)' }} />
+      {/* no bounce past the ends, so the band's cut-off end never shows */}
+      <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden overscroll-x-none [scrollbar-width:none]">
+        <div className="relative h-full overflow-hidden" style={{ width: stripW }}>
+          {/* the same hand-drawn grey band as Town List, laid sideways; runs past the strip's right edge (clipped) */}
+          <div className="pointer-events-none absolute top-[11px] h-[48px]" style={{ left: 52, width: bandW }}>
+            <img src={tlBar} alt="" className="absolute top-0 left-0 w-[48px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(48px) rotate(-90deg)' }} />
           </div>
           {state.towns.map((t, i) => {
             const on = t.id === town.id
@@ -199,17 +205,18 @@ export default function CollectionScreen({
         {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
         <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] left-[10px] h-[256px] w-[382px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} />
         <div
-          className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none]"
+          className="absolute top-[4px] bottom-[4px] flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[18px] [scrollbar-width:none]"
+          style={{ left: CLIP_L, width: CLIP_W }}
           onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
         >
           {Array.from({ length: pages }, (_, p) => (
-            <div key={p} className="relative h-full w-[402px] shrink-0 snap-start">
+            <div key={p} className="relative h-full shrink-0 snap-start" style={{ width: CLIP_W, marginTop: -4 }}>
               {Array.from({ length: PER_PAGE }, (_, k) => {
                 const at = p * PER_PAGE + k
                 if (at >= MAX_RESIDENTS) return null
                 const c = deck[at]
                 return (
-                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: 31 + (k % 3) * COL, top: 20 + Math.floor(k / 3) * 116, width: TILE, height: TILE }}>
+                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: 31 - CLIP_L + (k % 3) * COL, top: 20 + Math.floor(k / 3) * 116, width: TILE, height: TILE }}>
                     {c ? (
                       <>
                         {tile(c, 'deck', `${c.nickname || 'Card'}${at === 0 ? ', head' : ''}`)}
