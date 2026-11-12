@@ -1,3 +1,4 @@
+import { fillInside } from '../lib/fillInside'
 import { useEffect, useRef, useState } from 'react'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
 import backIcon from '../assets/proto/v2/back.svg'
@@ -115,7 +116,8 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
       setShowMissing(true)
       return
     }
-    const blob = await canvas.current!.toBlob()
+    // unpainted spots inside the figure become white (they looked white on the paper)
+    const blob = await fillInside(await canvas.current!.toBlob())
     setThumb(await toThumb(blob))
     setPreview(await toDataUrl(blob))
   }
