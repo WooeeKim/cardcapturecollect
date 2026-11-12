@@ -9,14 +9,24 @@ const LEAVE_MS = 700 // blur transition into the app
 // (the cover's backdrop blur eases from 14px to 0 while it fades, so the first screen "slides" into focus).
 // Waits for `ready` so a slow account load never shows a half-loaded screen.
 export function Splash({ ready }: { ready: boolean }) {
+  const [shown, setShown] = useState(false) // handwriting font ready → show the name
   const [held, setHeld] = useState(false)
   const [gone, setGone] = useState(false)
   const leaving = held && ready
 
   useEffect(() => {
+    let alive = true
+    const font = document.fonts?.load('40px "Griun Myoeun Heullim"', 'card capture collect').catch(() => {}) ?? Promise.resolve()
+    Promise.race([font, new Promise((r) => setTimeout(r, 1500))]).then(() => alive && setShown(true))
+    return () => {
+      alive = false
+    }
+  }, [])
+  useEffect(() => {
+    if (!shown) return
     const t = window.setTimeout(() => setHeld(true), HOLD_MS)
     return () => clearTimeout(t)
-  }, [])
+  }, [shown])
   useEffect(() => {
     if (!leaving) return
     const t = window.setTimeout(() => setGone(true), LEAVE_MS)
@@ -46,7 +56,7 @@ export function Splash({ ready }: { ready: boolean }) {
           transition: `opacity ${ease}, filter ${ease}, transform ${ease}`,
         }}
       >
-        <h1 className="animate-fade-in text-center font-hand text-[40px] leading-[1.05] tracking-[-0.8px]">
+        <h1 className={`${shown ? 'animate-fade-in' : 'invisible'} text-center font-hand text-[40px] leading-[1.05] tracking-[-0.8px]`}>
           card
           <br />
           capture
