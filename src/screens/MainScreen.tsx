@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import menuClosedBox from '../assets/proto/v2/menu-closed-box.svg'
-import menuDown from '../assets/proto/v2/menu-down.svg'
-import menuBox from '../assets/proto/v2/menu-box.svg'
-import menuUp from '../assets/proto/v2/menu-up.svg'
+import triDown from '../assets/proto/v2/tri-down.svg'
+import triUp from '../assets/proto/v2/tri-up.svg'
+import menuBox from '../assets/proto/v2/menu-box2.svg'
 import menuTowns from '../assets/proto/menu-towns.svg'
 import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
@@ -385,35 +384,28 @@ export default function MainScreen({
       {/* header */}
       {!follow && (
         <>
-          {/* Figma main 683:4633 (closed) / 683:4589 (menu open: box with ^ to fold it back) */}
-          {menu ? (
+          {/* Figma main 803:951 (closed: ▽) / 803:922 (open: △ with the icon box under it).
+              The triangle stays in one spot (center 50, 91) so it flips in place. */}
+          <button aria-label={menu ? 'Close menu' : 'Menu'} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
+            <img src={menu ? triUp : triDown} alt="" className="h-[20.5px] w-[28.7px] max-w-none" />
+          </button>
+          {menu && (
             <>
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
-              <div className="animate-pop-in absolute top-[73px] left-[15px] z-20 h-[169px] w-[81px] origin-top">
-                <img src={menuBox} alt="" className="absolute inset-[-0.59%_-1.23%] size-[calc(100%+2.46%)] max-w-none" />
-                <button aria-label="Close menu" aria-expanded onClick={() => setMenu(false)} className="absolute top-[8px] left-[21px] flex h-[31px] w-[38px] items-center justify-center">
-                  <img src={menuUp} alt="" className="h-[18px] w-[11px] rotate-90" />
-                </button>
-                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[51px] left-[18px] size-[45px]">
+              <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
+                <img src={menuBox} alt="" className="absolute inset-0 size-full" />
+                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
-                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[106px] left-[18px] size-[45px]">
+                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>
             </>
-          ) : (
-            <button aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(true)} className="absolute top-[74px] left-[23px] h-[50px] w-[51px]">
-              {/* Figma main 811:808: hand-drawn box with a ∨ */}
-              <img src={menuClosedBox} alt="" className="absolute inset-[-2%_-1.96%] size-[calc(100%+3.92%)] max-w-none" />
-              <span className="absolute top-[21px] left-[16px] flex h-[11px] w-[18px] items-center justify-center">
-                <img src={menuDown} alt="" className="h-[18px] w-[11px] max-w-none -scale-y-100 -rotate-90" />
-              </span>
-            </button>
           )}
           <p className="pointer-events-none absolute inset-x-[90px] top-[89px] truncate text-center font-hand text-[24px] leading-[normal]">{town.name}</p>
-          {/* same 23px from the right edge as the menu box from the left, same center line */}
-          <button aria-label="My page" onClick={onMyPage} className="absolute top-[71px] left-[345.6px] p-[8px]">
+          {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
+          <button aria-label="My page" onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
