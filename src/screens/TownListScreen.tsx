@@ -175,7 +175,8 @@ export default function TownListScreen({
     const editable = isNew || editing
     return (
       <>
-        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[112px] h-[183px] w-[281px] max-w-none" />
+        {/* townList-detail variant 2: the box grows out of the grey line (its left stroke is cut off right at the line) */}
+        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[104px] h-[183px] w-[289px] max-w-none" style={{ clipPath: 'inset(-4px -4px -4px 12px)' }} />
         {editable ? (
           <input
             autoFocus
