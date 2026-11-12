@@ -177,8 +177,9 @@ export default function TownListScreen({
     return (
       <>
         {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
-            behind it (-z), so the line's wavy edge covers the box's left end with no gap. */}
-        <img src={tlBox} alt="" className="pointer-events-none absolute top-[-6px] left-[64px] -z-10 h-[183px] w-[329px] max-w-none" />
+            behind it (-z), so the line's wavy edge covers the box's left end with no gap.
+            Its top lines up with the thumbnail circle; the Edit/Done pill hangs over its bottom edge. */}
+        <img src={tlBox} alt="" className="pointer-events-none absolute top-0 left-[64px] -z-10 h-[162px] w-[329px] max-w-none" />
         {editable ? (
           <input
             autoFocus
