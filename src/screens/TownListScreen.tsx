@@ -227,14 +227,15 @@ export default function TownListScreen({
             setEditing(true)
           }, 311)
         )}
-        {t && !editing && mode === 'browse' && (
-          <button aria-label={`Go to ${t.name}`} onClick={() => onGo(t.id)} className="absolute top-[73px] left-[43px]">
-            <GoTag />
-          </button>
-        )}
         <span data-thumb className="pointer-events-none absolute top-0 left-[24px]">
           <Thumb image={t ? chiefImage(t) : undefined} size={84} strong />
         </span>
+        {/* Go sits on top of the thumbnail, centered under it */}
+        {t && !editing && mode === 'browse' && (
+          <button aria-label={`Go to ${t.name}`} onClick={() => onGo(t.id)} className="absolute top-[70px] left-[39px] z-10">
+            <GoTag />
+          </button>
+        )}
       </>
     )
   }

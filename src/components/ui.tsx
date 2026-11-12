@@ -106,22 +106,40 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
 export function Thumb({ image, size = 70, strong = false, grey = false, ring: ringW }: { image?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number }) {
-  // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body
+  // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body.
+  // The ring is drawn as a slightly wobbly hand-drawn stroke, like the rest of the sketchy UI.
   const ring = ringW ?? (strong ? 8.5 : 9)
   return (
-    <span
-      className="relative block shrink-0 overflow-hidden rounded-full bg-white"
-      style={{ width: size, height: size, border: `${ring}px solid ${strong ? '#686868' : '#ccc'}` }}
-    >
-      {image ? (
-        <img src={image} alt="" className={`absolute top-[6%] left-[-20%] w-[140%] max-w-none ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
-      ) : (
-        <span className="flex size-full items-center justify-center font-hand leading-none" style={{ fontSize: size * 0.55 }}>
-          ?
-        </span>
-      )}
+    <span className="relative block shrink-0" style={{ width: size, height: size }}>
+      <span className="absolute overflow-hidden rounded-full bg-white" style={{ inset: ring * 0.75 }}>
+        {image ? (
+          <img src={image} alt="" className={`absolute top-[6%] left-[-20%] w-[140%] max-w-none ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
+        ) : (
+          <span className="flex size-full items-center justify-center font-hand leading-none" style={{ fontSize: size * 0.55 }}>
+            ?
+          </span>
+        )}
+      </span>
+      <svg viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
+        <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring / 2, size)} fill="none" stroke={strong ? '#686868' : '#ccc'} strokeWidth={ring} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </span>
   )
+}
+
+// A circle drawn by hand: radius wobbles a little and the stroke overlaps where it starts. Same seed = same shape.
+function sketchyCircle(cx: number, cy: number, r: number, seed: number) {
+  const a = 0.9 + ((seed * 7) % 5) * 0.12
+  const p1 = (seed % 7) * 0.9
+  const p2 = (seed % 11) * 0.6
+  const pts: string[] = []
+  const steps = 48
+  for (let i = 0; i <= steps + 3; i++) {
+    const t = (i / steps) * Math.PI * 2 - 0.4
+    const rr = r + a * Math.sin(3 * t + p1) + a * 0.6 * Math.sin(5 * t + p2) + (i > steps ? 1.2 : 0)
+    pts.push(`${(cx + rr * Math.cos(t)).toFixed(2)} ${(cy + rr * Math.sin(t)).toFixed(2)}`)
+  }
+  return `M${pts.join(' L')}`
 }
 
 // ---------- mood chip ----------
