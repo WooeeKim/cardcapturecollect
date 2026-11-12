@@ -12,8 +12,11 @@
 const W = 400 // working width (the mask is smoothed when scaled back up)
 const REACH = 0.25 // bridge reach, fraction of the tip's run since the last sharp corner
 const MAX_REACH = 0.12 // …but never more than this fraction of the width
+const MIN_REACH = 0.035 // …and always at least this (short pieces still close hairline gaps)
 const CONE = (40 * Math.PI) / 180 // how far off the line's direction a bridge may go
-const CORNER = (50 * Math.PI) / 180 // a turn sharper than this (over ~5 cells each side) is a corner
+const SIDE_CONE = Math.PI / 2 // fallback when nothing is ahead: anything not behind…
+const SIDE_REACH = 0.6 // …within this share of the reach
+const CORNER = (70 * Math.PI) / 180 // a turn sharper than this (over ~8 cells each side) is a corner
 const SPUR = 6 // thinning leaves little side twigs at line ends; shorter ones are dropped
 
 type P = { x: number; y: number }
@@ -119,8 +122,17 @@ function trace(sk: Uint8Array, w: number, tip: number, max: number) {
       const dy = Math.floor(cur / w) - Math.floor(from / w)
       let bestDot = -Infinity
       for (const j of next) {
-        const ex = (j % w) - (cur % w)
-        const ey = Math.floor(j / w) - Math.floor(cur / w)
+        // judge each branch by where it leads a few cells on (crossings are a little knotted)
+        let tipJ = j
+        const walked = new Set([cur, ...next])
+        for (let k = 0; k < 6; k++) {
+          const nx = off.map((o) => tipJ + o).find((q) => sk[q] && !walked.has(q) && !seen.has(q))
+          if (nx === undefined) break
+          walked.add(nx)
+          tipJ = nx
+        }
+        const ex = (tipJ % w) - (cur % w)
+        const ey = Math.floor(tipJ / w) - Math.floor(cur / w)
         const dot = (ex * dx + ey * dy) / (Math.hypot(ex, ey) * (Math.hypot(dx, dy) || 1))
         if (dot > bestDot) (bestDot = dot), (pick = j)
       }
@@ -154,7 +166,7 @@ function bridges(sk: Uint8Array, w: number, paper = w) {
     const dl = Math.hypot(dx, dy)
     if (dl < 1) continue
     // run: how far back from the tip the line goes before a sharp corner
-    const K = 5
+    const K = 8
     let run = len
     for (let i = K; i < path.length - K; i++) {
       const a = path[i - K]
@@ -166,25 +178,30 @@ function bridges(sk: Uint8Array, w: number, paper = w) {
         break
       }
     }
-    const reach = Math.min(MAX_REACH * paper, Math.max(3, REACH * run))
+    const reach = Math.min(MAX_REACH * paper, Math.max(MIN_REACH * paper, REACH * run))
     // own line: only parts far along it count (not the stretch right behind the tip)
     const along = new Map<number, number>()
     path.forEach((p, i) => along.set(p.y * w + p.x, s[i]))
-    let best: P | null = null
-    let bestScore = Infinity
-    for (const j of pts) {
-      const q = xy(j)
-      const vx = q.x - end.x
-      const vy = q.y - end.y
-      const d = Math.hypot(vx, vy)
-      if (d < 1.5 || d > reach) continue
-      const sj = along.get(j)
-      if (sj !== undefined && sj < 2.5 * d + 6) continue
-      const ang = Math.acos(Math.max(-1, Math.min(1, (vx * dx + vy * dy) / (d * dl))))
-      if (ang > CONE) continue
-      const score = d * (1 + ang / CONE)
-      if (score < bestScore) (bestScore = score), (best = q)
+    // first straight ahead; if nothing's there, something close off to the side (a brim overhanging the face)
+    const find = (cone: number, far: number) => {
+      let best: P | null = null
+      let bestScore = Infinity
+      for (const j of pts) {
+        const q = xy(j)
+        const vx = q.x - end.x
+        const vy = q.y - end.y
+        const d = Math.hypot(vx, vy)
+        if (d < 1.5 || d > far) continue
+        const sj = along.get(j)
+        if (sj !== undefined && sj < 2.5 * d + 6) continue
+        const ang = Math.acos(Math.max(-1, Math.min(1, (vx * dx + vy * dy) / (d * dl))))
+        if (ang > cone) continue
+        const score = d * (1 + ang / cone)
+        if (score < bestScore) (bestScore = score), (best = q)
+      }
+      return best
     }
+    const best = find(CONE, reach) ?? find(SIDE_CONE, reach * SIDE_REACH)
     if (best) out.push([end, best])
   }
   return out
@@ -204,7 +221,11 @@ async function fill(src: Blob, trimmed = false) {
   sctx.drawImage(bmp, pad, pad, w - pad * 2, h - pad * 2)
   let px = sctx.getImageData(0, 0, w, h)
   const ink = new Uint8Array(w * h)
-  for (let i = 0; i < ink.length; i++) ink[i] = px.data[i * 4 + 3] > 20 ? 1 : 0
+  // lines = drawn pixels that aren't white (white is paper colour / an earlier inside-fill)
+  for (let i = 0; i < ink.length; i++) {
+    const d = px.data
+    ink[i] = d[i * 4 + 3] > 20 && !(d[i * 4] > 235 && d[i * 4 + 1] > 235 && d[i * 4 + 2] > 235) ? 1 : 0
+  }
   const sk = thin(ink.slice(), w)
   prune(sk, w)
   // invisible bridges, drawn into the mask only
