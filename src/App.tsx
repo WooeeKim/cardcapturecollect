@@ -4,7 +4,7 @@ import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
 import { loadImage } from './lib/preload'
 import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
-import { GUEST_KEY, hasContent, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
+import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import MainScreen from './screens/MainScreen'
@@ -284,6 +284,12 @@ export default function App({ onReady }: { onReady?: () => void }) {
             await logOut()
             await enter(null)
             setRoute({ name: 'mypage' })
+          }}
+          onReset={() => {
+            const fresh = initial()
+            track('reset')
+            commit(() => fresh)
+            setHomeId(fresh.towns[0].id)
           }}
           onDeleteAccount={async () => {
             const u = userRef.current

@@ -35,6 +35,7 @@ export default function MyPageScreen({
   onLogin,
   onLogout,
   onDeleteAccount,
+  onReset,
 }: {
   user: User | null
   cardCount: number
@@ -47,6 +48,7 @@ export default function MyPageScreen({
   onLogin: (user: User) => void
   onLogout: () => void
   onDeleteAccount: () => Promise<string | undefined>
+  onReset: () => void
 }) {
   const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
@@ -98,6 +100,18 @@ export default function MyPageScreen({
     { label: 'Notice', onClick: () => gotIt('Notices are coming soon.') },
     { label: 'FAQ', onClick: () => gotIt('FAQ is coming soon.') },
     { label: 'Feedback', onClick: () => setSheet('feedback') },
+    {
+      // testing helper: wipes towns, cards, nickname and intro on this device / account (guests too)
+      label: 'Reset (test)',
+      onClick: () =>
+        setPopup({
+          message: "Reset all your towns and cards?\nThis can't be undone.",
+          actions: [
+            { label: 'Reset', onClick: () => { setPopup(null); onReset() } },
+            { label: 'Cancel', onClick: () => setPopup(null) },
+          ],
+        }),
+    },
     { label: 'Neighbors', tone: 'text-[#7e7e7e]', soon: true },
     { label: 'Developers', tone: 'text-[#7e7e7e]', soon: true },
     { label: 'Delete Account', tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
