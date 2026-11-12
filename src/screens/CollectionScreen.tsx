@@ -4,8 +4,8 @@ import closeRing from '../assets/proto/v2/detail-close-ring.svg'
 import closeX from '../assets/proto/v2/detail-close-x.svg'
 import deckBox from '../assets/proto/v2/deck-box.svg'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
-import bandImg from '../assets/proto/v2/collection-band.svg'
-import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
+import bandImg from '../assets/proto/v2/tl-bar.svg'
+import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
 
@@ -161,9 +161,13 @@ export default function CollectionScreen({
       data-card={c.id}
       data-from={from}
       {...cardProps(c, from)}
-      className={`relative size-full overflow-hidden rounded-[3px] border-2 border-black bg-white ${from === 'deck' ? 'touch-pan-x' : ''} ${drag?.id === c.id ? 'opacity-30' : ''}`}
+      className={`relative size-full rounded-[3px] bg-white ${from === 'deck' ? 'touch-pan-x' : ''} ${drag?.id === c.id ? 'opacity-30' : ''}`}
     >
-      <img src={c.thumb ?? c.image} alt="" draggable={false} className={c.thumb ? 'pointer-events-none absolute inset-0 size-full object-cover' : 'pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none'} />
+      <span className="absolute inset-[1px] overflow-hidden rounded-[3px]">
+        <img src={c.thumb ?? c.image} alt="" draggable={false} className={c.thumb ? 'pointer-events-none absolute inset-0 size-full object-cover' : 'pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none'} />
+      </span>
+      {/* hand-drawn black frame */}
+      <SketchyBox w={90} h={90} seed={c.id.charCodeAt(0) + c.id.charCodeAt(1)} />
     </button>
   )
 
@@ -183,19 +187,19 @@ export default function CollectionScreen({
         <div className="relative h-full" style={{ width: stripW }}>
           {/* the hand-drawn grey band (Town List's, without the outline), laid sideways; its end cap runs past the
               strip's right edge and is cut off there */}
-          <div className="pointer-events-none absolute top-[11px] h-[48px] overflow-hidden" style={{ left: 52, width: stripW - 52 }}>
-            <img src={bandImg} alt="" className="absolute top-0 left-0 w-[48px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(48px) rotate(-90deg)' }} />
+          <div className="pointer-events-none absolute top-[5px] h-[60px] overflow-hidden" style={{ left: 52, width: stripW - 52 }}>
+            <img src={bandImg} alt="" className="absolute top-0 left-0 w-[60px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(60px) rotate(-90deg)' }} />
           </div>
           {/* iPhone can still bounce the strip past its end: a flat grey continuation drawn as a box-shadow
               (shadows don't add scroll width), so the band never looks cut while dragging */}
           <div className="pointer-events-none absolute top-[15px] h-[40px]" style={{ left: stripW - 600, width: 600, boxShadow: '600px 0 0 #ccc' }} />
           {state.towns.map((t, i) => {
             const on = t.id === town.id
-            const size = on ? 60 : 55
+            const size = on ? 64 : 52
             return (
-              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: 61 + i * PITCH - size / 2, marginTop: on ? 0 : 3, width: size }}>
-                <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} />
-                <span className="absolute left-1/2 w-[96px] -translate-x-1/2 truncate text-center text-[14px] leading-[normal]" style={{ top: on ? 70 : 67 }}>
+              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: 61 + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
+                <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} outline={!on} />
+                <span className="absolute left-1/2 w-[100px] -translate-x-1/2 truncate text-center text-[16px] leading-[normal]" style={{ top: on ? 72 : 66 }}>
                   {t.name}
                 </span>
               </button>

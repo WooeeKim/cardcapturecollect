@@ -248,3 +248,21 @@ export const shrink = (h: number): React.CSSProperties => ({
 })
 // `top` that follows the screen bottom (for things that also need bottom: 0)
 export const fromBottom = (top: number) => `calc(${top}px - var(--cut) * 1px)`
+
+// A box drawn by hand: each side bows a little and the corners overshoot slightly. Same seed = same shape.
+export function SketchyBox({ w, h, seed = 1, stroke = '#000', width = 2.6, className = '' }: { w: number; h: number; seed?: number; stroke?: string; width?: number; className?: string }) {
+  const j = (k: number) => Math.sin(seed * 12.9898 + k * 78.233) * 1.1 // small, stable wobble
+  const i = width / 2
+  const d = [
+    `M${i + j(1)} ${i + 0.6 + j(2)}`,
+    `Q${w / 2} ${i - 1.2 + j(3)} ${w - i + j(4)} ${i + j(5)}`,
+    `Q${w - i + 1.3 + j(6)} ${h / 2} ${w - i + j(7)} ${h - i + j(8)}`,
+    `Q${w / 2} ${h - i + 1.2 + j(9)} ${i + j(10)} ${h - i + j(11)}`,
+    `Q${i - 1.3 + j(12)} ${h / 2} ${i + j(13)} ${i + 2 + j(14)}`,
+  ].join(' ')
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className={`pointer-events-none absolute inset-0 size-full overflow-visible ${className}`} aria-hidden>
+      <path d={d} fill="none" stroke={stroke} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
