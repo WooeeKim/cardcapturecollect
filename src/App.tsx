@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
+import { fixOldFills } from './lib/fixFills'
 import { loadImage } from './lib/preload'
 import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
@@ -95,6 +96,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     let unplaced = 0
     if (hasContent(guest)) {
       ;({ state: next, unplaced } = mergeGuest(next, guest))
+      next = { ...next, fillsFixed: false } // guest drawings may still have old see-through fills
       merged = true
     }
     let cached = true
@@ -152,6 +154,25 @@ export default function App({ onReady }: { onReady?: () => void }) {
       return next
     })
   }, [])
+
+  // one-time: make the see-through fills of old drawings solid, then remember it on this town data
+  useEffect(() => {
+    if (!ready || state.fillsFixed) return
+    const who = userRef.current
+    let stale = false
+    fixOldFills(state).then((fixed) => {
+      if (stale || userRef.current !== who) return
+      commit((s) => {
+        const cards = { ...s.cards }
+        for (const [id, f] of Object.entries(fixed)) if (cards[id]) cards[id] = { ...cards[id], ...f }
+        return { ...s, cards, fillsFixed: true }
+      })
+    })
+    return () => {
+      stale = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, user, state.fillsFixed, commit])
 
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {
