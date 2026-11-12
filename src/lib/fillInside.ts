@@ -14,8 +14,6 @@ const REACH = 0.25 // bridge reach, fraction of the tip's run since the last sha
 const MAX_REACH = 0.12 // …but never more than this fraction of the width
 const MIN_REACH = 0.035 // …and always at least this (short pieces still close hairline gaps)
 const CONE = (40 * Math.PI) / 180 // how far off the line's direction a bridge may go
-const SIDE_CONE = Math.PI / 2 // fallback when nothing is ahead: anything not behind…
-const SIDE_REACH = 0.6 // …within this share of the reach
 const CORNER = (70 * Math.PI) / 180 // a turn sharper than this (over ~8 cells each side) is a corner
 const SPUR = 6 // thinning leaves little side twigs at line ends; shorter ones are dropped
 
@@ -160,7 +158,7 @@ function bridges(sk: Uint8Array, w: number, paper = w) {
     const len = s[s.length - 1]
     if (len < 3) continue
     const end = path[0]
-    const ref = path[s.findIndex((v) => v >= Math.min(len / 3, paper * 0.04))]
+    const ref = path[s.findIndex((v) => v >= Math.min(len / 3, paper * 0.02))]
     const dx = end.x - ref.x
     const dy = end.y - ref.y
     const dl = Math.hypot(dx, dy)
@@ -182,7 +180,7 @@ function bridges(sk: Uint8Array, w: number, paper = w) {
     // own line: only parts far along it count (not the stretch right behind the tip)
     const along = new Map<number, number>()
     path.forEach((p, i) => along.set(p.y * w + p.x, s[i]))
-    // first straight ahead; if nothing's there, something close off to the side (a brim overhanging the face)
+    // the closest line straight ahead
     const find = (cone: number, far: number) => {
       let best: P | null = null
       let bestScore = Infinity
@@ -201,7 +199,7 @@ function bridges(sk: Uint8Array, w: number, paper = w) {
       }
       return best
     }
-    const best = find(CONE, reach) ?? find(SIDE_CONE, reach * SIDE_REACH)
+    const best = find(CONE, reach)
     if (best) out.push([end, best])
   }
   return out
@@ -228,7 +226,8 @@ async function fill(src: Blob, trimmed = false) {
   }
   const sk = thin(ink.slice(), w)
   prune(sk, w)
-  // invisible bridges, drawn into the mask only
+  // invisible bridges, drawn on their own; walls = real lines + bridges (not white, which may be an old fill)
+  sctx.clearRect(0, 0, w, h)
   sctx.strokeStyle = '#000'
   sctx.lineWidth = 2
   sctx.lineCap = 'round'
@@ -242,7 +241,7 @@ async function fill(src: Blob, trimmed = false) {
   }
   px = sctx.getImageData(0, 0, w, h)
   const wall = new Uint8Array(w * h)
-  for (let i = 0; i < wall.length; i++) wall[i] = px.data[i * 4 + 3] > 20 ? 1 : 0
+  for (let i = 0; i < wall.length; i++) wall[i] = ink[i] || px.data[i * 4 + 3] > 20 ? 1 : 0
   const outside = floodOutside(wall, w, h)
   for (let i = 0; i < wall.length; i++) px.data.set(!outside[i] && !ink[i] ? [255, 255, 255, 255] : [0, 0, 0, 0], i * 4)
   sctx.putImageData(px, 0, 0)
@@ -253,7 +252,23 @@ async function fill(src: Blob, trimmed = false) {
   const ctx = out.getContext('2d')!
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(small, pad, pad, w - pad * 2, h - pad * 2, 0, 0, out.width, out.height) // white inside
-  ctx.drawImage(bmp, 0, 0) // drawing on top
+  // drawing on top. A stored card may carry stray white from an earlier, looser fill: white that's now outside goes.
+  const top = document.createElement('canvas')
+  top.width = bmp.width
+  top.height = bmp.height
+  const tctx = top.getContext('2d')!
+  tctx.drawImage(bmp, 0, 0)
+  if (trimmed) {
+    const img = tctx.getImageData(0, 0, top.width, top.height)
+    const d = img.data
+    for (let y = 0; y < top.height; y++)
+      for (let x = 0; x < top.width; x++) {
+        const i = (y * top.width + x) * 4
+        if (d[i + 3] && d[i] > 235 && d[i + 1] > 235 && d[i + 2] > 235 && outside[(Math.round(y * k) + pad) * w + Math.round(x * k) + pad]) d[i + 3] = 0
+      }
+    tctx.putImageData(img, 0, 0)
+  }
+  ctx.drawImage(top, 0, 0)
   return out
 }
 

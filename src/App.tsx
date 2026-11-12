@@ -96,7 +96,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     let unplaced = 0
     if (hasContent(guest)) {
       ;({ state: next, unplaced } = mergeGuest(next, guest))
-      next = { ...next, insideFilled2: false } // guest drawings may predate the white fill
+      next = { ...next, insideFilled3: false } // guest drawings may predate the white fill
       merged = true
     }
     let cached = true
@@ -157,7 +157,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   // one-time: drawings made before the white inside-fill get it now (new ones get it when finished)
   useEffect(() => {
-    if (!ready || state.insideFilled2) return
+    if (!ready || state.insideFilled3) return
     const who = userRef.current
     let stale = false
     ;(async () => {
@@ -174,14 +174,14 @@ export default function App({ onReady }: { onReady?: () => void }) {
       commit((s) => {
         const cards = { ...s.cards }
         for (const [id, image] of Object.entries(fixed)) if (cards[id]) cards[id] = { ...cards[id], image }
-        return { ...s, cards, insideFilled2: true }
+        return { ...s, cards, insideFilled3: true }
       })
     })()
     return () => {
       stale = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, state.insideFilled2, commit])
+  }, [ready, user, state.insideFilled3, commit])
 
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {
