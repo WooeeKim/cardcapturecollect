@@ -4,7 +4,7 @@ import closeRing from '../assets/proto/v2/detail-close-ring.svg'
 import closeX from '../assets/proto/v2/detail-close-x.svg'
 import deckBox from '../assets/proto/v2/deck-box.svg'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
-import tlBar from '../assets/proto/v2/tl-bar.svg'
+import bandImg from '../assets/proto/v2/collection-band.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
@@ -180,11 +180,15 @@ export default function CollectionScreen({
       {/* towns on one grey band; the picked one gets the dark ring */}
       {/* no bounce past the ends, so the band's cut-off end never shows */}
       <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden overscroll-x-none [scrollbar-width:none]">
-        <div className="relative h-full overflow-hidden" style={{ width: stripW }}>
-          {/* the same hand-drawn grey band as Town List, laid sideways; runs past the strip's right edge (clipped) */}
-          <div className="pointer-events-none absolute top-[11px] h-[48px]" style={{ left: 52, width: bandW }}>
-            <img src={tlBar} alt="" className="absolute top-0 left-0 w-[48px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(48px) rotate(-90deg)' }} />
+        <div className="relative h-full" style={{ width: stripW }}>
+          {/* the hand-drawn grey band (Town List's, without the outline), laid sideways; its end cap runs past the
+              strip's right edge and is cut off there */}
+          <div className="pointer-events-none absolute top-[11px] h-[48px] overflow-hidden" style={{ left: 52, width: stripW - 52 }}>
+            <img src={bandImg} alt="" className="absolute top-0 left-0 w-[48px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(48px) rotate(-90deg)' }} />
           </div>
+          {/* iPhone can still bounce the strip past its end: a flat grey continuation drawn as a box-shadow
+              (shadows don't add scroll width), so the band never looks cut while dragging */}
+          <div className="pointer-events-none absolute top-[15px] h-[40px]" style={{ left: stripW - 600, width: 600, boxShadow: '600px 0 0 #ccc' }} />
           {state.towns.map((t, i) => {
             const on = t.id === town.id
             const size = on ? 60 : 55
@@ -206,7 +210,8 @@ export default function CollectionScreen({
         <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] left-[10px] h-[256px] w-[382px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} />
         <div
           className="absolute top-[4px] bottom-[4px] flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[18px] [scrollbar-width:none]"
-          style={{ left: CLIP_L, width: CLIP_W }}
+          // clip-path as well: iPhone Safari can paint a scrolling box's children outside its rounded overflow clip
+          style={{ left: CLIP_L, width: CLIP_W, clipPath: 'inset(0 round 18px)', WebkitClipPath: 'inset(0 round 18px)' }}
           onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
         >
           {Array.from({ length: pages }, (_, p) => (
