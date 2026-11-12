@@ -26,11 +26,13 @@ function Raw({ svg, className = '' }: { svg: string; className?: string }) {
 const paint = (svg: string, id: string, attr: 'fill' | 'stroke', color: string) =>
   svg.replace(new RegExp(`(<path id="${id}"[^>]*?)${attr}="[^"]*"`), `$1${attr}="${color}"`).replace(new RegExp(`(<path id="${id}")(?![^>]*${attr}=)`), `$1 ${attr}="${color}"`)
 
-export const PenV2 = () => <Raw svg={pen} />
+export const PenV2 = ({ color }: { color: string }) => <Raw svg={paint(pen, 'Vector 29', 'fill', color)} />
 export const HighlighterV2 = ({ color }: { color: string }) => <Raw svg={paint(highlighter, 'Vector 78', 'fill', color)} />
 export const EraserV2 = () => <Raw svg={eraser} />
-export const UndoV2 = () => <Raw svg={undo} />
-export const RedoV2 = () => <Raw svg={redo} />
+// Figma exports these grey (= nothing to undo / redo); dark when there is
+const ink = (svg: string, on: boolean) => (on ? svg.replaceAll('stroke="#B3B3B3"', 'stroke="black"') : svg)
+export const UndoV2 = ({ on }: { on: boolean }) => <Raw svg={ink(undo, on)} />
+export const RedoV2 = ({ on }: { on: boolean }) => <Raw svg={ink(redo, on)} />
 export const ColorWheelV2 = ({ color }: { color: string }) => <Raw svg={paint(wheel, 'Vector 40', 'stroke', color)} />
 export const SizeBubbleV2 = () => <Raw svg={sizeBubble.replace(/<path id="Vector (3[5-9])"[^>]*\/>/g, '')} />
 export const ConfirmBubble = () => <Raw svg={confirmBubble} />

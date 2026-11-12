@@ -63,6 +63,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const [picking, setPicking] = useState(false)
   const [zoomed, setZoomed] = useState(false)
   const [empty, setEmpty] = useState(true)
+  const [history, setHistory] = useState({ undo: false, redo: false })
+  const placeRef = useRef<HTMLInputElement>(null)
+  const nickRef = useRef<HTMLInputElement>(null)
   const [mood, setMood] = useState('')
   // starts with the last place used, then switches to the nearest station once location arrives
   const [place, setPlace] = useState(lastPlace)
@@ -140,7 +143,11 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             setPicking(false)
           }}
           onZoom={setZoomed}
-          onChange={() => setEmpty(!!canvas.current?.isEmpty())}
+          onChange={() => {
+            const c = canvas.current
+            setEmpty(!!c?.isEmpty())
+            setHistory({ undo: !!c?.canUndo(), redo: !!c?.canRedo() })
+          }}
           paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">A few lines will do!</p>}
@@ -149,7 +156,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
       {/* header */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
-      <button aria-label="Back" onClick={back} className="absolute top-[75px] left-[24px] z-10 size-[50px]">
+      <button aria-label="Back" onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {(['draw', 'memo'] as const).map((t) => (
@@ -162,14 +169,14 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             if (t === 'memo') canvas.current?.resetView()
           }}
           aria-pressed={tab === t}
-          className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] ${tab === 'memo' && !preview ? 'text-white' : ''}`}
+          className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] `}
           style={{ left: t === 'draw' ? 154 : 242.5 }}
         >
           {t === 'draw' ? 'Drawing' : 'Memo'}
         </button>
       ))}
-      <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-10 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
-      <button aria-label="Finish card" onClick={check} className="absolute top-[75px] right-[24px] z-10 size-[50px]">
+      <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
+      <button aria-label="Finish card" onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 
@@ -181,7 +188,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             {/* folder-tab box around the moods (Figma 787:3578 Vector 413) */}
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
             <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>Mood</span>
-            <label className={`absolute top-[11px] right-[25px] flex rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
+            <label onClick={() => placeRef.current?.focus()} className={`absolute top-[11px] right-[25px] flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
               <input
                 value={place}
                 onChange={(e) => {
@@ -191,6 +198,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 placeholder={locating ? 'Finding where you are…' : 'Where are you?'}
                 maxLength={30}
                 aria-label="Place"
+                ref={placeRef}
                 size={Math.max(4, (place || (locating ? 'Finding where you are…' : 'Where are you?')).length)}
                 className="max-w-[220px] bg-transparent text-right text-[17px] leading-[1.1] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#777]"
               />
@@ -210,13 +218,17 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             </div>
             {/* the whole lower area starts writing the memo */}
             <div onClick={() => memoRef.current?.focus()} className="absolute top-[262px] left-[21px] flex h-[258px] w-[360px] cursor-text flex-col items-start gap-[10px] rounded-[10px] p-[10px]">
-              <label className={`flex rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('nickname')}`} onClick={(e) => e.stopPropagation()}>
+              <label className={`flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('nickname')}`} onClick={(e) => {
+                e.stopPropagation()
+                nickRef.current?.focus()
+              }}>
                 <input
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="Nickname"
                   maxLength={24}
                   aria-label="Nickname"
+                  ref={nickRef}
                   size={Math.max(8, nickname.length + 1)}
                   className="max-w-[320px] bg-transparent text-[21px] leading-[1.1] tracking-[-0.42px] text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d]"
                 />
@@ -250,15 +262,15 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 className="absolute transition-transform duration-300 ease-[var(--ease-spring)]"
                 style={{ left: s.left, top: s.top, width: s.w, height: s.h, transform: `translateY(${tool === t ? -s.up : 0}px)` }}
               >
-                {t === 'pen' ? <PenV2 /> : t === 'highlighter' ? <HighlighterV2 color={settings.highlighter.color} /> : <EraserV2 />}
+                {t === 'pen' ? <PenV2 color={settings.pen.color} /> : t === 'highlighter' ? <HighlighterV2 color={settings.highlighter.color} /> : <EraserV2 />}
               </button>
             )
           })}
           <button aria-label="Undo" onClick={() => canvas.current?.undo()} className="absolute top-[801px] left-[201px] h-[24.6px] w-[22.7px]">
-            <UndoV2 />
+            <UndoV2 on={history.undo} />
           </button>
           <button aria-label="Redo" onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
-            <RedoV2 />
+            <RedoV2 on={history.redo} />
           </button>
           <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label="Guide" className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
             <span className="absolute inset-x-0 top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px]">Guide</span>

@@ -189,7 +189,7 @@ export default function MainScreen({
 
   // ---- gestures: drag = pan (pull past the edge = next town), pinch = zoom, tap = open ----
   const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const gesture = useRef<{ start: { x: number; y: number }; view: View; moved: boolean; pinch?: { d: number; mid: { x: number; y: number }; view: View } } | null>(null)
+  const gesture = useRef<{ start: { x: number; y: number }; view: View; moved: boolean; walker?: string; pinch?: { d: number; mid: { x: number; y: number }; view: View } } | null>(null)
   const pullRef = useRef(0)
 
   function local(e: React.PointerEvent) {
@@ -212,7 +212,9 @@ export default function MainScreen({
       /* pointer already gone */
     }
     if (pointers.current.size === 1) {
-      gesture.current = { start: local(e), view: { ...view.current }, moved: false }
+      // remember who was touched now: with pointer capture, pointerup's target is the box, not the character
+      const walker = (e.target as HTMLElement).closest<HTMLElement>('[data-walker]')?.dataset.walker
+      gesture.current = { start: local(e), view: { ...view.current }, moved: false, walker }
     } else if (pointers.current.size === 2 && gesture.current) {
       gesture.current.moved = true
       gesture.current.pinch = { ...pinchOf(), view: { ...view.current } }
@@ -275,9 +277,9 @@ export default function MainScreen({
       apply()
     }
     if (g && !g.moved) {
-      const hit = (e.target as HTMLElement).closest<HTMLElement>('[data-walker]')
+      const hit = g.walker
       if (hit) {
-        setOpenId(hit.dataset.walker!)
+        setOpenId(hit)
         setFollow(null)
       } else {
         setOpenId(null)

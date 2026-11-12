@@ -15,6 +15,8 @@ export type DrawingCanvasHandle = {
   redo: () => void
   clear: () => void
   isEmpty: () => boolean
+  canUndo: () => boolean
+  canRedo: () => boolean
   toBlob: () => Promise<Blob>
   resetView: () => void
 }
@@ -299,6 +301,8 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       redraw()
     },
     isEmpty: () => strokes.current.length === 0,
+    canUndo: () => strokes.current.length > 0,
+    canRedo: () => redoStack.current.length > 0,
     resetView: () => {
       view.current = IDENTITY
       apply(true)
