@@ -16,7 +16,7 @@ type Route =
   | { name: 'towns' }
   | { name: 'migrate'; cardId: string; back: Route; to: 'main' | 'collection' }
   | { name: 'send' }
-  | { name: 'collection'; townId: string }
+  | { name: 'collection'; townId: string; card?: string }
   | { name: 'draw' }
   | { name: 'tada' }
   | { name: 'mypage' }
@@ -180,6 +180,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           focusId={route.focus ?? null}
           onTowns={() => setRoute({ name: 'towns' })}
           onCollection={() => setRoute({ name: 'collection', townId: town.id })}
+          onOpenCard={(cardId) => setRoute({ name: 'collection', townId: town.id, card: cardId })}
           onMyPage={() => setRoute({ name: 'mypage' })}
           onDraw={() => setRoute({ name: 'draw' })}
           onSwitch={(id, enter) => goMain(id, enter)}
@@ -240,6 +241,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           state={state}
           commit={commit}
           townId={existing(route.townId)}
+          openCard={route.card}
           onTown={(id) => setRoute({ name: 'collection', townId: id })}
           onBack={() => goMain(existing(homeId))}
         />

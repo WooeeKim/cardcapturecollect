@@ -21,18 +21,20 @@ export default function CollectionScreen({
   state,
   commit,
   townId,
+  openCard,
   onTown,
   onBack,
 }: {
   state: State
   commit: (fn: (s: State) => State) => void
   townId: string
+  openCard?: string // open this card's big view on arrival
   onTown: (id: string) => void
   onBack: () => void
 }) {
   const [newest, setNewest] = useState(true)
   const [page, setPage] = useState(0)
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(openCard ?? null)
   const [drag, setDrag] = useState<Drag | null>(null)
   const [overDeck, setOverDeck] = useState(false)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)

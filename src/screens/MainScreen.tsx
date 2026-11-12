@@ -35,6 +35,7 @@ export default function MainScreen({
   focusId,
   onTowns,
   onCollection,
+  onOpenCard,
   onMyPage,
   onDraw,
   onSwitch,
@@ -46,6 +47,7 @@ export default function MainScreen({
   focusId: string | null
   onTowns: () => void
   onCollection: () => void
+  onOpenCard: (cardId: string) => void
   onMyPage: () => void
   onDraw: () => void
   onSwitch: (townId: string, enter: 'left' | 'right') => void
@@ -503,24 +505,29 @@ export default function MainScreen({
         </button>
       )}
 
-      {open && <Detail card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} />}
+      {open && <Detail card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} />}
     </div>
   )
 }
 
 // card info under the zoomed character (Figma main-carddeatail 787:759: hand-drawn panel + Follow / Migration pills)
-function Detail({ card, onClose, onFollow, onMigrate }: { card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void }) {
+function Detail({ card, onClose, onFollow, onMigrate, onOpen }: { card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void; onOpen: () => void }) {
   const [drag, setDrag] = useState(0)
   const start = useRef<number | null>(null)
   return (
     <Bottom>
       <div
-        className="animate-sheet-up absolute top-[565px] left-[11px] z-10 h-[285px] w-[380px] font-hand"
+        className="animate-sheet-up absolute top-[565px] left-[11px] z-10 h-[285px] w-[380px] cursor-pointer font-hand"
         style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
+        // tapping the card area (not a button, not the pull strip) opens this card in Collection
+        onClick={(e) => {
+          if (!(e.target as HTMLElement).closest('button, [data-pull]')) onOpen()
+        }}
       >
         <img src={cardPanel} alt="" className="pointer-events-none absolute top-[-1px] left-[-1px] h-[256px] w-[382px] max-w-none" />
         {/* top edge: pull down to close */}
         <div
+          data-pull
           className="absolute inset-x-0 top-0 h-[24px] touch-none"
           onPointerDown={(e) => {
             start.current = framePoint(e.clientX, e.clientY).y
