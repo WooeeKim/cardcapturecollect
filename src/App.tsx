@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
+import { Splash } from './components/Splash'
 import { identify, track, trackScreen } from './lib/analytics'
 import { currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
@@ -287,6 +288,7 @@ export default function App() {
         />
       )}
       <PhoneChrome />
+      <Splash ready={ready} />
       {error && <Popup message={error} actions={[{ label: 'Got it!', onClick: () => setError('') }]} />}
     </>
   )
