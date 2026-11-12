@@ -26,7 +26,13 @@ function Raw({ svg, className = '' }: { svg: string; className?: string }) {
 const paint = (svg: string, id: string, attr: 'fill' | 'stroke', color: string) =>
   svg.replace(new RegExp(`(<path id="${id}"[^>]*?)${attr}="[^"]*"`), `$1${attr}="${color}"`).replace(new RegExp(`(<path id="${id}")(?![^>]*${attr}=)`), `$1 ${attr}="${color}"`)
 
-export const PenV2 = ({ color }: { color: string }) => <Raw svg={paint(pen, 'Vector 29', 'fill', color)} />
+// only the nib tip (top ~12 units of the cone, like the Figma red tip) takes the pen color: a filled copy of the cone, clipped
+const penTip = (color: string) => {
+  const cone = pen.match(/<path id="Vector 29" d="([^"]+)"/)?.[1] ?? ''
+  const tip = `<defs><clipPath id="pen-tip"><rect x="0" y="0" width="32" height="12"/></clipPath></defs><path d="${cone}" fill="${color}" clip-path="url(#pen-tip)"/>`
+  return pen.replace(/(<svg[^>]*>)/, `$1${tip}`)
+}
+export const PenV2 = ({ color }: { color: string }) => <Raw svg={penTip(color)} />
 export const HighlighterV2 = ({ color }: { color: string }) => <Raw svg={paint(highlighter, 'Vector 78', 'fill', color)} />
 export const EraserV2 = () => <Raw svg={eraser} />
 // Figma exports these grey (= nothing to undo / redo); dark when there is

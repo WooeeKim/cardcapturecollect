@@ -7,6 +7,7 @@ import lineMemo from '../assets/proto/v2/tab-line-memo.svg'
 import closeDark from '../assets/proto/v2/close-dark.svg'
 import eyedropper from '../assets/proto/v2/eyedropper.svg'
 import checker from '../assets/proto/v2/checker.png'
+import fitIcon from '../assets/proto/v2/fit.svg'
 import moodBox from '../assets/proto/v2/mood-box.svg'
 import chipW1 from '../assets/proto/v2/chip-w1.svg'
 import chipW2 from '../assets/proto/v2/chip-w2.svg'
@@ -320,10 +321,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
-            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[662px] left-[330px] size-[36px] rounded-[4px] border-2 border-black bg-white">
-              <svg viewBox="0 0 36 36" className="size-full" aria-hidden>
-                <path d="M13 7v6H7M23 29v-6h6" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[697px] left-[320px] size-[70px]">
+              {/* Figma drawing 719:10468 Frame 128, no fill */}
+              <img src={fitIcon} alt="" className="size-full" />
             </button>
           )}
         </Bottom>
