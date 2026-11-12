@@ -89,11 +89,14 @@ button {
   cursor: pointer;
 }
 
-input,
-textarea {
-  font: inherit;
-  -webkit-user-select: text;
-  user-select: text;
+/* in the base layer so text-* / leading-* utilities on inputs win (unlayered CSS beats every Tailwind layer) */
+@layer base {
+  input,
+  textarea {
+    font: inherit;
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 img {

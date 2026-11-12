@@ -170,10 +170,7 @@ export default function TownListScreen({
   )
 
   // open town (Figma townList-detail 787:1012): hand-drawn box, Go tag, Edit pill.
-  // Edit mode must look exactly like view mode. Inline sizes because the global `input, textarea { font: inherit }`
-  // in index.css is unlayered and beats Tailwind's text-* utilities.
-  const SAME_AS_NAME = { fontSize: 21, lineHeight: 1.3, height: 27.3 }
-  const SAME_AS_BIO = { fontSize: 17, lineHeight: 1.2 }
+  // Edit mode uses the same size and position as view mode.
   const detail = (t: Town | null) => {
     const isNew = !t
     const editable = isNew || editing
@@ -190,8 +187,7 @@ export default function TownListScreen({
             maxLength={20}
             placeholder={isNew ? `New Town ${state.towns.length + 1}` : ''}
             aria-label="Town name"
-            className="absolute top-[22px] left-[135px] w-[205px] bg-transparent outline-none placeholder:text-[#5f5f5f]"
-            style={SAME_AS_NAME}
+            className="absolute top-[22px] left-[135px] h-[27.3px] w-[205px] bg-transparent text-[21px] leading-[1.3] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
           <p className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{t!.name}</p>
@@ -210,8 +206,7 @@ export default function TownListScreen({
             rows={2}
             placeholder="Write your town biography."
             aria-label="Town biography"
-            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent outline-none placeholder:text-black"
-            style={SAME_AS_BIO}
+            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-black"
           />
         ) : (
           <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{t!.bio}</p>
