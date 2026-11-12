@@ -163,7 +163,7 @@ export default function CollectionScreen({
       {...cardProps(c, from)}
       className={`relative size-full overflow-hidden rounded-[3px] border-2 border-black bg-white ${from === 'deck' ? 'touch-pan-x' : ''} ${drag?.id === c.id ? 'opacity-30' : ''}`}
     >
-      <img src={c.image} alt="" draggable={false} className="pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none" />
+      <img src={c.thumb ?? c.image} alt="" draggable={false} className={c.thumb ? 'pointer-events-none absolute inset-0 size-full object-cover' : 'pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none'} />
     </button>
   )
 
@@ -194,7 +194,7 @@ export default function CollectionScreen({
             const size = on ? 60 : 55
             return (
               <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: 61 + i * PITCH - size / 2, marginTop: on ? 0 : 3, width: size }}>
-                <Thumb image={state.cards[t.residents[0] ?? '']?.image} size={size} strong={on} ring={on ? 7 : 6.6} />
+                <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} />
                 <span className="absolute left-1/2 w-[96px] -translate-x-1/2 truncate text-center text-[14px] leading-[normal]" style={{ top: on ? 70 : 67 }}>
                   {t.name}
                 </span>
@@ -267,7 +267,11 @@ export default function CollectionScreen({
           className="pointer-events-none absolute z-40 size-[74px] -translate-x-1/2 -translate-y-1/2 scale-[1.2] overflow-hidden rounded-[3.7px] border-[2.4px] border-black bg-white shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
           style={{ left: drag.x, top: drag.y }}
         >
-          <img src={state.cards[drag.id]?.image} alt="" className="absolute top-[5%] left-[-15%] w-[130%] max-w-none" />
+          {state.cards[drag.id]?.thumb ? (
+            <img src={state.cards[drag.id]!.thumb} alt="" className="absolute inset-0 size-full object-cover" />
+          ) : (
+            <img src={state.cards[drag.id]?.image} alt="" className="absolute top-[5%] left-[-15%] w-[130%] max-w-none" />
+          )}
         </div>
       )}
 

@@ -49,6 +49,7 @@ export default function TownListScreen({
 
   const openIndex = state.towns.findIndex((t) => t.id === openId)
   const chiefImage = (t: Town) => state.cards[t.residents[0] ?? '']?.image
+  const chiefThumb = (t: Town) => state.cards[t.residents[0] ?? '']?.thumb
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
   const open = state.towns.find((t) => t.id === openId)
   const dirty = !!open && editing && (draft.name !== open.name || draft.bio !== open.bio)
@@ -235,7 +236,7 @@ export default function TownListScreen({
           }, 311)
         )}
         <span data-thumb className="pointer-events-none absolute top-0 left-[24px]">
-          <Thumb image={t ? chiefImage(t) : undefined} size={84} strong />
+          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong />
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
@@ -277,7 +278,7 @@ export default function TownListScreen({
                 ) : (
                   <>
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
-                      <Thumb image={chiefImage(t)} size={70} grey={dimmed} outline />
+                      <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} grey={dimmed} outline />
                     </button>
                     <button onClick={() => toggle(t)} className="absolute top-[23px] left-[121px] max-w-[220px] truncate text-left text-[21px] leading-[1.1]">
                       {t.name}

@@ -74,6 +74,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const [nickname, setNickname] = useState('')
   const [memo, setMemo] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
+  const [thumb, setThumb] = useState('')
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const typedPlace = useRef(false)
   const memoRef = useRef<HTMLTextAreaElement>(null)
@@ -85,7 +86,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
     })
   }, [])
 
-  const draft = (image: string): Draft => ({ image, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim() })
+  const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim() })
 
   function back() {
     if (preview) return setPreview(null)
@@ -114,7 +115,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
       setShowMissing(true)
       return
     }
-    setPreview(await toDataUrl(await canvas.current!.toBlob()))
+    const blob = await canvas.current!.toBlob()
+    setThumb(await toThumb(blob))
+    setPreview(await toDataUrl(blob))
   }
 
   function pickTool(t: Tool) {
@@ -542,5 +545,17 @@ async function toDataUrl(blob: Blob, maxSide = 480) {
   c.width = Math.max(1, Math.round(w * k))
   c.height = Math.max(1, Math.round(h * k))
   c.getContext('2d')!.drawImage(src, x0, y0, w, h, 0, 0, c.width, c.height)
+  return c.toDataURL('image/png')
+}
+
+// Square thumbnail: the guide's head-and-shoulders area of the card (≈ x 15.6–84.4%, y 2.7–50.8% of the paper).
+async function toThumb(blob: Blob, side = 200) {
+  const bmp = await createImageBitmap(blob)
+  const w = bmp.width * 0.688
+  const x = bmp.width * 0.156
+  const y = bmp.height * 0.027
+  const c = document.createElement('canvas')
+  c.width = c.height = side
+  c.getContext('2d')!.drawImage(bmp, x, y, w, w, 0, 0, side, side)
   return c.toDataURL('image/png')
 }

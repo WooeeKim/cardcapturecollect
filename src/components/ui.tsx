@@ -105,14 +105,16 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
 
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
-export function Thumb({ image, size = 70, strong = false, grey = false, ring: ringW, outline = false }: { image?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number; outline?: boolean }) {
+export function Thumb({ image, thumb, size = 70, strong = false, grey = false, ring: ringW, outline = false }: { image?: string; thumb?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number; outline?: boolean }) {
   // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body.
   // The ring is drawn as a slightly wobbly hand-drawn stroke, like the rest of the sketchy UI.
   const ring = ringW ?? (strong ? 8.5 : 9)
   return (
     <span className="relative block shrink-0" style={{ width: size, height: size }}>
       <span className="absolute overflow-hidden rounded-full bg-white" style={{ inset: ring * 0.75 }}>
-        {image ? (
+        {thumb ? (
+          <img src={thumb} alt="" className={`absolute inset-0 size-full object-cover ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
+        ) : image ? (
           <img src={image} alt="" className={`absolute top-[6%] left-[-20%] w-[140%] max-w-none ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
         ) : (
           <span className="flex size-full items-center justify-center font-hand leading-none" style={{ fontSize: size * 0.55 }}>

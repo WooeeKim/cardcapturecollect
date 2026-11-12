@@ -5,6 +5,7 @@ export const MAX_RESIDENTS = 10
 export type Card = {
   id: string
   image: string // PNG data URL
+  thumb?: string // square crop of the head area (where the guide's head is), for town / collection thumbnails
   mood: string
   place: string
   nickname: string
