@@ -31,7 +31,8 @@ export type State = {
   nickname?: string // name shown in the app (separate from the login email)
   intro?: string // short self-introduction on My Page
   fillsFixed?: boolean // old see-through fills already made solid (fixFills.ts)
-  repaired?: boolean // one drawing's colors restored from its screenshot (repairCard.ts)
+  repaired?: boolean // one drawing's colors restored from its screenshot (done; code removed)
+  rethumbed?: boolean // that drawing's thumbnail re-cut (repairCard.ts)
 }
 
 // Ground / sky per town: same two-band look, each town a slightly different tint.
