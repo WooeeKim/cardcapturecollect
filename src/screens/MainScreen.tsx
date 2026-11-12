@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import menuIcon from '../assets/proto/menu.svg'
+import menuClosedBox from '../assets/proto/v2/menu-closed-box.svg'
+import menuDown from '../assets/proto/v2/menu-down.svg'
 import menuBox from '../assets/proto/v2/menu-box.svg'
 import menuUp from '../assets/proto/v2/menu-up.svg'
 import menuTowns from '../assets/proto/menu-towns.svg'
@@ -402,14 +403,17 @@ export default function MainScreen({
               </div>
             </>
           ) : (
-            <button aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(true)} className="absolute top-[68.6px] left-[32px] p-[10px]">
-              {/* ≡ sits where the open menu's ^ is (center 55, 96.5) */}
-              <img src={menuIcon} alt="" className="h-[17px] w-[26px]" />
+            <button aria-label="Menu" aria-expanded={menu} onClick={() => setMenu(true)} className="absolute top-[74px] left-[23px] h-[50px] w-[51px]">
+              {/* Figma main 811:808: hand-drawn box with a ∨ */}
+              <img src={menuClosedBox} alt="" className="absolute inset-[-2%_-1.96%] size-[calc(100%+3.92%)] max-w-none" />
+              <span className="absolute top-[21px] left-[16px] flex h-[11px] w-[18px] items-center justify-center">
+                <img src={menuDown} alt="" className="h-[18px] w-[11px] max-w-none -scale-y-100 -rotate-90" />
+              </span>
             </button>
           )}
           <p className="pointer-events-none absolute inset-x-[90px] top-[89px] truncate text-center font-hand text-[24px] leading-[normal]">{town.name}</p>
-          {/* same 42px from the right edge as ≡ from the left, same center line */}
-          <button aria-label="My page" onClick={onMyPage} className="absolute top-[59.1px] left-[326.6px] p-[8px]">
+          {/* same 23px from the right edge as the menu box from the left, same center line */}
+          <button aria-label="My page" onClick={onMyPage} className="absolute top-[71px] left-[345.6px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
