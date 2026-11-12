@@ -22,7 +22,8 @@ const SKY = 409 / 874 // horizon height ratio
 const WORLD = 2.5 // world width = screen width × WORLD
 const MAX_S = 3
 const DETAIL_S = 2.1
-const SWITCH_AT = 70 // px of rubber-band pull that switches town
+const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
+const BUZZ = [70, 50, 70] // "웅웅" while undecided
 const TAP = 8
 
 type View = { s: number; x: number; y: number }
@@ -58,7 +59,11 @@ export default function MainScreen({
   const [openId, setOpenId] = useState<string | null>(null) // card detail
   const [follow, setFollow] = useState<string | null>(focusId)
   const [menu, setMenu] = useState(false)
-  const [pull, setPull] = useState(0) // rubber-band overscroll (screen px, + = left edge)
+  // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
+  const [side, setSide] = useState<1 | -1 | 0>(0)
+  const sideRef = useRef<1 | -1 | 0>(0)
+  const groundEl = useRef<SVGPolygonElement>(null)
+  const hintEl = useRef<HTMLDivElement>(null)
   const target = openId ?? follow
   const targetRef = useRef(target)
   targetRef.current = target
@@ -101,6 +106,37 @@ export default function MainScreen({
   function apply(extra = 0) {
     const { s, x, y } = view.current
     if (world.current) world.current.style.transform = `translate(${x + extra}px, ${y}px) scale(${s})`
+    drawGround(y + groundTop * s, extra)
+    placeHint()
+    const atL = x >= -0.5
+    const atR = x <= size.w - W * s + 0.5
+    const d: 1 | -1 | 0 = extra > 0 ? 1 : extra < 0 ? -1 : atL ? 1 : atR ? -1 : 0
+    if (d !== sideRef.current) {
+      sideRef.current = d
+      setSide(d)
+    }
+  }
+  // town guide sits just above the ground line on screen, even when zoomed (stays below the header)
+  function placeHint() {
+    const { s, y } = view.current
+    if (hintEl.current) hintEl.current.style.top = `${Math.max(130, y + groundTop * s - 64)}px`
+  }
+  // ground = one screen-space polygon: a rectangle, or a single trapezoid whose pulled edge tilts away (main-transit).
+  // Drawn in screen px (not scaled with the world) so the edge never splits from the ground or blurs when zoomed.
+  function drawGround(top: number, pull: number) {
+    const el = groundEl.current
+    if (!el || !size.w) return
+    const w = size.w
+    const h = size.h
+    const g = Math.abs(pull)
+    const tilt = Math.min(h, top + g * 1.7)
+    const pts =
+      g < 0.5
+        ? [[0, h], [0, top], [w, top], [w, h]]
+        : pull > 0
+          ? [[0, h], [0, tilt], [g, top], [w, top], [w, h]]
+          : [[0, h], [0, top], [w - g, top], [w, tilt], [w, h]]
+    el.setAttribute('points', pts.map((p) => p.join(',')).join(' '))
   }
 
   // initial camera + walkers when size / residents known
@@ -201,8 +237,34 @@ export default function MainScreen({
   }
   function setPullBoth(v: number) {
     pullRef.current = v
-    setPull(v)
   }
+
+  // ---- haptics: buzz while undecided (pulled past the end, finger not yet at the far edge) ----
+  const zoneRef = useRef<'hesitate' | 'commit' | null>(null)
+  const buzz = useRef<number | null>(null)
+  function vibrate(p: number | number[]) {
+    try {
+      navigator.vibrate?.(p)
+    } catch {
+      /* unsupported (iOS Safari) */
+    }
+  }
+  function setZone(z: 'hesitate' | 'commit' | null) {
+    if (z === zoneRef.current) return
+    const was = zoneRef.current
+    zoneRef.current = z
+    if (z === 'hesitate') {
+      vibrate(BUZZ)
+      buzz.current ??= window.setInterval(() => vibrate(BUZZ), 380)
+      return
+    }
+    if (buzz.current !== null) {
+      clearInterval(buzz.current)
+      buzz.current = null
+    }
+    vibrate(z === 'commit' && was === 'hesitate' ? 25 : 0) // one short tick: "release now switches"
+  }
+  useEffect(() => () => setZone(null), [])
 
   function onDown(e: React.PointerEvent) {
     pointers.current.set(e.pointerId, local(e))
@@ -217,6 +279,8 @@ export default function MainScreen({
       gesture.current.moved = true
       gesture.current.pinch = { ...pinchOf(), view: { ...view.current } }
       setPullBoth(0)
+      setZone(null)
+      apply()
     }
   }
 
@@ -252,6 +316,10 @@ export default function MainScreen({
     const rubber = over * 0.45
     apply(rubber)
     setPullBoth(rubber)
+    // switching needs the finger dragged all the way to the opposite edge
+    const to = rubber > 4 ? prev : rubber < -4 ? next : undefined
+    const commit = rubber > 0 ? p.x >= size.w - COMMIT_EDGE : p.x <= COMMIT_EDGE
+    setZone(to ? (commit ? 'commit' : 'hesitate') : null)
   }
 
   function onUp(e: React.PointerEvent) {
@@ -268,8 +336,10 @@ export default function MainScreen({
     }
     gesture.current = null
     const p = pullRef.current
-    if (p > SWITCH_AT && prev) return onSwitch(prev.id, 'right')
-    if (p < -SWITCH_AT && next) return onSwitch(next.id, 'left')
+    const commit = zoneRef.current === 'commit'
+    setZone(null)
+    if (commit && p > 0 && prev) return onSwitch(prev.id, 'right')
+    if (commit && p < 0 && next) return onSwitch(next.id, 'left')
     if (p !== 0) {
       setPullBoth(0)
       apply()
@@ -305,8 +375,8 @@ export default function MainScreen({
     return () => el.removeEventListener('wheel', onWheel)
   }, [size.w, size.h])
 
-  const hint = pull > 10 ? prev : pull < -10 ? next : undefined
-  const gap = Math.abs(pull)
+  // shown as soon as the camera reaches that end of the town, before any pull
+  const hint = open || follow ? undefined : side > 0 ? prev : side < 0 ? next : undefined
   const empty = cards.length === 0
   const charH = 170
 
@@ -321,8 +391,10 @@ export default function MainScreen({
         onPointerUp={onUp}
         onPointerCancel={onUp}
       >
+        <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
+          <polygon ref={groundEl} fill={tone.ground} />
+        </svg>
         <div ref={world} className="absolute top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
-          <div className="absolute inset-x-0 bottom-0" style={{ top: groundTop, background: tone.ground }} />
           {cards.map((c) => {
             const m = moodOf(c.mood)
             return (
@@ -352,26 +424,19 @@ export default function MainScreen({
           })}
         </div>
 
-        {/* pulled past the edge: ground tilts away and the neighbour town peeks in (main-transit) */}
-        {gap > 0 && (
-          <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-            {pull > 0 ? (
-              <polygon points={`0,${H} 0,${groundTop + gap * 1.7} ${gap},${groundTop} ${gap},${H}`} fill={tone.ground} />
-            ) : (
-              <polygon points={`${size.w},${H} ${size.w},${groundTop + gap * 1.7} ${size.w - gap},${groundTop} ${size.w - gap},${H}`} fill={tone.ground} />
-            )}
-          </svg>
-        )}
         {hint && (
           <div
-            className={`pointer-events-none absolute font-hand ${pull > 0 ? 'left-[18px] text-left' : 'right-[18px] text-right'}`}
-            style={{ top: groundTop + 6, opacity: Math.min(1, gap / SWITCH_AT) }}
+            ref={(el) => {
+              hintEl.current = el
+              placeHint()
+            }}
+            className={`animate-pop-in pointer-events-none absolute font-hand ${side > 0 ? 'left-[18px] text-left' : 'right-[18px] text-right'}`}
           >
             <p className="text-[18px] leading-[1.2]">{hint.name}</p>
             <p className="text-[24px] leading-none tracking-[-2px]">
               {[0, 1, 2].map((i) => (
-                <span key={i} style={{ animation: `chevron-wave 1s ease-in-out ${(pull > 0 ? i : 2 - i) * 0.15}s infinite` }}>
-                  {pull > 0 ? '<' : '>'}
+                <span key={i} style={{ animation: `chevron-wave 1s ease-in-out ${(side > 0 ? i : 2 - i) * 0.15}s infinite` }}>
+                  {side > 0 ? '<' : '>'}
                 </span>
               ))}
             </p>
