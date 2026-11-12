@@ -183,7 +183,8 @@ export default function TownListScreen({
         {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
             behind it (-z), so the line's wavy edge covers the box's left end with no gap.
             Its top lines up with the thumbnail circle; the Edit/Done pill hangs over its bottom edge. */}
-        <img src={tlBox} alt="" className="pointer-events-none absolute top-0 left-[64px] -z-10 h-[162px] w-[329px] max-w-none" />
+        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute top-0 left-[64px] -z-10 h-[162px] w-[329px] max-w-none origin-left" />
+        <div className="animate-tl-content absolute inset-0">
         {editable ? (
           <input
             autoFocus
@@ -235,7 +236,8 @@ export default function TownListScreen({
             setEditing(true)
           }, 311)
         )}
-        <span data-thumb className="pointer-events-none absolute top-0 left-[24px]">
+        </div>
+        <span data-thumb className="animate-tl-thumb pointer-events-none absolute top-0 left-[24px]">
           <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong />
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
@@ -265,7 +267,7 @@ export default function TownListScreen({
             return (
               <div
                 key={t.id}
-                className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-200'}`}
+                className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
                 style={{ top: rowTop(i) + (lifted ? dragDy : 0), height: isOpen ? ROW + OPEN_EXTRA : ROW }}
                 ref={(el) => {
                   if (el) thumbs.current.set(t.id, el)

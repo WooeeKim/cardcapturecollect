@@ -174,3 +174,23 @@ img {
 /* walkers bob only while moving */
 .walker .bob { animation: walk-bob 1s ease-in-out infinite paused; transform-origin: bottom center; }
 .walker.walking .bob { animation-play-state: running; }
+
+/* Town List: a town opens smoothly — box grows out of the grey line, thumbnail swells, text fades in */
+@keyframes tl-box {
+  from { transform: scaleX(0.12); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes tl-thumb {
+  from { transform: scale(0.83); }
+  to { transform: none; }
+}
+@keyframes tl-content {
+  0%, 35% { opacity: 0; transform: translateX(-8px); }
+  100% { opacity: 1; transform: none; }
+}
+.animate-tl-box { animation: tl-box 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-tl-thumb { animation: tl-thumb 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.animate-tl-content { animation: tl-content 0.42s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-tl-box, .animate-tl-thumb, .animate-tl-content { animation: none; }
+}
