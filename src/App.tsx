@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
-import { currentUser, flushRemote, loadRemote, logOut, saveRemote, type User } from './lib/auth'
+import { currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
@@ -20,8 +20,8 @@ type Route =
   | { name: 'tada' }
   | { name: 'mypage' }
 
-// guest data goes to the first account that logs in on this device
-const GUEST_OWNER = 'subwayseal.guestOwner'
+// old flag that limited guest data to the first account on a device (no longer used)
+const LEGACY_GUEST_OWNER = 'subwayseal.guestOwner'
 // the "keep your town" login prompt shows once, after the first card moves in
 const PROMPTED = 'subwayseal.loginPrompted'
 const flag = (k: string) => {
@@ -52,30 +52,54 @@ export default function App() {
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
 
-  // switch the whole app to an account (or back to guest)
+  // switch the whole app to an account (or back to guest).
+  // Guest data on this device always joins the account being entered (sign-up or log-in); the guest copy is
+  // removed only once the merged data is safely saved, so a failure just means it merges again next time.
   const enter = useCallback(async (u: User | null) => {
+    await flushRemote()
+    if (!u) {
+      userRef.current = null
+      setUser(null)
+      identify(null)
+      const guest = load(GUEST_KEY)
+      setState(guest)
+      setHomeId(guest.towns[0].id)
+      setRoute(startRoute(guest))
+      return
+    }
+    const remote = await loadRemote(u)
+    if (!remote.ok) {
+      // can't tell what the account holds → don't merge or save over it; stay a guest (session kept, retried next start)
+      setError("Couldn't reach your account. Your town stays on this device — try again in a moment.")
+      return enter(null)
+    }
+    // newer copy wins: a save that never reached the server (tab closed, offline) must not be overwritten
+    let next = load(keyFor(u.id))
+    if (remote.remote && remote.remote.updatedAt >= savedAt(keyFor(u.id))) next = remote.remote.state
+    const guest = load(GUEST_KEY)
+    let merged = false
+    let unplaced = 0
+    if (hasContent(guest)) {
+      ;({ state: next, unplaced } = mergeGuest(next, guest))
+      merged = true
+    }
+    let cached = true
+    try {
+      save(next, keyFor(u.id))
+    } catch {
+      cached = false
+    }
+    const stored = await saveRemoteNow(u, next)
+    if (merged) {
+      // with a server, the server copy is what counts; without one, the device copy is
+      if (usingSupabase ? stored : cached) localStorage.removeItem(GUEST_KEY)
+      else setError("Couldn't save your guest town to the account yet. It will be added the next time you log in.")
+    }
+    if (unplaced > 0) setError(`${unplaced} card${unplaced > 1 ? 's' : ''} didn't fit in your towns.`)
+    localStorage.removeItem(LEGACY_GUEST_OWNER)
     userRef.current = u
     setUser(u)
     identify(u)
-    await flushRemote() // a batched save of the previous account goes out first
-    let next = load(keyFor(u?.id ?? null))
-    if (u) {
-      // newer copy wins: a save that never reached the server (tab closed, offline) must not be overwritten
-      const remote = await loadRemote(u)
-      if (remote && remote.updatedAt >= savedAt(keyFor(u.id))) next = remote.state
-      const guest = load(GUEST_KEY)
-      if (!flag(GUEST_OWNER) && hasContent(guest)) {
-        next = mergeGuest(next, guest)
-        setFlag(GUEST_OWNER, u.id)
-        localStorage.removeItem(GUEST_KEY)
-      }
-      try {
-        save(next, keyFor(u.id))
-      } catch {
-        /* cache only */
-      }
-      saveRemote(u, next)
-    }
     setState(next)
     setHomeId(next.towns[0].id)
     setRoute(startRoute(next))

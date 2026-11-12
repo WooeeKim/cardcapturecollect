@@ -125,15 +125,18 @@ export async function changePassword(user: User, password: string): Promise<{ ok
 // ---------- per-account data in Supabase (local cache is always kept too) ----------
 
 export type Remote = { state: State; updatedAt: number }
+// ok:false = the server couldn't be read (offline, table missing…). Callers must not treat that as "empty account",
+// or saving afterwards would wipe the real data.
+export type RemoteLoad = { ok: true; remote: Remote | null } | { ok: false }
 
-export async function loadRemote(user: User): Promise<Remote | null> {
-  if (!sb) return null
+export async function loadRemote(user: User): Promise<RemoteLoad> {
+  if (!sb) return { ok: true, remote: null }
   const { data, error } = await sb.from('user_states').select('state, updated_at').eq('user_id', user.id).maybeSingle()
   if (error) {
     console.warn('user_states load failed (run supabase/migrations/004_user_states.sql?)', error.message)
-    return null
+    return { ok: false }
   }
-  return data ? { state: data.state as State, updatedAt: Date.parse(data.updated_at) || 0 } : null
+  return { ok: true, remote: data ? { state: data.state as State, updatedAt: Date.parse(data.updated_at) || 0 } : null }
 }
 
 // Saves are batched (800ms). The time is taken when the change happens, so it matches this
@@ -152,6 +155,7 @@ async function push(job: { user: User; state: State; at: string }) {
     ;({ error } = await sb!.from('user_states').upsert(row))
   }
   if (error) console.warn('user_states save failed', error.message)
+  return !error
 }
 
 export function saveRemote(user: User, state: State) {
@@ -167,4 +171,11 @@ export async function flushRemote() {
   const job = queued
   queued = null
   if (job) await push(job)
+}
+
+// Save right now and say whether it reached the server (true when there is no server).
+export async function saveRemoteNow(user: User, state: State): Promise<boolean> {
+  clearTimeout(timer)
+  queued = null
+  return sb ? push({ user, state, at: new Date().toISOString() }) : true
 }

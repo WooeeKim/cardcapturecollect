@@ -415,11 +415,14 @@ export default function MainScreen({
         <div className="pointer-events-none absolute inset-0">
           <img src={uncle} alt="" className="absolute bottom-0 left-[-56px] h-[325px] w-[252px] -scale-x-100 object-cover" />
           <img src={bubble} alt="" className="absolute bottom-[281px] left-[97px] h-[140px] w-[248px]" />
-          <p className="absolute bottom-[341px] left-[133px] font-hand text-[27px] leading-[1.1] tracking-[-0.54px]">
-            Invite your
-            <br />
-            eye catcher!
-          </p>
+          {/* centered over the bubble's oval body (the tail sits below it) */}
+          <div className="absolute bottom-[316px] left-[97px] flex h-[105px] w-[248px] items-center justify-center">
+            <p className="text-center font-hand text-[27px] leading-[1.1] tracking-[-0.54px]">
+              Invite your
+              <br />
+              eye catcher!
+            </p>
+          </div>
         </div>
       )}
 

@@ -55,9 +55,11 @@ export function newTown(state: Pick<State, 'towns'>, name: string, bio: string):
   return { id: uid(), name, bio, createdAt: today(), tone: tone < 0 ? 0 : tone, residents: [] }
 }
 
+export const STARTER_TOWN = 'Town 1'
+
 export function initial(): State {
   const base = { towns: [] as Town[] }
-  return { towns: [newTown(base, 'Town 1', '')], cards: {}, pending: null, seq: { day: '', n: 0 } }
+  return { towns: [newTown(base, STARTER_TOWN, '')], cards: {}, pending: null, seq: { day: '', n: 0 } }
 }
 
 export function load(key = GUEST_KEY): State {
@@ -102,19 +104,90 @@ export function dotDate(iso: string) {
 }
 
 export function hasContent(state: State) {
-  return Object.keys(state.cards).length > 0 || state.pending !== null || state.towns.length > 1 || state.towns.some((t) => t.name !== 'Town 1' || t.bio)
+  return Object.keys(state.cards).length > 0 || state.pending !== null || state.towns.length > 1 || state.towns.some((t) => t.name !== STARTER_TOWN || t.bio)
 }
 
-// Guest data joins an account: empty account → takes the guest data as is; otherwise guest towns/cards are added on.
-export function mergeGuest(account: State, guest: State): State {
-  if (!hasContent(guest)) return account
-  if (!hasContent(account)) return guest
-  return {
-    towns: [...account.towns, ...guest.towns],
-    cards: { ...account.cards, ...guest.cards },
-    pending: account.pending ?? guest.pending,
-    seq: account.seq.day >= guest.seq.day ? account.seq : guest.seq,
+// Guest data joins an account (sign-up or log-in). Safe to run again on the same data: towns/cards the
+// account already has (same id) are skipped. Rules:
+// - empty account → takes the guest data as is
+// - guest's untouched starter town is dropped; a clashing town name gets " (2)", " (3)"…; tones are re-picked
+// - towns beyond MAX_TOWNS don't come over, their cards move into towns that still have room
+// - both sides have a card waiting to be sent → the account's stays waiting, the guest's moves into a town
+// - a guest serial already used by the account is renumbered
+// `unplaced` = cards that found no room anywhere (kept in `cards`, just not in a town).
+export function mergeGuest(account: State, guest: State): { state: State; unplaced: number } {
+  if (!hasContent(guest)) return { state: account, unplaced: 0 }
+  if (!hasContent(account)) return { state: guest, unplaced: 0 }
+
+  // ---- cards (+ serials) ----
+  const top = new Map<string, number>() // day → highest serial number
+  const note = (serial: string) => {
+    const m = /^SN(\d{6})-(\d+)$/.exec(serial)
+    if (m) top.set(m[1], Math.max(top.get(m[1]) ?? 0, Number(m[2])))
   }
+  const accountCards = [...Object.values(account.cards), ...(account.pending ? [account.pending] : [])]
+  const known = new Set(accountCards.map((c) => c.id))
+  const used = new Set(accountCards.map((c) => c.serial))
+  const incoming = [...Object.values(guest.cards), ...(guest.pending ? [guest.pending] : [])]
+    .filter((c) => !known.has(c.id))
+    .sort((x, y) => x.createdAt.localeCompare(y.createdAt))
+  for (const c of [...accountCards, ...incoming]) note(c.serial)
+  const added: Record<string, Card> = {}
+  for (const c of incoming) {
+    let serial = c.serial
+    if (used.has(serial)) {
+      const day = serial.slice(2, 8)
+      const n = (top.get(day) ?? 0) + 1
+      top.set(day, n)
+      serial = `SN${day}-${String(n).padStart(2, '0')}`
+    }
+    used.add(serial)
+    added[c.id] = { ...c, serial }
+  }
+
+  // ---- waiting card ----
+  const guestPending = guest.pending && added[guest.pending.id]
+  const pending = account.pending ?? guestPending ?? null
+  const homeless: string[] = guestPending && pending !== guestPending ? [guestPending.id] : []
+  const cards = { ...account.cards, ...added }
+  if (pending && pending === guestPending) delete cards[pending.id]
+
+  // ---- towns ----
+  const towns = [...account.towns]
+  const names = new Set(towns.map((t) => t.name))
+  const tones = new Set(towns.map((t) => t.tone))
+  for (const g of guest.towns) {
+    if (towns.some((t) => t.id === g.id)) continue
+    const residents = g.residents.filter((id) => added[id])
+    if (residents.length === 0 && !g.bio && g.name === STARTER_TOWN) continue
+    if (towns.length >= MAX_TOWNS) {
+      homeless.push(...residents)
+      continue
+    }
+    let name = g.name
+    for (let k = 2; names.has(name); k++) name = `${g.name} (${k})`
+    names.add(name)
+    let tone = g.tone
+    if (tones.has(tone)) {
+      const free = TONES.findIndex((_, i) => !tones.has(i))
+      if (free >= 0) tone = free
+    }
+    tones.add(tone)
+    towns.push({ ...g, name, tone, residents })
+  }
+
+  // ---- serial counter ----
+  const day = account.seq.day >= guest.seq.day ? account.seq.day : guest.seq.day
+  const seq = { day, n: Math.max(top.get(day) ?? 0, account.seq.day === day ? account.seq.n : 0, guest.seq.day === day ? guest.seq.n : 0) }
+
+  let state: State = { towns, cards, pending, seq }
+  let unplaced = 0
+  for (const id of homeless) {
+    const room = state.towns.find((t) => t.residents.length < MAX_RESIDENTS)
+    if (room) state = placeCard(state, id, room.id)
+    else unplaced++
+  }
+  return { state, unplaced }
 }
 
 export function townOf(state: State, cardId: string) {
@@ -238,9 +311,29 @@ if (argv?.[1]?.endsWith('store.ts')) {
   }
   const guest = oneCard()
   const g2 = oneCard()
-  assert(mergeGuest(initial(), g2) === g2, 'empty account takes guest data')
-  const merged = mergeGuest(s, guest)
+  assert(mergeGuest(initial(), g2).state === g2, 'empty account takes guest data')
+  const merged = mergeGuest(s, guest).state
   assert(merged.towns.length === s.towns.length + 1 && Object.keys(merged.cards).length === Object.keys(s.cards).length + 1, 'merge keeps both')
-  assert(mergeGuest(s, initial()) === s, 'empty guest changes nothing')
+  assert(mergeGuest(s, initial()).state === s, 'empty guest changes nothing')
+  // same-name town gets a suffix and its own tone; serial clash is renumbered; merging twice adds nothing
+  const acc = oneCard()
+  const m1 = mergeGuest(acc, guest).state
+  assert(m1.towns.length === 2 && m1.towns[1].name === 'Town 1 (2)', 'same name gets (2)')
+  assert(m1.towns[0].tone !== m1.towns[1].tone, 'tones differ')
+  const serials = Object.values(m1.cards).map((c) => c.serial)
+  assert(new Set(serials).size === 2 && m1.seq.n === 2, 'serials unique, counter moves on')
+  const m2 = mergeGuest(m1, guest).state
+  assert(m2.towns.length === 2 && Object.keys(m2.cards).length === 2, 'merge is idempotent')
+  // untouched starter town is dropped, its waiting card moves into a town when the account has one waiting too
+  const gp = makePending(initial(), { image: '', mood: 'Calm', place: '', nickname: '', memo: '' })
+  const ap = makePending(acc, { image: '', mood: 'Calm', place: '', nickname: '', memo: '' })
+  const m3 = mergeGuest(ap, gp).state
+  assert(m3.towns.length === 1 && m3.pending?.id === ap.pending!.id && m3.towns[0].residents.includes(gp.pending!.id), 'both waiting: guest card placed')
+  // town cap: overflow towns' cards go to towns with room
+  let full = initial()
+  for (let i = 1; i < MAX_TOWNS; i++) full = addTown(full, newTown(full, `T${i}`, ''))
+  full = sendPending(makePending(full, { image: '', mood: 'Calm', place: '', nickname: '', memo: '' }), full.towns[0].id)
+  const m4 = mergeGuest(full, guest)
+  assert(m4.state.towns.length === MAX_TOWNS && m4.unplaced === 0 && Object.values(m4.state.cards).every((c) => townOf(m4.state, c.id)), 'cap kept, cards rehomed')
   console.log('store ok')
 }
