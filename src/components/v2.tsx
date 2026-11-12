@@ -26,12 +26,10 @@ function Raw({ svg, className = '' }: { svg: string; className?: string }) {
 const paint = (svg: string, id: string, attr: 'fill' | 'stroke', color: string) =>
   svg.replace(new RegExp(`(<path id="${id}"[^>]*?)${attr}="[^"]*"`), `$1${attr}="${color}"`).replace(new RegExp(`(<path id="${id}")(?![^>]*${attr}=)`), `$1 ${attr}="${color}"`)
 
-// only the nib tip (top ~12 units of the cone, like the Figma red tip) takes the pen color: a filled copy of the cone, clipped
-const penTip = (color: string) => {
-  const cone = pen.match(/<path id="Vector 29" d="([^"]+)"/)?.[1] ?? ''
-  const tip = `<defs><clipPath id="pen-tip"><rect x="0" y="0" width="32" height="12"/></clipPath></defs><path d="${cone}" fill="${color}" clip-path="url(#pen-tip)"/>`
-  return pen.replace(/(<svg[^>]*>)/, `$1${tip}`)
-}
+// Like the Figma pen: the nib top stays black-outlined and a small triangle inside it (≈11×12) takes the pen color.
+// Drawn after the strokes so the black nib scribble doesn't cover it.
+const penTip = (color: string) =>
+  pen.replace('</svg>', `<path d="M18.3 2.6C19.9 5.2 21.4 8.8 22.7 12.6C19.9 12.4 16.9 12.3 13.9 12.5C15.3 9 16.8 5.3 18.3 2.6Z" fill="${color}"/></svg>`)
 export const PenV2 = ({ color }: { color: string }) => <Raw svg={penTip(color)} />
 export const HighlighterV2 = ({ color }: { color: string }) => <Raw svg={paint(highlighter, 'Vector 78', 'fill', color)} />
 export const EraserV2 = () => <Raw svg={eraser} />

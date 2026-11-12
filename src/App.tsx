@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
+import { loadImage } from './lib/preload'
 import { currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
@@ -40,6 +41,11 @@ const setFlag = (k: string, v: string) => {
 }
 
 const startRoute = (s: State): Route => (s.pending ? { name: 'tada' } : { name: 'main', townId: s.towns[0].id, enter: 'center' })
+
+async function decodeAll(srcs: string[]) {
+  const jobs = srcs.filter(Boolean).map((src) => loadImage(new Image(), src))
+  await Promise.race([Promise.all(jobs), new Promise((r) => setTimeout(r, 5000))])
+}
 
 export default function App({ onReady }: { onReady?: () => void }) {
   const [ready, setReady] = useState(false)
@@ -103,6 +109,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setState(next)
     setHomeId(next.towns[0].id)
     setRoute(startRoute(next))
+    return next
   }, [])
 
   // leaving / hiding the page: send the batched account save instead of dropping it
@@ -114,7 +121,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   useEffect(() => {
     currentUser().then(async (u) => {
-      if (u) await enter(u)
+      const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
+      // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
+      await decodeAll(Object.values(s.cards).map((c) => c.image))
       setReady(true)
       onReady?.()
     })

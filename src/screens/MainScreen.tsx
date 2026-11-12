@@ -467,7 +467,7 @@ export default function MainScreen({
               </div>
             </>
           )}
-          <p className="pointer-events-none absolute inset-x-[90px] top-[89px] truncate text-center font-hand text-[24px] leading-[normal]">{town.name}</p>
+          <p className="pointer-events-none absolute inset-x-[90px] top-[77px] truncate text-center font-hand text-[24px] leading-[28px]">{town.name}</p>
           {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
           <button aria-label="My page" onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
