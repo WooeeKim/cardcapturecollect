@@ -548,12 +548,12 @@ async function toDataUrl(blob: Blob, maxSide = 480) {
   return c.toDataURL('image/png')
 }
 
-// Square thumbnail: the guide's head-and-shoulders area of the card (≈ x 15.6–84.4%, y 2.7–50.8% of the paper).
+// Square thumbnail: the guide's head-and-shoulders area of the card (≈ x 11.3–88.6%, y 0–54% of the paper).
 async function toThumb(blob: Blob, side = 200) {
   const bmp = await createImageBitmap(blob)
-  const w = bmp.width * 0.688
-  const x = bmp.width * 0.156
-  const y = bmp.height * 0.027
+  const w = bmp.width * 0.773
+  const x = bmp.width * 0.113
+  const y = 0
   const c = document.createElement('canvas')
   c.width = c.height = side
   c.getContext('2d')!.drawImage(bmp, x, y, w, w, 0, 0, side, side)

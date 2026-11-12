@@ -111,6 +111,12 @@ export function Thumb({ image, thumb, size = 70, strong = false, grey = false, r
   const ring = ringW ?? (strong ? 8.5 : 9)
   return (
     <span className="relative block shrink-0" style={{ width: size, height: size }}>
+      {/* with the black outline, everything inside it is white (fills the wobble too) */}
+      {outline && (
+        <svg viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
+          <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring * 0.75, size + 3)} fill="#fff" />
+        </svg>
+      )}
       <span className="absolute overflow-hidden rounded-full bg-white" style={{ inset: ring * 0.75 }}>
         {thumb ? (
           <img src={thumb} alt="" className={`absolute inset-0 size-full object-cover ${grey ? 'mix-blend-luminosity grayscale' : ''}`} />
@@ -123,7 +129,8 @@ export function Thumb({ image, thumb, size = 70, strong = false, grey = false, r
         )}
       </span>
       <svg viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
-        <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring / 2, size)} fill="none" stroke={strong ? '#686868' : '#ccc'} strokeWidth={ring} strokeLinecap="round" strokeLinejoin="round" />
+        {/* with the black outline, everything inside it is white (no grey ring between) */}
+        {!outline && <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring / 2, size)} fill="none" stroke={strong ? '#686868' : '#ccc'} strokeWidth={ring} strokeLinecap="round" strokeLinejoin="round" />}
         {/* townList-detail (right): thin black hand-drawn line around the white circle */}
         {outline && (
           <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring * 0.75, size + 3)} fill="none" stroke="#000" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
