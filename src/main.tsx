@@ -4,6 +4,7 @@ import './index.css'
 import AdminPage from './AdminPage'
 import App from './App'
 import { setFrameMatrix } from './lib/frame'
+import { preloadAssets } from './lib/preload'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
@@ -48,4 +49,7 @@ else {
   addEventListener('orientationchange', () => setTimeout(fit, 100))
 }
 
-createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <App />}</StrictMode>)
+// the app starts once the handwriting font and every icon are ready, so screens never pop in piece by piece
+const start = () => createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <App />}</StrictMode>)
+if (admin) start()
+else preloadAssets().then(start)

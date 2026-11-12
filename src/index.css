@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
-/* Card + title handwriting from the Figma prototyping frames (Griun Myoeun Heullim, original file, unmodified). */
+/* Card + title handwriting from the Figma prototyping frames (Griun Myoeun Heullim).
+   .woff2 = the original .ttf repacked (same glyphs, half the size); preloaded in index.html, waited for in main.tsx. */
 @font-face {
   font-family: "Griun Myoeun Heullim";
-  src: url("/fonts/Griun_MyoeunHeullim-Rg.ttf") format("truetype");
+  src: url("/fonts/Griun_MyoeunHeullim-Rg.woff2") format("woff2"), url("/fonts/Griun_MyoeunHeullim-Rg.ttf") format("truetype");
   font-display: swap;
 }
 
