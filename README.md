@@ -4,7 +4,7 @@
 
 KAIST ID304 UX Design (2026 Fall) 팀 프로젝트. 배포 주소: **https://cardcapturecollect.vercel.app**
 
-(저장소 이름 `subwayseal`과 브라우저 저장 키 `subwayseal.*`는 예전 이름 "찌부씰 · Subway Seal" 때 그대로예요. 바꾸면 기존 사용자 데이터가 사라지니 그대로 둡니다.)
+(브라우저 저장 키 `subwayseal.*`와 Vercel 프로젝트 이름 `subwayseal`은 예전 이름 "찌부씰 · Subway Seal" 때 그대로예요. 저장 키를 바꾸면 기존 사용자 데이터가 사라지니 그대로 둡니다.)
 
 ## 컨셉
 
@@ -110,8 +110,8 @@ git config --global user.email "내이메일@example.com"
 
 ```bash
 cd ~/Documents
-git clone https://github.com/WooeeKim/subwayseal.git
-cd subwayseal
+git clone https://github.com/WooeeKim/cardcapturecollect.git
+cd cardcapturecollect
 ```
 
 ### 6. 의존성 설치
@@ -224,7 +224,7 @@ Supabase 대시보드 → **SQL Editor**에서 [supabase/migrations/](supabase/m
 
 ## Vercel 배포
 
-- 프로젝트: Vercel `subwayseal` (GitHub `WooeeKim/subwayseal` 연결), **Production Branch = `main`**
+- 프로젝트: Vercel `subwayseal` (GitHub `WooeeKim/cardcapturecollect` 연결), **Production Branch = `main`**
 - 주소: https://cardcapturecollect.vercel.app (예전 주소 https://subwayseal.vercel.app 도 같은 앱으로 계속 열려요)
 - main에 머지되면 자동으로 https://cardcapturecollect.vercel.app 에 배포되고, 다른 브랜치·PR은 미리보기 주소로 배포돼요
 - 환경 변수(Vercel → Settings → Environment Variables): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (시크릿 키 금지). 바꾼 뒤에는 다시 배포해야 적용돼요
