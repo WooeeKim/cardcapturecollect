@@ -254,10 +254,9 @@ export default function TownListScreen({
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[186px] bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0" />
 
       <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
-        <div className="relative isolate min-h-full" style={{ height: listHeight }}>
-          {/* the grey line every town hangs on */}
-          {/* narrower than the thumbnails (70 / 84) so the circles poke out a little on both sides; centred on them (x 66) */}
-          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: `calc(100% - 37px)` }} />
+        <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight }}>
+          {/* the grey line every town hangs on; it runs past the end and is clipped, so its bottom end never shows */}
+          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: `calc(100% - 37px + 160px)` }} />
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id
