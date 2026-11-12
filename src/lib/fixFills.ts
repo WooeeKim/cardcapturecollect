@@ -2,7 +2,7 @@ import { loadImage } from './preload'
 import type { State } from './store'
 
 // One-time data fix: cards drawn before 2026-11-12 had the fill tool painted at 35% opacity.
-// Those pixels are made solid (alpha ÷ 0.35), so walkers no longer show through each other.
+// Those pixels are made solid in the light tint they showed on the white card, so walkers no longer show through each other.
 const CUTOFF = '2026-11-12T12:40:00.000Z' // fill became solid after this deploy
 const OLD_ALPHA = 89 / 255 // 35% as stored in the PNG
 
@@ -20,7 +20,15 @@ async function solidify(src: string, force = false): Promise<string | null> {
   let fill = 0
   for (let i = 3; i < px.length; i += 4) if (px[i] >= 80 && px[i] <= 98) fill++
   if (!force && fill < (px.length / 4) * 0.005) return null
-  for (let i = 3; i < px.length; i += 4) px[i] = Math.min(255, Math.round(px[i] / OLD_ALPHA))
+  // keep the light tint it showed (color laid over the white card), but solid
+  for (let i = 0; i < px.length; i += 4) {
+    const a = px[i + 3] / 255
+    if (a === 0 || a === 1) continue
+    const solid = Math.min(1, a / OLD_ALPHA)
+    // color seen = c·a + white·(1−a); stored with the new alpha so it shows the same over white
+    for (let k = 0; k < 3; k++) px[i + k] = Math.round(255 - (255 - px[i + k]) * (a / solid))
+    px[i + 3] = Math.round(solid * 255)
+  }
   ctx.putImageData(data, 0, 0)
   return c.toDataURL('image/png')
 }
