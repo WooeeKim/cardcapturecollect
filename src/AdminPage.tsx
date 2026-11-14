@@ -3,7 +3,7 @@ import { CardView } from './components/ui'
 import { currentUser, logIn, logOut, supabase, type User } from './lib/auth'
 import type { State } from './lib/store'
 
-// Card gallery for the team: open <site>/#/admin and log in with an admin email
+// Card gallery for the team: open <site>/admin and log in with an admin email
 // (supabase/migrations/005_admin_gallery.sql). Reads every tester's saved towns + cards.
 type Row = { user_id: string; email: string | null; state: State; updated_at: string }
 
