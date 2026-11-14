@@ -15,6 +15,10 @@ import chipPanel from '../assets/proto/v2/chip-panel.svg'
 import pillFollow from '../assets/proto/v2/pill-follow.svg'
 import pillMigration from '../assets/proto/v2/pill-migration.svg'
 import { framePoint, toLocal } from '../lib/frame'
+import groundSvg from '../assets/proto/ground/ground.svg?raw'
+import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
+import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
+import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
@@ -24,14 +28,25 @@ const DETAIL_S = 2.1
 const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
 const BUZZ = [70, 50, 70] // "웅웅" while undecided
 const TAP = 8
-const SLOPE = 0.55 // ground side edges lean in by this much per px of depth (trapezoid, Figma 474:1050)
-const GROUND = '#339329'
-const GRASS = '#66d54d'
-const TUFTS = [
-  { w: 34, h: 24, d: 'M3 22 L5 7 L11 13 L17 2 L23 13 L29 7 L31 22 Z', lines: 'M17 12v7M10 17v3M24 17v3' },
-  { w: 36, h: 14, d: 'M2 12 L9 5 L13 9 L19 3 L23 8 L33 3 L29 12 Z', lines: 'M14 10l2-3M21 10l2-3' },
-  { w: 26, h: 18, d: 'M13 16 C7 13 4 8 2 4 C7 5 11 8 13 12 C15 7 19 4 24 3 C22 8 18 13 13 16 Z', lines: 'M13 15v-6' },
-]
+// ground + grass drawn in Figma (UX › 스케치 확정 › Section 2, 905:994), used as-is.
+// Figma ground box = 1109.76 × 474.39; it stretches over the world's ground area (0..W, groundTop..H).
+const GROUND_D = groundSvg.match(/ d="([^"]+)"/)![1]
+const GW = 1111.76 // ground.svg viewBox (path box + 1px stroke each side)
+const GH = 476.389
+const GROUND_TOP_INSET = 0.24 // the drawn top edge starts ~24% in from each side
+const TUFT_KIND = {
+  crown: { src: tuftCrown, w: 59.33, h: 45.21 },
+  sprout: { src: tuftSprout, w: 45.44, h: 28.78 },
+  leaf: { src: tuftLeaf, w: 63.95, h: 22.79 },
+}
+// [kind, x, y] = each tuft's top-left in the Figma section, minus the ground's top-left (477.34, 1163.08)
+const TUFTS: [keyof typeof TUFT_KIND, number, number][] = (
+  [
+    ['crown', 731, 1410], ['crown', 1322, 1458], ['crown', 1187, 1273], ['crown', 881, 1288], ['crown', 826.33, 1191], ['crown', 1124.33, 1528],
+    ['sprout', 856.44, 1501], ['sprout', 1165, 1425], ['sprout', 995.44, 1213], ['sprout', 1253, 1200], ['sprout', 623, 1550],
+    ['leaf', 930, 1453], ['leaf', 1042, 1359], ['leaf', 1154.63, 1220], ['leaf', 780.63, 1331], ['leaf', 1314.63, 1553], ['leaf', 1367.63, 1352],
+  ] as const
+).map(([k, x, y]) => [k, x - 477.34, y - 1163.08])
 
 type View = { s: number; x: number; y: number }
 type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1 }
@@ -71,7 +86,7 @@ export default function MainScreen({
   // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
   const [side, setSide] = useState<1 | -1 | 0>(0)
   const sideRef = useRef<1 | -1 | 0>(0)
-  const groundEl = useRef<SVGPolygonElement>(null)
+  const groundEl = useRef<SVGPathElement>(null)
   const hintEl = useRef<HTMLDivElement>(null)
   const target = openId ?? follow
   const targetRef = useRef(target)
@@ -102,20 +117,19 @@ export default function MainScreen({
   const W = size.w * WORLD
   const H = size.h
   const groundTop = H * SKY
-  const edge = (y: number) => SLOPE * (H - y) // world x where the ground starts at height y
+  // world x where the ground starts at height y (straight-line fit of the drawn, slightly wobbly side edge)
+  const edge = (y: number) => GROUND_TOP_INSET * W * (1 - (y - groundTop) / Math.max(1, H - groundTop))
 
-  // grass tufts: fixed per town, live in the world like residents (same depth scale + y stacking)
+  // grass tufts exactly where drawn in Figma, mapped onto the world's ground area; only their size follows distance
   const tufts = useMemo(() => {
     if (!size.w) return []
-    let h = 0
-    for (const ch of town.id) h = (h * 31 + ch.charCodeAt(0)) | 0
-    const rnd = () => ((h = (h * 1103515245 + 12345) | 0) >>> 0) / 4294967296
-    return Array.from({ length: Math.round(W / 22) }, () => {
-      const y = groundTop + 14 + rnd() * (H - groundTop - 24)
-      const x = edge(y) + 24 + rnd() * (W - 2 * edge(y) - 48)
-      return { x, y, kind: Math.floor(rnd() * TUFTS.length) }
+    const sx = W / (GW - 2)
+    const sy = (H - groundTop) / (GH - 2)
+    return TUFTS.map(([kind, fx, fy]) => {
+      const k = TUFT_KIND[kind]
+      return { kind, x: (fx + k.w / 2) * sx, y: groundTop + (fy + k.h) * sy, w: k.w * sx, h: k.h * sx }
     })
-  }, [town.id, size.w, size.h])
+  }, [size.w, size.h])
 
   // ---- camera ----
   function clamp(v: View): View {
@@ -144,14 +158,13 @@ export default function MainScreen({
     const { s, y } = view.current
     if (hintEl.current) hintEl.current.style.top = `${Math.max(130, y + groundTop * s - 64)}px`
   }
-  // ground = world-space trapezoid (sides lean in toward the horizon), projected to screen px each frame
-  // so the outline stays crisp when zoomed; pulling past an end shows that slanted edge (main-transit).
+  // ground = the Figma drawing stretched over the world's ground area, positioned in screen px each frame
+  // (stroke stays 2px and crisp at any zoom); pulling past an end shows its slanted edge (main-transit).
   function drawGround(pull: number) {
     const el = groundEl.current
     if (!el || !size.w) return
     const { s, x, y } = view.current
-    const pts = [[0, H], [edge(groundTop), groundTop], [W - edge(groundTop), groundTop], [W, H]]
-    el.setAttribute('points', pts.map(([px, py]) => `${px * s + x + pull},${py * s + y}`).join(' '))
+    el.setAttribute('transform', `translate(${x + pull} ${y + groundTop * s}) scale(${(s * W) / GW} ${(s * (H - groundTop)) / GH})`)
   }
 
   // initial camera + walkers when size / residents known
@@ -412,26 +425,19 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <polygon ref={groundEl} fill={GROUND} stroke="#000" strokeWidth={1.5} strokeLinejoin="round" />
+          <path ref={groundEl} d={GROUND_D} fill="#4BA012" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
         <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
-          {tufts.map((t, i) => {
-            const k = TUFTS[t.kind]
-            return (
-              <svg
-                key={i}
-                aria-hidden
-                viewBox={`0 0 ${k.w} ${k.h}`}
-                width={k.w}
-                height={k.h}
-                className="pointer-events-none absolute top-0 left-0 origin-bottom overflow-visible"
-                style={{ marginLeft: -k.w / 2, marginTop: -k.h, transform: `translate(${t.x}px, ${t.y}px) scale(${depth(t.y)})`, zIndex: Math.round(t.y) }}
-              >
-                <path d={k.d} fill={GRASS} stroke="#000" strokeWidth={1.2} strokeLinejoin="round" />
-                <path d={k.lines} fill="none" stroke="#000" strokeWidth={1} strokeLinecap="round" />
-              </svg>
-            )
-          })}
+          {tufts.map((t, i) => (
+            <img
+              key={i}
+              src={TUFT_KIND[t.kind].src}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute top-0 left-0 max-w-none origin-bottom"
+              style={{ width: t.w, height: t.h, marginLeft: -t.w / 2, marginTop: -t.h, transform: `translate(${t.x}px, ${t.y}px) scale(${depth(t.y)})`, zIndex: Math.round(t.y) }}
+            />
+          ))}
           {cards.map((c) => {
             const m = moodOf(c.mood)
             return (
