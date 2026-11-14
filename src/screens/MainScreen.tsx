@@ -24,6 +24,14 @@ const DETAIL_S = 2.1
 const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
 const BUZZ = [70, 50, 70] // "웅웅" while undecided
 const TAP = 8
+const SLOPE = 0.55 // ground side edges lean in by this much per px of depth (trapezoid, Figma 474:1050)
+const GROUND = '#339329'
+const GRASS = '#66d54d'
+const TUFTS = [
+  { w: 34, h: 24, d: 'M3 22 L5 7 L11 13 L17 2 L23 13 L29 7 L31 22 Z', lines: 'M17 12v7M10 17v3M24 17v3' },
+  { w: 36, h: 14, d: 'M2 12 L9 5 L13 9 L19 3 L23 8 L33 3 L29 12 Z', lines: 'M14 10l2-3M21 10l2-3' },
+  { w: 26, h: 18, d: 'M13 16 C7 13 4 8 2 4 C7 5 11 8 13 12 C15 7 19 4 24 3 C22 8 18 13 13 16 Z', lines: 'M13 15v-6' },
+]
 
 type View = { s: number; x: number; y: number }
 type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1 }
@@ -94,6 +102,20 @@ export default function MainScreen({
   const W = size.w * WORLD
   const H = size.h
   const groundTop = H * SKY
+  const edge = (y: number) => SLOPE * (H - y) // world x where the ground starts at height y
+
+  // grass tufts: fixed per town, live in the world like residents (same depth scale + y stacking)
+  const tufts = useMemo(() => {
+    if (!size.w) return []
+    let h = 0
+    for (const ch of town.id) h = (h * 31 + ch.charCodeAt(0)) | 0
+    const rnd = () => ((h = (h * 1103515245 + 12345) | 0) >>> 0) / 4294967296
+    return Array.from({ length: Math.round(W / 22) }, () => {
+      const y = groundTop + 14 + rnd() * (H - groundTop - 24)
+      const x = edge(y) + 24 + rnd() * (W - 2 * edge(y) - 48)
+      return { x, y, kind: Math.floor(rnd() * TUFTS.length) }
+    })
+  }, [town.id, size.w, size.h])
 
   // ---- camera ----
   function clamp(v: View): View {
@@ -107,7 +129,7 @@ export default function MainScreen({
   function apply(extra = 0) {
     const { s, x, y } = view.current
     if (world.current) world.current.style.transform = `translate(${x + extra}px, ${y}px) scale(${s})`
-    drawGround(y + groundTop * s, extra)
+    drawGround(extra)
     placeHint()
     const atL = x >= -0.5
     const atR = x <= size.w - W * s + 0.5
@@ -122,22 +144,14 @@ export default function MainScreen({
     const { s, y } = view.current
     if (hintEl.current) hintEl.current.style.top = `${Math.max(130, y + groundTop * s - 64)}px`
   }
-  // ground = one screen-space polygon: a rectangle, or a single trapezoid whose pulled edge tilts away (main-transit).
-  // Drawn in screen px (not scaled with the world) so the edge never splits from the ground or blurs when zoomed.
-  function drawGround(top: number, pull: number) {
+  // ground = world-space trapezoid (sides lean in toward the horizon), projected to screen px each frame
+  // so the outline stays crisp when zoomed; pulling past an end shows that slanted edge (main-transit).
+  function drawGround(pull: number) {
     const el = groundEl.current
     if (!el || !size.w) return
-    const w = size.w
-    const h = size.h
-    const g = Math.abs(pull)
-    const tilt = Math.min(h, top + g * 1.7)
-    const pts =
-      g < 0.5
-        ? [[0, h], [0, top], [w, top], [w, h]]
-        : pull > 0
-          ? [[0, h], [0, tilt], [g, top], [w, top], [w, h]]
-          : [[0, h], [0, top], [w - g, top], [w, tilt], [w, h]]
-    el.setAttribute('points', pts.map((p) => p.join(',')).join(' '))
+    const { s, x, y } = view.current
+    const pts = [[0, H], [edge(groundTop), groundTop], [W - edge(groundTop), groundTop], [W, H]]
+    el.setAttribute('points', pts.map(([px, py]) => `${px * s + x + pull},${py * s + y}`).join(' '))
   }
 
   // initial camera + walkers when size / residents known
@@ -157,11 +171,14 @@ export default function MainScreen({
   function spawn(i: number): Walker {
     const p = randomSpot()
     // spread first positions across the world so nobody stacks up
-    const x = ((i + 0.5) / Math.max(1, cards.length)) * (W - 120) + 60
+    const lo = edge(p.y) + 60
+    const x = lo + ((i + 0.5) / Math.max(1, cards.length)) * (W - 2 * lo)
     return { id: cards[i].id, x, y: p.y, tx: p.x, ty: p.y, wait: Math.random() * 2, dir: 1 }
   }
   function randomSpot() {
-    return { x: 60 + Math.random() * (W - 120), y: groundTop + 40 + Math.random() * (H - groundTop - 90) }
+    const y = groundTop + 40 + Math.random() * (H - groundTop - 90)
+    const lo = edge(y) + 60
+    return { x: lo + Math.random() * (W - 2 * lo), y }
   }
 
   // ---- simulation loop: walk, follow camera ----
@@ -395,9 +412,26 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <polygon ref={groundEl} fill={tone.ground} />
+          <polygon ref={groundEl} fill={GROUND} stroke="#000" strokeWidth={1.5} strokeLinejoin="round" />
         </svg>
-        <div ref={world} className="absolute top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
+        <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
+          {tufts.map((t, i) => {
+            const k = TUFTS[t.kind]
+            return (
+              <svg
+                key={i}
+                aria-hidden
+                viewBox={`0 0 ${k.w} ${k.h}`}
+                width={k.w}
+                height={k.h}
+                className="pointer-events-none absolute top-0 left-0 origin-bottom overflow-visible"
+                style={{ marginLeft: -k.w / 2, marginTop: -k.h, transform: `translate(${t.x}px, ${t.y}px) scale(${depth(t.y)})`, zIndex: Math.round(t.y) }}
+              >
+                <path d={k.d} fill={GRASS} stroke="#000" strokeWidth={1.2} strokeLinejoin="round" />
+                <path d={k.lines} fill="none" stroke="#000" strokeWidth={1} strokeLinecap="round" />
+              </svg>
+            )
+          })}
           {cards.map((c) => {
             const m = moodOf(c.mood)
             return (
