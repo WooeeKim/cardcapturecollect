@@ -62,7 +62,6 @@ export function answered(q: Question, a: Answer | undefined) {
 export type Result = { answers: Answers; type: TypeId; observe: number; record: number; at: string; sent: boolean }
 
 const RESULT = 'subwayseal.gilbti'
-const LATER = 'subwayseal.gilbtiLater'
 const DEVICE = 'subwayseal.device'
 
 const read = (k: string) => {
@@ -96,10 +95,6 @@ export function savedResult(): Result | null {
     return null
   }
 }
-
-// first launch shows the interview until it's done or put off with "Later"
-export const needsInterview = () => !savedResult() && !read(LATER)
-export const putOff = () => write(LATER, '1')
 
 // ---------- server ----------
 
@@ -136,6 +131,15 @@ export async function submit(answers: Answers, user: User | null): Promise<Resul
 export async function resendUnsent(user: User | null) {
   const r = savedResult()
   if (r && !r.sent && (await send(r, user))) write(RESULT, JSON.stringify({ ...r, sent: true }))
+}
+
+// Logged in on a device that has no answers yet: did this account already answer somewhere else?
+// (needs the "own answers" read policy from 008_gilbti_own_read.sql; without it the interview just asks again)
+export async function doneOnServer(user: User): Promise<boolean> {
+  if (!supabase) return false
+  const { data, error } = await supabase.from('gilbti_responses').select('id').eq('user_id', user.id).limit(1)
+  if (error) console.warn('gilbti_responses read failed (run supabase/migrations/008_gilbti_own_read.sql?)', error.message)
+  return !error && !!data?.length
 }
 
 // After login: this device's guest answers now belong to the account.
