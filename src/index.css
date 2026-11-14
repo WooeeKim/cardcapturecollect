@@ -28,6 +28,11 @@ body {
   height: 100%;
 }
 
+/* no browser pinch / double-tap zoom anywhere (inner lists still scroll); drawing handles its own fingers */
+html {
+  touch-action: pan-x pan-y;
+}
+
 body {
   margin: 0;
   overflow: hidden;

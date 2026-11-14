@@ -48,6 +48,21 @@ else {
   addEventListener('resize', fit)
   screen.orientation?.addEventListener('change', fit)
   addEventListener('orientationchange', () => setTimeout(fit, 100))
+  pinPage()
+}
+
+// The frame is position: fixed, so the page itself must never zoom or stay scrolled: on phones that leaves
+// touches landing away from what's drawn (lines appear off the finger). iOS ignores user-scalable=no, so
+// its pinch (gesture*) is cancelled here, and the scroll it leaves after the keyboard closes is undone.
+function pinPage() {
+  const stop = (e: Event) => e.preventDefault()
+  for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, stop, { passive: false })
+  const unscroll = () => {
+    if (scrollX || scrollY) scrollTo(0, 0)
+  }
+  addEventListener('scroll', unscroll)
+  addEventListener('focusout', () => setTimeout(unscroll, 50))
+  visualViewport?.addEventListener('resize', unscroll)
 }
 
 // The app name (Splash) shows right away while the handwriting font and every icon load, so the wait never
