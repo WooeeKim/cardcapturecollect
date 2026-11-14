@@ -32,6 +32,7 @@ export default function MyPageScreen({
   intro,
   onProfile,
   onBack,
+  onInterview,
   onLogin,
   onLogout,
   onDeleteAccount,
@@ -45,6 +46,7 @@ export default function MyPageScreen({
   intro: string
   onProfile: (nickname: string, intro: string) => void
   onBack: () => void
+  onInterview: () => void
   onLogin: (user: User) => void
   onLogout: () => void
   onDeleteAccount: () => Promise<string | undefined>
@@ -97,6 +99,7 @@ export default function MyPageScreen({
       onClick: toggleNotify,
       right: notify ? <img src={toggleOn} alt="" className="h-[25px] w-[48px]" /> : <span className="block h-[23px] w-[46px]"><ToggleIcon on={false} /></span>,
     },
+    { label: 'Subway-TI', onClick: onInterview },
     { label: 'Notice', onClick: () => gotIt('Notices are coming soon.') },
     { label: 'FAQ', onClick: () => gotIt('FAQ is coming soon.') },
     { label: 'Feedback', onClick: () => setSheet('feedback') },

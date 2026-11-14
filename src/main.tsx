@@ -44,8 +44,8 @@ function fit() {
   root.style.transform = m.toString()
   setFrameMatrix(m)
 }
-// <site>/#/admin = team card gallery (normal page, no phone frame)
-const admin = location.hash === '#/admin'
+// <site>/admin (or the older <site>/#/admin) = team card gallery (normal page, no phone frame)
+const admin = /^\/admin\/?$/.test(location.pathname) || location.hash === '#/admin'
 if (admin) document.documentElement.classList.add('admin')
 else {
   fit()
