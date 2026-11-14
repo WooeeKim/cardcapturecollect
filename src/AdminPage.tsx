@@ -1,14 +1,24 @@
-import { useEffect, useState } from 'react'
-import { CardView } from './components/ui'
+import { useEffect, useMemo, useState } from 'react'
+import { CardList } from './admin/CardList'
+import { flatten, type Row } from './admin/data'
+import { People } from './admin/People'
+import { Plaza } from './admin/Plaza'
+import { Stats } from './admin/Stats'
 import { currentUser, logIn, logOut, supabase, type User } from './lib/auth'
 import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
-import type { State } from './lib/store'
 
 // Team admin: open <site>/admin and log in with an email listed in app_admins
-// (supabase/migrations/005_admin_gallery.sql, 007_gilbti.sql). Two tabs:
-// - Cards: every tester's saved towns + cards (user_states)
+// (supabase/migrations/005_admin_gallery.sql, 007_gilbti.sql). Tabs (each has its own #hash):
+// - Plaza: everyone's drawings in one wall          - List: every drawing as a table (+ CSV)
+// - People: pick someone → the app as they see it (read-only, <site>/?viewAs=<id>)
+// - Stats: counts, cards per day / hour, moods, places
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
-type Row = { user_id: string; email: string | null; state: State; updated_at: string }
+type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti'
+const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti']
+const fromHash = (): { tab: Tab; person: string | null } => {
+  const [t, person] = location.hash.slice(1).split('/')
+  return (TABS as string[]).includes(t) ? { tab: t as Tab, person: (t === 'people' && person) || null } : { tab: 'plaza', person: null }
+}
 type Gil = {
   id: string
   device_id: string
@@ -28,7 +38,8 @@ const show = (a: Answers[string] | undefined) => (a === undefined || a === '' ? 
 
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [tab, setTab] = useState<'cards' | 'gilbti'>(() => (location.hash === '#gilbti' ? 'gilbti' : 'cards'))
+  const [tab, setTab] = useState<Tab>(() => fromHash().tab)
+  const [person, setPerson] = useState<string | null>(() => fromHash().person)
   const [rows, setRows] = useState<Row[] | null>(null)
   const [gil, setGil] = useState<Gil[] | null>(null)
   const [error, setError] = useState('')
@@ -58,10 +69,16 @@ export default function AdminPage() {
     })
   }, [])
 
-  const pick = (t: 'cards' | 'gilbti') => {
+  const pick = (t: Tab, who: string | null = t === 'people' ? person : null) => {
     setTab(t)
-    history.replaceState(null, '', t === 'gilbti' ? '#gilbti' : location.pathname)
+    if (t === 'people') setPerson(who)
+    history.replaceState(null, '', `#${t}${t === 'people' && who ? `/${who}` : ''}`)
+    if (t !== tab) scrollTo(0, 0)
   }
+  const viewAs = (userId: string) => pick('people', userId)
+  // admin's own empty row isn't a tester
+  const testers = useMemo(() => (rows ?? []).filter((r) => r.user_id !== user?.id || Object.keys(r.state.cards).length), [rows, user])
+  const items = useMemo(() => flatten(testers), [testers])
 
   if (!supabase) return <p className="p-8">No Supabase key: the admin reads everything from Supabase.</p>
 
@@ -85,8 +102,6 @@ export default function AdminPage() {
       </form>
     )
 
-  const testers = (rows ?? []).filter((r) => r.user_id !== user.id || Object.keys(r.state.cards).length)
-  const total = testers.reduce((n, r) => n + Object.keys(r.state.cards).length, 0)
   const notAdmin = rows && rows.length <= 1 && (gil ?? []).length === 0
 
   // one row per person (account, or device for guests): their latest answers
@@ -113,7 +128,10 @@ export default function AdminPage() {
         <nav className="flex gap-1">
           {(
             [
-              ['cards', `Cards (${testers.length})`],
+              ['plaza', `Plaza (${items.length})`],
+              ['list', 'List'],
+              ['people', `People (${testers.length})`],
+              ['stats', 'Stats'],
               ['gilbti', `Subway-TI (${latest.length})`],
             ] as const
           ).map(([id, label]) => (
@@ -132,43 +150,11 @@ export default function AdminPage() {
       </header>
       {notAdmin && <p className="mb-4 text-neutral-500">Only your own data is visible? Add your email to app_admins (see 007_gilbti.sql).</p>}
 
-      {tab === 'cards' && (
-        <>
-          <p className="mb-6 text-neutral-500">
-            {testers.length} testers · {total} cards
-          </p>
-          {error && <p className="mb-4 text-red-700">{error}</p>}
-          {testers.map((r) => (
-            <section key={r.user_id} className="mb-10">
-              <h2 className="mb-1 text-xl">
-                {r.state.nickname ? `${r.state.nickname} · ` : ''}
-                {r.email ?? r.user_id}
-              </h2>
-              <p className="mb-3 text-sm text-neutral-500">last saved {when(r.updated_at)}</p>
-              {r.state.towns.map((t) => (
-                <div key={t.id} className="mb-4">
-                  <h3 className="mb-2 text-neutral-600">
-                    {t.name} · {t.residents.length}
-                  </h3>
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
-                    {t.residents.map((id) => {
-                      const c = r.state.cards[id]
-                      return c ? (
-                        <figure key={id}>
-                          <CardView card={c} />
-                          <figcaption className="mt-1 text-xs text-neutral-500">
-                            {c.serial} · {when(c.createdAt)}
-                          </figcaption>
-                        </figure>
-                      ) : null
-                    })}
-                  </div>
-                </div>
-              ))}
-            </section>
-          ))}
-        </>
-      )}
+      {error && tab !== 'gilbti' && <p className="mb-4 text-red-700">{error}</p>}
+      {tab === 'plaza' && <Plaza items={items} onViewAs={viewAs} />}
+      {tab === 'list' && <CardList items={items} onViewAs={viewAs} />}
+      {tab === 'people' && <People rows={testers} selected={person} onSelect={viewAs} />}
+      {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} />}
 
       {tab === 'gilbti' && (
         <>
