@@ -3,11 +3,13 @@ import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
+import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { loadImage } from './lib/preload'
 import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
+import GilbtiScreen from './screens/GilbtiScreen'
 import MainScreen from './screens/MainScreen'
 import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
@@ -64,6 +66,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
   const [loginPrompt, setLoginPrompt] = useState(false)
+  // Onboarding gate: 길BTI first, then log in, then the app ('first' until both are done).
+  // 'mypage' = taken again from My Page (closable).
+  const [interview, setInterview] = useState<'first' | 'mypage' | null>(null)
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
 
@@ -73,6 +78,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const enter = useCallback(async (u: User | null) => {
     await flushRemote()
     if (!u) {
+      setInterview('first') // logged out (or the account couldn't be reached): back to the gate
       userRef.current = null
       setUser(null)
       identify(null)
@@ -113,6 +119,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     }
     if (unplaced > 0) setError(`${unplaced} card${unplaced > 1 ? 's' : ''} didn't fit in your towns.`)
     localStorage.removeItem(LEGACY_GUEST_OWNER)
+    claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
     setUser(u)
     identify(u)
@@ -132,6 +139,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     currentUser().then(async (u) => {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
+      resendUnsent(u)
+      const who = userRef.current // null if the account couldn't be reached
+      if (!who || !(savedResult() || (await doneOnServer(who)))) setInterview('first')
       // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
       await decodeAll(Object.values(s.cards).map((c) => c.image))
       setReady(true)
@@ -189,7 +199,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setRoute({ name: 'main', townId, enter, focus })
   }
 
-  useEffect(() => trackScreen(route.name), [route.name])
+  useEffect(() => trackScreen(interview ? 'gilbti' : route.name), [route.name, interview])
 
   // pending card vanished (e.g. storage reset) → go home
   const lost = (route.name === 'tada' || route.name === 'send') && !state.pending
@@ -311,6 +321,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           intro={state.intro ?? ''}
           onProfile={(nickname, intro) => commit((s) => ({ ...s, nickname: nickname || undefined, intro: intro || undefined }))}
           onBack={() => goMain(existing(homeId))}
+          onInterview={() => setInterview('mypage')}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
             await logOut()
@@ -344,7 +355,25 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   return (
     <>
-      {ready && screen}
+      {ready &&
+        (interview ? (
+          <GilbtiScreen
+            user={user}
+            saved={interview === 'first' ? savedResult() : null}
+            onClose={interview === 'mypage' ? () => setInterview(null) : undefined}
+            onDone={(r) => {
+              // the nickname from the interview, unless the town already has one
+              const name = typeof r.answers.name === 'string' ? r.answers.name.trim() : ''
+              if (name) commit((s) => (s.nickname ? s : { ...s, nickname: name }))
+              setInterview(userRef.current ? null : 'first') // the login didn't stick (account unreachable): stay at the gate
+            }}
+            onLogin={async (u) => {
+              await enter(u)
+            }}
+          />
+        ) : (
+          screen
+        ))}
       {loginPrompt && (
         <LoginSheet
           prompt

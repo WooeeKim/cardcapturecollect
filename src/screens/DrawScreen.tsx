@@ -134,7 +134,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const g = TOOLS[tool]
 
   return (
-    <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
+    <div className="relative h-full touch-none overflow-hidden bg-[#f0f0f0] font-hand">
       {/* card-sized paper: two fingers zoom, tilt and move the whole card (it can go past the screen) */}
       <div className="absolute top-[145px] left-[21px] h-[515px] w-[360px] transition-transform duration-300" style={tab === 'draw' ? shrink(515) : undefined}>
         <DrawingCanvas
