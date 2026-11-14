@@ -2,11 +2,31 @@ import { useEffect, useMemo, useState } from 'react'
 import { CardView } from '../components/ui'
 import { moodOf } from '../lib/moods'
 import { when, who, type Item } from './data'
+import { PlazaTown } from './PlazaTown'
 
-// 광장: everyone's drawings in one wall, newest first. Filter by mood or person; click to open.
+const VIEW_KEY = 'subwayseal.admin.plazaView'
+const savedView = (): 'cards' | 'town' => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'town' ? 'town' : 'cards'
+  } catch {
+    return 'cards'
+  }
+}
+
+// 광장: everyone's drawings, as a card wall (newest first) or as one town where they all walk around.
+// Filter by mood; click a card or a walker to open it.
 export function Plaza({ items, onViewAs }: { items: Item[]; onViewAs: (userId: string) => void }) {
   const [mood, setMood] = useState('')
   const [plain, setPlain] = useState(true)
+  const [view, setView] = useState(savedView)
+  const pickView = (v: 'cards' | 'town') => {
+    setView(v)
+    try {
+      localStorage.setItem(VIEW_KEY, v)
+    } catch {
+      /* private mode */
+    }
+  }
   const [open, setOpen] = useState<Item | null>(null)
   const moods = useMemo(() => [...new Set(items.map((i) => i.card.mood).filter(Boolean))].sort(), [items])
   const shown = mood ? items.filter((i) => i.card.mood === mood) : items
@@ -24,38 +44,68 @@ export function Plaza({ items, onViewAs }: { items: Item[]; onViewAs: (userId: s
           All {items.length}
         </button>
         {moods.map((m) => (
-          <button key={m} onClick={() => setMood(m === mood ? '' : m)} className={`flex items-center gap-1.5 rounded-full px-3 py-1 ${mood === m ? 'bg-black text-white' : 'bg-neutral-100'}`}>
+          <button
+            key={m}
+            onClick={() => setMood(m === mood ? '' : m)}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 ${mood === m ? 'bg-black text-white' : 'bg-neutral-100'}`}
+          >
             <span className="size-2.5 rounded-full" style={{ background: moodOf(m).color }} />
             {m} {items.filter((i) => i.card.mood === m).length}
           </button>
         ))}
         <span className="flex-1" />
-        <label className="flex items-center gap-2 text-neutral-600">
-          <input type="checkbox" checked={plain} onChange={(e) => setPlain(e.target.checked)} />
-          Drawings only
-        </label>
+        {view === 'cards' && (
+          <label className="flex items-center gap-2 text-neutral-600">
+            <input type="checkbox" checked={plain} onChange={(e) => setPlain(e.target.checked)} />
+            Drawings only
+          </label>
+        )}
+        <div className="flex rounded-full bg-neutral-100 p-0.5" role="group" aria-label="Plaza view">
+          {(
+            [
+              ['cards', 'Cards'],
+              ['town', 'Town'],
+            ] as const
+          ).map(([v, label]) => (
+            <button
+              key={v}
+              onClick={() => pickView(v)}
+              aria-pressed={view === v}
+              className={`rounded-full px-3 py-1 ${view === v ? 'bg-white shadow-sm' : 'text-neutral-500'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
-        {shown.map((i) => (
-          <button key={`${i.owner.user_id}:${i.card.id}`} onClick={() => setOpen(i)} className="group text-left">
-            <div className={`rounded-[10px] ring-1 ring-neutral-200 transition group-hover:ring-2 group-hover:ring-black ${i.pending ? 'opacity-60' : ''}`}>
-              <div className="pointer-events-none">
-                <CardView card={i.card} plain={plain} />
+      {view === 'town' && <PlazaTown items={shown} onOpen={setOpen} />}
+
+      {view === 'cards' && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+          {shown.map((i) => (
+            <button key={`${i.owner.user_id}:${i.card.id}`} onClick={() => setOpen(i)} className="group text-left">
+              <div className={`rounded-[10px] ring-1 ring-neutral-200 transition group-hover:ring-2 group-hover:ring-black ${i.pending ? 'opacity-60' : ''}`}>
+                <div className="pointer-events-none">
+                  <CardView card={i.card} plain={plain} />
+                </div>
               </div>
-            </div>
-            <p className="mt-1 truncate text-xs text-neutral-500">
-              {who(i.owner)}
-              {i.pending ? ' · not sent yet' : ''}
-            </p>
-          </button>
-        ))}
-      </div>
-      {shown.length === 0 && <p className="text-neutral-500">No drawings yet.</p>}
+              <p className="mt-1 truncate text-xs text-neutral-500">
+                {who(i.owner)}
+                {i.pending ? ' · not sent yet' : ''}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+      {view === 'cards' && shown.length === 0 && <p className="text-neutral-500">No drawings yet.</p>}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setOpen(null)}>
-          <div className="flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-auto rounded-2xl bg-white p-5 sm:flex-row" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-auto rounded-2xl bg-white p-5 sm:flex-row"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="w-full shrink-0 sm:w-[280px]">
               <CardView card={open.card} />
             </div>
