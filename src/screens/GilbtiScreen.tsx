@@ -5,8 +5,10 @@ import { PillBack, PillFinish } from '../components/v2'
 import type { User } from '../lib/auth'
 import { QUESTIONS, TYPES, answered, submit, type Answer, type Answers, type Result, type TypeId } from '../lib/gilbti'
 
-// 길BTI (Subway-TI) pre-interview: intro → one question per page → result (the 2×2 persona).
-// Shown on first launch (before the town) and from My Page. Monotone, hand-drawn like the rest of the app.
+// 길BTI (Subway-TI) pre-interview: intro → one question per page → result (the 2×2 persona) → log in.
+// Onboarding gate: nobody gets into the app without answering and logging in (email), so every tester's
+// answers are tied to an account. Also opened from My Page to answer again (then closable).
+// Monotone, hand-drawn like the rest of the app.
 
 const field = 'w-full rounded-[8px] border-[2px] border-dashed border-[#555] bg-white px-[12px] text-[20px] outline-none placeholder:text-[#9a9a9a]'
 
@@ -49,23 +51,23 @@ export function TypeGrid({ type }: { type: TypeId }) {
 
 export default function GilbtiScreen({
   user,
-  later,
+  saved,
   onDone,
-  onLater,
+  onClose,
   onLogin,
 }: {
   user: User | null
-  later: string // "Later" on first launch, "Close" from My Page
+  saved: Result | null // answered already on this device (only logging in is left)
   onDone: (r: Result) => void
-  onLater: () => void
-  onLogin: (u: User) => void
+  onClose?: () => void // only from My Page; the onboarding gate can't be skipped
+  onLogin: (u: User) => Promise<void>
 }) {
-  const [step, setStep] = useState(-1) // -1 intro, 0..n-1 questions, n result
+  const n = QUESTIONS.length
+  const [step, setStep] = useState(saved ? n : -1) // -1 intro, 0..n-1 questions, n result (+ log in)
   const [answers, setAnswers] = useState<Answers>({})
-  const [result, setResult] = useState<Result | null>(null)
+  const [result, setResult] = useState<Result | null>(saved)
   const [busy, setBusy] = useState(false)
   const [login, setLogin] = useState(false)
-  const n = QUESTIONS.length
 
   const set = (id: string, a: Answer) => setAnswers((s) => ({ ...s, [id]: a }))
 
@@ -95,9 +97,11 @@ export default function GilbtiScreen({
         <Bottom>
           <div className="absolute top-[730px] inset-x-0 flex flex-col items-center gap-[22px]">
             <Pill label="Start" onClick={() => setStep(0)} />
-            <TextButton dim className="text-[19px]" onClick={onLater}>
-              {later}
-            </TextButton>
+            {onClose && (
+              <TextButton dim className="text-[19px]" onClick={onClose}>
+                Close
+              </TextButton>
+            )}
           </div>
         </Bottom>
       </div>
@@ -114,14 +118,20 @@ export default function GilbtiScreen({
           <div className="mt-[28px]">
             <TypeGrid type={result.type} />
           </div>
-          {!user && <p className="mt-[24px] text-[16px] leading-[1.35] text-[#8a8a8a]">Log in so your answers stay with your account and cards.</p>}
+          {!user && (
+            <p className="mt-[26px] text-[19px] leading-[1.35] text-[#3d3d3d]">
+              Last step: log in or sign up with your email.
+              <br />
+              <span className="text-[16px] text-[#8a8a8a]">Your answers, towns and cards stay with your account.</span>
+            </p>
+          )}
         </div>
         <Bottom>
           <div className="absolute top-[730px] inset-x-0 flex flex-col items-center gap-[22px]">
-            <Pill label="Let's go" onClick={() => onDone(result)} />
-            {!user && (
-              <TextButton dim className="text-[19px]" onClick={() => setLogin(true)}>
-                Log in/Sign up
+            {user ? <Pill label="Let's go" onClick={() => onDone(result)} /> : <Pill label="Log in" onClick={() => setLogin(true)} />}
+            {!user && saved && (
+              <TextButton dim className="text-[19px]" onClick={() => setStep(-1)}>
+                Answer again
               </TextButton>
             )}
           </div>
@@ -129,10 +139,10 @@ export default function GilbtiScreen({
         {login && (
           <LoginSheet
             onClose={() => setLogin(false)}
-            onDone={(u) => {
+            onDone={async (u) => {
               setLogin(false)
-              onDone(result) // nickname lands in the guest town first, then joins the account
-              onLogin(u)
+              await onLogin(u) // guest town + these answers join the account
+              onDone(result)
             }}
           />
         )}

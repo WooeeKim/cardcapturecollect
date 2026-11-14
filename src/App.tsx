@@ -3,7 +3,7 @@ import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
-import { claim, needsInterview, putOff, resendUnsent } from './lib/gilbti'
+import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { loadImage } from './lib/preload'
 import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
@@ -66,8 +66,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
   const [loginPrompt, setLoginPrompt] = useState(false)
-  // 길BTI pre-interview: on first launch (until done or put off), or opened again from My Page
-  const [interview, setInterview] = useState<'first' | 'mypage' | null>(() => (needsInterview() ? 'first' : null))
+  // Onboarding gate: 길BTI first, then log in, then the app ('first' until both are done).
+  // 'mypage' = taken again from My Page (closable).
+  const [interview, setInterview] = useState<'first' | 'mypage' | null>(null)
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
 
@@ -77,6 +78,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const enter = useCallback(async (u: User | null) => {
     await flushRemote()
     if (!u) {
+      setInterview('first') // logged out (or the account couldn't be reached): back to the gate
       userRef.current = null
       setUser(null)
       identify(null)
@@ -138,6 +140,8 @@ export default function App({ onReady }: { onReady?: () => void }) {
     currentUser().then(async (u) => {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
       resendUnsent(u)
+      const who = userRef.current // null if the account couldn't be reached
+      if (!who || !(savedResult() || (await doneOnServer(who)))) setInterview('first')
       // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
       await decodeAll(Object.values(s.cards).map((c) => c.image))
       setReady(true)
@@ -355,17 +359,17 @@ export default function App({ onReady }: { onReady?: () => void }) {
         (interview ? (
           <GilbtiScreen
             user={user}
-            later={interview === 'first' ? 'Later' : 'Close'}
-            onLater={() => {
-              if (interview === 'first') putOff()
-              setInterview(null)
-            }}
+            saved={interview === 'first' ? savedResult() : null}
+            onClose={interview === 'mypage' ? () => setInterview(null) : undefined}
             onDone={(r) => {
+              // the nickname from the interview, unless the town already has one
               const name = typeof r.answers.name === 'string' ? r.answers.name.trim() : ''
-              if (name && !state.nickname) commit((s) => ({ ...s, nickname: name }))
-              setInterview(null)
+              if (name) commit((s) => (s.nickname ? s : { ...s, nickname: name }))
+              setInterview(userRef.current ? null : 'first') // the login didn't stick (account unreachable): stay at the gate
             }}
-            onLogin={(u) => enter(u)}
+            onLogin={async (u) => {
+              await enter(u)
+            }}
           />
         ) : (
           screen
