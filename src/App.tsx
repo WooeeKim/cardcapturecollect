@@ -3,11 +3,13 @@ import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
 import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
+import { claim, needsInterview, putOff, resendUnsent } from './lib/gilbti'
 import { loadImage } from './lib/preload'
 import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
+import GilbtiScreen from './screens/GilbtiScreen'
 import MainScreen from './screens/MainScreen'
 import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
@@ -64,6 +66,8 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
   const [loginPrompt, setLoginPrompt] = useState(false)
+  // 길BTI pre-interview: on first launch (until done or put off), or opened again from My Page
+  const [interview, setInterview] = useState<'first' | 'mypage' | null>(() => (needsInterview() ? 'first' : null))
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
 
@@ -113,6 +117,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     }
     if (unplaced > 0) setError(`${unplaced} card${unplaced > 1 ? 's' : ''} didn't fit in your towns.`)
     localStorage.removeItem(LEGACY_GUEST_OWNER)
+    claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
     setUser(u)
     identify(u)
@@ -132,6 +137,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     currentUser().then(async (u) => {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
+      resendUnsent(u)
       // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
       await decodeAll(Object.values(s.cards).map((c) => c.image))
       setReady(true)
@@ -189,7 +195,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setRoute({ name: 'main', townId, enter, focus })
   }
 
-  useEffect(() => trackScreen(route.name), [route.name])
+  useEffect(() => trackScreen(interview ? 'gilbti' : route.name), [route.name, interview])
 
   // pending card vanished (e.g. storage reset) → go home
   const lost = (route.name === 'tada' || route.name === 'send') && !state.pending
@@ -311,6 +317,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           intro={state.intro ?? ''}
           onProfile={(nickname, intro) => commit((s) => ({ ...s, nickname: nickname || undefined, intro: intro || undefined }))}
           onBack={() => goMain(existing(homeId))}
+          onInterview={() => setInterview('mypage')}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
             await logOut()
@@ -344,7 +351,25 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   return (
     <>
-      {ready && screen}
+      {ready &&
+        (interview ? (
+          <GilbtiScreen
+            user={user}
+            later={interview === 'first' ? 'Later' : 'Close'}
+            onLater={() => {
+              if (interview === 'first') putOff()
+              setInterview(null)
+            }}
+            onDone={(r) => {
+              const name = typeof r.answers.name === 'string' ? r.answers.name.trim() : ''
+              if (name && !state.nickname) commit((s) => ({ ...s, nickname: name }))
+              setInterview(null)
+            }}
+            onLogin={(u) => enter(u)}
+          />
+        ) : (
+          screen
+        ))}
       {loginPrompt && (
         <LoginSheet
           prompt
