@@ -61,12 +61,30 @@ else {
 function pinPage() {
   const stop = (e: Event) => e.preventDefault()
   for (const t of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(t, stop, { passive: false })
+  const vv = window.visualViewport
+  const typing = () => document.activeElement?.matches('input, textarea, [contenteditable]') ?? false
+  // Home-screen (standalone) iOS can keep the visual viewport shifted after the keyboard closes even with
+  // scrollY = 0, so the offset is checked there too (not while typing: then the shift is the keyboard's).
   const unscroll = () => {
-    if (scrollX || scrollY) scrollTo(0, 0)
+    const shifted = !!vv && !typing() && vv.scale < 1.01 && (vv.offsetTop !== 0 || vv.offsetLeft !== 0)
+    if (scrollX || scrollY || shifted) scrollTo(0, 0)
   }
   addEventListener('scroll', unscroll)
   addEventListener('focusout', () => setTimeout(unscroll, 50))
-  visualViewport?.addEventListener('resize', unscroll)
+  vv?.addEventListener('resize', unscroll)
+  vv?.addEventListener('scroll', unscroll)
+
+  // Standalone launch / coming back from the background can report the viewport size late, without a window
+  // resize: re-fit then too (and once shortly after start), so the frame always matches the real screen.
+  const refit = () => {
+    fit()
+    unscroll()
+  }
+  vv?.addEventListener('resize', refit)
+  addEventListener('pageshow', refit)
+  addEventListener('focusout', () => setTimeout(refit, 300))
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && setTimeout(refit, 50))
+  setTimeout(refit, 500)
 }
 
 // The app name (Splash) shows right away while the handwriting font and every icon load, so the wait never
