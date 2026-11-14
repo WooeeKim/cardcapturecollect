@@ -17,7 +17,11 @@ const TOP = 40
 function fit() {
   const root = document.getElementById('root')!
   const html = document.documentElement
-  const phone = matchMedia('(pointer: coarse)').matches
+  // phones with a stylus can report a "fine" main pointer; a small touch screen is still a phone (full width)
+  const phone =
+    matchMedia('(pointer: coarse)').matches || (matchMedia('(any-pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 600)
+  // layout-viewport width: unlike innerWidth (iOS), it doesn't change if the page ever gets zoomed
+  const innerWidth = html.clientWidth || window.innerWidth
   const raw = screen.orientation?.angle ?? Number((window as { orientation?: number }).orientation ?? 0)
   const angle = ((raw % 360) + 360) % 360
   const sideways = phone && (angle === 90 || angle === 270)
