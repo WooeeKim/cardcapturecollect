@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CardList } from './admin/CardList'
-import { cardSessions, flatten, loadEvents, type CardSession, type Row } from './admin/data'
+import { cardSessions, feedbacks, flatten, loadEvents, type CardSession, type Feedback, type Row } from './admin/data'
 import { People } from './admin/People'
 import { Plaza } from './admin/Plaza'
 import { Stats } from './admin/Stats'
@@ -11,7 +11,7 @@ import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
 // (supabase/migrations/005_admin_gallery.sql, 007_gilbti.sql). Tabs (each has its own #hash):
 // - Plaza: everyone's drawings in one wall          - List: every drawing as a table (+ CSV)
 // - People: pick someone → the app as they see it (read-only, <site>/?viewAs=<id>)
-// - Stats: counts, cards per day / hour, moods, places, time on Drawing vs Memo (app_events)
+// - Stats: counts, cards per day / hour, moods, places, time on Drawing vs Memo, feedback (app_events)
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
 type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti'
 const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti']
@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [gilError, setGilError] = useState('')
   const [sessions, setSessions] = useState<CardSession[] | null>(null)
   const [eventsError, setEventsError] = useState('')
+  const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
   const [allAnswers, setAllAnswers] = useState(false)
@@ -60,6 +61,7 @@ export default function AdminPage() {
     ])
     setEventsError(events.error)
     setSessions(cardSessions(events.data))
+    setFeedback(feedbacks(events.data))
     if (cards.error) setError(cards.error.message)
     else setRows(cards.data as Row[])
     if (answers.error) setGilError(`${answers.error.message} — run supabase/migrations/007_gilbti.sql`)
@@ -159,7 +161,7 @@ export default function AdminPage() {
       {tab === 'plaza' && <Plaza items={items} onViewAs={viewAs} />}
       {tab === 'list' && <CardList items={items} onViewAs={viewAs} />}
       {tab === 'people' && <People rows={testers} selected={person} onSelect={viewAs} />}
-      {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} sessions={sessions} eventsError={eventsError} />}
+      {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} sessions={sessions} feedback={feedback} eventsError={eventsError} />}
 
       {tab === 'gilbti' && (
         <>

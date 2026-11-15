@@ -232,7 +232,7 @@ Supabase 대시보드 → **SQL Editor**에서 [supabase/migrations/](supabase/m
 - 앱 이벤트를 Supabase 테이블 `app_events`에 한 줄씩 저장 (이벤트 이름 + 기기 시각 + 계정/기기 id). 팀 어드민만 읽음
 - 그리기 화면 한 번 방문 = 한 세션. 상태가 바뀔 때마다 기록: `draw` / `memo` / `confirm`(최종 확인) / `hidden`(앱 백그라운드) → 끝은 `finish`(저장) 또는 `exit`(저장 안 하고 나감)
 - 어드민 → Stats → **Time on the card screen**: Drawing·Memo 체류시간 중앙값/평균, 세션별 표, CSV. 각 상태는 다음 이벤트까지의 시간, `confirm`·`hidden` 시간은 빠짐
-- 피드백(마이페이지 → Feedback)도 `feedback` 이벤트(`data.text`)로 저장
+- 피드백(마이페이지 → Feedback)도 `feedback` 이벤트(`data.text`)로 저장 → 어드민 Stats → **Feedback**에서 최신순으로 보기
 - Supabase 키가 없거나 어드민 "view as" 모드면 보내지 않음
 
 **설정 (한 번):** Supabase SQL Editor에서 `supabase/migrations/009_app_events.sql` 실행

@@ -38,6 +38,15 @@ export async function loadEvents(sb: SupabaseClient): Promise<{ data: Ev[]; erro
   }
 }
 
+// feedback sent from My page → Feedback, newest first
+export type Feedback = { at: string; who: string; text: string }
+const whoEv = (e: Ev) => e.email ?? `guest ${e.device_id.slice(0, 6)}`
+export const feedbacks = (events: Ev[]): Feedback[] =>
+  events
+    .filter((e) => e.event === 'feedback' && typeof e.data?.text === 'string')
+    .map((e) => ({ at: e.at, who: whoEv(e), text: e.data!.text as string }))
+    .reverse()
+
 // One visit to the drawing screen. Each state event lasts until the next event of the session;
 // 'hidden' (app in background) and 'confirm' (final check) count toward neither tab.
 export type CardSession = { id: string; who: string; start: string; draw: number; memo: number; result: 'finish' | 'exit' | 'open' }
@@ -48,7 +57,7 @@ export function cardSessions(events: Ev[]): CardSession[] {
   for (const e of events) if (e.session_id !== '-' && (STATES.has(e.event) || e.event === 'finish' || e.event === 'exit')) by.set(e.session_id, [...(by.get(e.session_id) ?? []), e])
   const out: CardSession[] = []
   for (const [id, evs] of by) {
-    const s: CardSession = { id, who: evs[0].email ?? `guest ${evs[0].device_id.slice(0, 6)}`, start: evs[0].at, draw: 0, memo: 0, result: 'open' }
+    const s: CardSession = { id, who: whoEv(evs[0]), start: evs[0].at, draw: 0, memo: 0, result: 'open' }
     evs.forEach((e, i) => {
       const next = evs[i + 1]
       if (next && (e.event === 'draw' || e.event === 'memo')) s[e.event] += (Date.parse(next.at) - Date.parse(e.at)) / 1000

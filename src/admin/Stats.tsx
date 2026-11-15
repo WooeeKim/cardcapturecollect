@@ -1,12 +1,26 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { moodOf } from '../lib/moods'
-import { cardCount, dayKey, when, who, type CardSession, type Item, type Row } from './data'
+import { cardCount, dayKey, when, who, type CardSession, type Feedback, type Item, type Row } from './data'
 
 const INK = '#3d5a80' // single hue for every magnitude bar
 
 // 통계: how much people draw, when, with which moods / places, and how complete their cards are.
 // Only accounts are counted: guest towns live on their own device and never reach the server.
-export function Stats({ rows, items, gilCount, sessions, eventsError }: { rows: Row[]; items: Item[]; gilCount: number | null; sessions: CardSession[] | null; eventsError: string }) {
+export function Stats({
+  rows,
+  items,
+  gilCount,
+  sessions,
+  feedback,
+  eventsError,
+}: {
+  rows: Row[]
+  items: Item[]
+  gilCount: number | null
+  sessions: CardSession[] | null
+  feedback: Feedback[] | null
+  eventsError: string
+}) {
   const [range, setRange] = useState<14 | 30 | 90>(30)
   const s = useMemo(() => {
     const now = new Date()
@@ -105,6 +119,25 @@ export function Stats({ rows, items, gilCount, sessions, eventsError }: { rows: 
       </div>
 
       <TimePanel sessions={sessions} error={eventsError} />
+
+      {feedback && (
+        <Panel title={`Feedback (${feedback.length})`}>
+          {feedback.length ? (
+            <ul className="flex max-h-96 flex-col gap-2 overflow-auto">
+              {feedback.map((f, i) => (
+                <li key={i} className="rounded-xl bg-neutral-50 p-3 text-sm">
+                  <div className="mb-1 text-xs text-neutral-500">
+                    {when(f.at)} · {f.who}
+                  </div>
+                  <p className="whitespace-pre-wrap text-neutral-800">{f.text}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty />
+          )}
+        </Panel>
+      )}
 
       <Panel title="How complete are cards (% of cards with each field)">
         <Bars rows={s.filled.map(([k, p]) => ({ label: k, n: p }))} total={100} unit="%" />
