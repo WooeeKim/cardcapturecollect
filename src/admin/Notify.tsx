@@ -86,6 +86,9 @@ export function Notify({ rows }: { rows: Row[] }) {
             Refresh
           </button>
         </div>
+        {!import.meta.env.VITE_VAPID_PUBLIC_KEY && (
+          <p className="mb-2 text-red-700">Push is off: VITE_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY are not set in Vercel → Settings → Environment Variables (then redeploy). Until then no phone can subscribe.</p>
+        )}
         {error && <p className="mb-2 text-red-700">{error}</p>}
         <table className="w-full text-left text-sm">
           <thead className="text-neutral-500">
