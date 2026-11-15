@@ -140,13 +140,16 @@ export async function resendUnsent(user: User | null) {
   if (who !== undefined && (await send(r, who))) write(RESULT, JSON.stringify({ ...r, sent: true }))
 }
 
-// Logged in on a device that has no answers yet: did this account already answer somewhere else?
-// (needs the "own answers" read policy from 008_gilbti_own_read.sql; without it the interview just asks again)
-export async function doneOnServer(user: User): Promise<boolean> {
-  if (!supabase) return false
-  const { data, error } = await supabase.from('gilbti_responses').select('id').eq('user_id', user.id).limit(1)
-  if (error) console.warn('gilbti_responses read failed (run supabase/migrations/008_gilbti_own_read.sql?)', error.message)
-  return !error && !!data?.length
+// Has this account answered? The server decides, so it's the same on every device and for every account
+// sharing one. Only when the server can't answer (none configured, offline, 008_gilbti_own_read.sql not run)
+// does this device's copy for the same account decide.
+export async function answeredByAccount(user: User): Promise<boolean> {
+  if (supabase) {
+    const { data, error } = await supabase.from('gilbti_responses').select('id').eq('user_id', user.id).limit(1)
+    if (!error) return !!data?.length
+    console.warn('gilbti_responses read failed (run supabase/migrations/008_gilbti_own_read.sql?)', error.message)
+  }
+  return !!savedResult(user)
 }
 
 // After login: this device's guest answers now belong to the account.

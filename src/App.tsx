@@ -4,7 +4,7 @@ import NotifyPrompt from './components/NotifyPrompt'
 import { syncPush } from './lib/push'
 import { PhoneChrome, Popup } from './components/ui'
 import { fillInsideImage } from './lib/fillInside'
-import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
+import { answeredByAccount, claim, resendUnsent } from './lib/gilbti'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
 import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
@@ -141,7 +141,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     const u = userRef.current
     if (!u) return setGate('login')
     if (!s.nickname) return setGate('nickname')
-    if (!(savedResult(u) || (await doneOnServer(u)))) return setGate('gilbti')
+    if (!(await answeredByAccount(u))) return setGate('gilbti')
     setGate(null)
     if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
   }, [])
