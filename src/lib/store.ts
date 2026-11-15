@@ -30,6 +30,7 @@ export type State = {
   seq: { day: string; n: number } // serial counter for the day
   nickname?: string // name shown in the app (separate from the login email)
   intro?: string // short self-introduction on My Page
+  profile?: string // card id used as the profile picture (the "draw yourself" card from onboarding; changeable on My Page)
   insideFilled3?: boolean // one-time: old drawings got their unpainted insides filled white (App.tsx)
 }
 
@@ -184,7 +185,7 @@ export function mergeGuest(account: State, guest: State): { state: State; unplac
   const day = account.seq.day >= guest.seq.day ? account.seq.day : guest.seq.day
   const seq = { day, n: Math.max(top.get(day) ?? 0, account.seq.day === day ? account.seq.n : 0, guest.seq.day === day ? guest.seq.n : 0) }
 
-  let state: State = { towns, cards, pending, seq, nickname: account.nickname || guest.nickname, intro: account.intro || guest.intro }
+  let state: State = { towns, cards, pending, seq, nickname: account.nickname || guest.nickname, intro: account.intro || guest.intro, profile: account.profile || guest.profile }
   let unplaced = 0
   for (const id of homeless) {
     const room = state.towns.find((t) => t.residents.length < MAX_RESIDENTS)
@@ -192,6 +193,12 @@ export function mergeGuest(account: State, guest: State): { state: State; unplac
     else unplaced++
   }
   return { state, unplaced }
+}
+
+// profile picture: the chosen card, or the first card ever made if it's gone / never chosen
+export function profileCard(state: State): Card | null {
+  const cards = Object.values(state.cards)
+  return state.cards[state.profile ?? ''] ?? cards.reduce<Card | null>((m, c) => (!m || c.createdAt < m.createdAt ? c : m), null)
 }
 
 export function townOf(state: State, cardId: string) {

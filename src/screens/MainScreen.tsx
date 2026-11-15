@@ -15,6 +15,11 @@ import chipPanel from '../assets/proto/v2/chip-panel.svg'
 import pillFollow from '../assets/proto/v2/pill-follow.svg'
 import pillMigration from '../assets/proto/v2/pill-migration.svg'
 import { framePoint, toLocal } from '../lib/frame'
+import groundSvg from '../assets/proto/ground/ground.svg?raw'
+import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
+import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
+import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
+import { townName, tr } from '../lib/i18n'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
@@ -24,6 +29,25 @@ const DETAIL_S = 2.1
 const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
 const BUZZ = [70, 50, 70] // "웅웅" while undecided
 const TAP = 8
+// ground + grass drawn in Figma (UX › 스케치 확정 › Section 2, 905:994), used as-is.
+// Figma ground box = 1109.76 × 474.39; it stretches over the world's ground area (0..W, groundTop..H).
+const GROUND_D = groundSvg.match(/ d="([^"]+)"/)![1]
+const GW = 1111.76 // ground.svg viewBox (path box + 1px stroke each side)
+const GH = 476.389
+const GROUND_TOP_INSET = 0.24 // the drawn top edge starts ~24% in from each side
+const TUFT_KIND = {
+  crown: { src: tuftCrown, w: 59.33, h: 45.21 },
+  sprout: { src: tuftSprout, w: 45.44, h: 28.78 },
+  leaf: { src: tuftLeaf, w: 63.95, h: 22.79 },
+}
+// [kind, x, y] = each tuft's top-left in the Figma section, minus the ground's top-left (477.34, 1163.08)
+const TUFTS: [keyof typeof TUFT_KIND, number, number][] = (
+  [
+    ['crown', 731, 1410], ['crown', 1322, 1458], ['crown', 1187, 1273], ['crown', 881, 1288], ['crown', 826.33, 1191], ['crown', 1124.33, 1528],
+    ['sprout', 856.44, 1501], ['sprout', 1165, 1425], ['sprout', 995.44, 1213], ['sprout', 1253, 1200], ['sprout', 623, 1550],
+    ['leaf', 930, 1453], ['leaf', 1042, 1359], ['leaf', 1154.63, 1220], ['leaf', 780.63, 1331], ['leaf', 1314.63, 1553], ['leaf', 1367.63, 1352],
+  ] as const
+).map(([k, x, y]) => [k, x - 477.34, y - 1163.08])
 
 type View = { s: number; x: number; y: number }
 type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1 }
@@ -63,7 +87,7 @@ export default function MainScreen({
   // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
   const [side, setSide] = useState<1 | -1 | 0>(0)
   const sideRef = useRef<1 | -1 | 0>(0)
-  const groundEl = useRef<SVGPolygonElement>(null)
+  const groundEl = useRef<SVGPathElement>(null)
   const hintEl = useRef<HTMLDivElement>(null)
   const target = openId ?? follow
   const targetRef = useRef(target)
@@ -94,6 +118,19 @@ export default function MainScreen({
   const W = size.w * WORLD
   const H = size.h
   const groundTop = H * SKY
+  // world x where the ground starts at height y (straight-line fit of the drawn, slightly wobbly side edge)
+  const edge = (y: number) => GROUND_TOP_INSET * W * (1 - (y - groundTop) / Math.max(1, H - groundTop))
+
+  // grass tufts exactly where drawn in Figma, mapped onto the world's ground area; only their size follows distance
+  const tufts = useMemo(() => {
+    if (!size.w) return []
+    const sx = W / (GW - 2)
+    const sy = (H - groundTop) / (GH - 2)
+    return TUFTS.map(([kind, fx, fy]) => {
+      const k = TUFT_KIND[kind]
+      return { kind, x: (fx + k.w / 2) * sx, y: groundTop + (fy + k.h) * sy, w: k.w * sx, h: k.h * sx }
+    })
+  }, [size.w, size.h])
 
   // ---- camera ----
   function clamp(v: View): View {
@@ -107,7 +144,7 @@ export default function MainScreen({
   function apply(extra = 0) {
     const { s, x, y } = view.current
     if (world.current) world.current.style.transform = `translate(${x + extra}px, ${y}px) scale(${s})`
-    drawGround(y + groundTop * s, extra)
+    drawGround(extra)
     placeHint()
     const atL = x >= -0.5
     const atR = x <= size.w - W * s + 0.5
@@ -122,22 +159,13 @@ export default function MainScreen({
     const { s, y } = view.current
     if (hintEl.current) hintEl.current.style.top = `${Math.max(130, y + groundTop * s - 64)}px`
   }
-  // ground = one screen-space polygon: a rectangle, or a single trapezoid whose pulled edge tilts away (main-transit).
-  // Drawn in screen px (not scaled with the world) so the edge never splits from the ground or blurs when zoomed.
-  function drawGround(top: number, pull: number) {
+  // ground = the Figma drawing stretched over the world's ground area, positioned in screen px each frame
+  // (stroke stays 2px and crisp at any zoom); pulling past an end shows its slanted edge (main-transit).
+  function drawGround(pull: number) {
     const el = groundEl.current
     if (!el || !size.w) return
-    const w = size.w
-    const h = size.h
-    const g = Math.abs(pull)
-    const tilt = Math.min(h, top + g * 1.7)
-    const pts =
-      g < 0.5
-        ? [[0, h], [0, top], [w, top], [w, h]]
-        : pull > 0
-          ? [[0, h], [0, tilt], [g, top], [w, top], [w, h]]
-          : [[0, h], [0, top], [w - g, top], [w, tilt], [w, h]]
-    el.setAttribute('points', pts.map((p) => p.join(',')).join(' '))
+    const { s, x, y } = view.current
+    el.setAttribute('transform', `translate(${x + pull} ${y + groundTop * s}) scale(${(s * W) / GW} ${(s * (H - groundTop)) / GH})`)
   }
 
   // initial camera + walkers when size / residents known
@@ -157,11 +185,14 @@ export default function MainScreen({
   function spawn(i: number): Walker {
     const p = randomSpot()
     // spread first positions across the world so nobody stacks up
-    const x = ((i + 0.5) / Math.max(1, cards.length)) * (W - 120) + 60
+    const lo = edge(p.y) + 60
+    const x = lo + ((i + 0.5) / Math.max(1, cards.length)) * (W - 2 * lo)
     return { id: cards[i].id, x, y: p.y, tx: p.x, ty: p.y, wait: Math.random() * 2, dir: 1 }
   }
   function randomSpot() {
-    return { x: 60 + Math.random() * (W - 120), y: groundTop + 40 + Math.random() * (H - groundTop - 90) }
+    const y = groundTop + 40 + Math.random() * (H - groundTop - 90)
+    const lo = edge(y) + 60
+    return { x: lo + Math.random() * (W - 2 * lo), y }
   }
 
   // ---- simulation loop: walk, follow camera ----
@@ -395,9 +426,19 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <polygon ref={groundEl} fill={tone.ground} />
+          <path ref={groundEl} d={GROUND_D} fill="#4BA012" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
-        <div ref={world} className="absolute top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
+        <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
+          {tufts.map((t, i) => (
+            <img
+              key={i}
+              src={TUFT_KIND[t.kind].src}
+              alt=""
+              draggable={false}
+              className="pointer-events-none absolute top-0 left-0 max-w-none origin-bottom"
+              style={{ width: t.w, height: t.h, marginLeft: -t.w / 2, marginTop: -t.h, transform: `translate(${t.x}px, ${t.y}px) scale(${depth(t.y)})`, zIndex: Math.round(t.y) }}
+            />
+          ))}
           {cards.map((c) => {
             const m = moodOf(c.mood)
             return (
@@ -419,7 +460,7 @@ export default function MainScreen({
                     className="pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
                     style={{ animation: `bubble-blink 9s ease-in-out ${-(c.serial.charCodeAt(c.serial.length - 1) % 9)}s infinite`, opacity: 0 }}
                   >
-                    {m.word}
+                    {tr(m.word)}
                   </span>
                 )}
               </div>
@@ -435,7 +476,7 @@ export default function MainScreen({
             }}
             className={`animate-pop-in pointer-events-none absolute font-hand ${side > 0 ? 'left-[18px] text-left' : 'right-[18px] text-right'}`}
           >
-            <p className="text-[18px] leading-[1.2]">{hint.name}</p>
+            <p className="text-[18px] leading-[1.2]">{townName(hint.name)}</p>
             <p className="text-[24px] leading-none tracking-[-2px]">
               {[0, 1, 2].map((i) => (
                 <span key={i} style={{ animation: `chevron-wave 1s ease-in-out ${(side > 0 ? i : 2 - i) * 0.15}s infinite` }}>
@@ -452,7 +493,7 @@ export default function MainScreen({
         <>
           {/* Figma main 803:951 (closed: ▽) / 803:922 (open: △ with the icon box under it).
               The triangle stays in one spot (center 50, 91) so it flips in place. */}
-          <button aria-label={menu ? 'Close menu' : 'Menu'} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
+          <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
             <img src={menu ? triUp : triDown} alt="" className="h-[20.5px] w-[28.7px] max-w-none" />
           </button>
           {menu && (
@@ -460,18 +501,23 @@ export default function MainScreen({
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
               <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
-                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
-                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Town list')} onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>
             </>
           )}
-          <p className="pointer-events-none absolute inset-x-[90px] top-[77px] truncate text-center font-hand text-[24px] leading-[28px]">{town.name}</p>
+          {/* town name → Town List (only the name itself is tappable; the rest of the bar still pans the town) */}
+          <div className="pointer-events-none absolute inset-x-[90px] top-[69px] flex justify-center">
+            <button onClick={() => { setMenu(false); onTowns() }} className="pointer-events-auto max-w-full truncate px-[6px] py-[8px] font-hand text-[24px] leading-[28px]">
+              {townName(town.name)}
+            </button>
+          </div>
           {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
-          <button aria-label="My page" onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
+          <button aria-label={tr('My page')} onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
@@ -484,18 +530,14 @@ export default function MainScreen({
           <img src={bubble} alt="" className="absolute bottom-[281px] left-[97px] h-[140px] w-[248px]" />
           {/* centered over the bubble's oval body (the tail sits below it) */}
           <div className="absolute bottom-[316px] left-[97px] flex h-[105px] w-[248px] items-center justify-center">
-            <p className="text-center font-hand text-[27px] leading-[1.1] tracking-[-0.54px]">
-              Invite your
-              <br />
-              eye catcher!
-            </p>
+            <p className="text-center font-hand text-[27px] leading-[1.1] tracking-[-0.54px] whitespace-pre-line">{tr('Invite your\neye catcher!')}</p>
           </div>
         </div>
       )}
 
       {/* draw a new card */}
       {!open && !follow && (
-        <button aria-label="Draw a card" onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
+        <button aria-label={tr('Draw a card')} onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
           {/* the Figma + card, with rounded corners */}
           <span className="absolute top-1/2 left-1/2 flex h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg] items-center justify-center rounded-[9px] border-[2.6px] border-[#222] bg-white">
             <svg viewBox="0 0 28 28" className="size-[28px]" aria-hidden>
@@ -543,7 +585,7 @@ function Detail({ card, onClose, onFollow, onMigrate, onOpen }: { card: Card; on
         {card.mood && (
           <span className="absolute top-[25px] left-[20px] flex h-[35px] w-[70.4px] items-center justify-center">
             <img src={chipPanel} alt="" className="absolute inset-[-2.85%_-1.42%] size-[calc(100%+2.84%)] max-w-none" />
-            <span className="relative text-[19px] leading-[1.1]">{card.mood}</span>
+            <span className="relative text-[19px] leading-[1.1]">{tr(card.mood)}</span>
           </span>
         )}
         {card.place && <p className="absolute top-[33px] right-[20px] text-[17px] leading-[1.1]">{card.place}</p>}
@@ -552,11 +594,11 @@ function Detail({ card, onClose, onFollow, onMigrate, onOpen }: { card: Card; on
         <p className="absolute top-[207px] right-[20px] text-[14px] leading-[1.1] text-[#8e8e8e]">{card.serial}</p>
         <button onClick={onFollow} className="absolute top-[225px] left-[44px] flex h-[55px] w-[113px] items-center justify-center">
           <img src={pillFollow} alt="" className="absolute inset-0 size-full" />
-          <span className="relative text-[24.3px] leading-[1.1]">Follow</span>
+          <span className="relative text-[24.3px] leading-[1.1]">{tr('Follow')}</span>
         </button>
         <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
           <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
-          <span className="relative text-[24.3px] leading-[1.1]">Migration</span>
+          <span className="relative text-[24.3px] leading-[1.1]">{tr('Migration')}</span>
         </button>
       </div>
     </Bottom>

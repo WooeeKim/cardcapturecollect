@@ -7,11 +7,13 @@ import lineB from '../assets/proto/v2/mp-line-b.svg'
 import underline from '../assets/proto/v2/mp-underline.svg'
 import toggleOn from '../assets/proto/v2/mp-toggle.svg'
 import pill from '../assets/proto/v2/tl-edit.svg'
-import { FeedbackSheet, LoginSheet, PasswordSheet } from '../components/LoginSheet'
+import { FeedbackSheet, LoginSheet, PasswordSheet, Sheet } from '../components/LoginSheet'
 import { ToggleIcon } from '../components/drawIcons'
-import { Bottom, Popup, type PopupAction } from '../components/ui'
+import { Bottom, LangButton, Popup, type PopupAction } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import { type User } from '../lib/auth'
+import { tr } from '../lib/i18n'
+import type { Card } from '../lib/store'
 
 // My Page (Figma mypage-login 830:814 / mypage-logout 838:2079 / edit 838:2365).
 const NOTIFY = 'subwayseal.notify'
@@ -25,6 +27,9 @@ const readNotify = () => {
 
 export default function MyPageScreen({
   user,
+  profile,
+  cards,
+  onPickProfile,
   cardCount,
   townCount,
   since,
@@ -41,6 +46,9 @@ export default function MyPageScreen({
 }: {
   user: User | null
   canReset: boolean // app_admins only
+  profile: Card | null // profile picture card (store.profileCard)
+  cards: Card[] // newest first, to pick the profile picture from
+  onPickProfile: (cardId: string) => void
   cardCount: number
   townCount: number
   since: string // YY.MM.DD
@@ -54,14 +62,14 @@ export default function MyPageScreen({
   onDeleteAccount: () => Promise<string | undefined>
   onReset: () => void
 }) {
-  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | null>(null)
+  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | 'picture' | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(nickname)
   const [about, setAbout] = useState(intro)
   const [notify, setNotify] = useState(readNotify)
 
-  const gotIt = (message: string) => setPopup({ message, actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
+  const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const startEdit = () => {
     setName(nickname)
     setAbout(intro)
@@ -75,20 +83,22 @@ export default function MyPageScreen({
     } catch {
       /* private mode */
     }
+    // turning it on before the phone was asked: ask now (this tap counts as the user's gesture on iPhone)
+    if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {})
   }
   const askDelete = () =>
     setPopup({
-      message: "Delete your account and all your towns and cards?\nThis can't be undone.",
+      message: tr("Delete your account and all your towns and cards?\nThis can't be undone."),
       actions: [
         {
-          label: 'Delete',
+          label: tr('Delete'),
           onClick: async () => {
             setPopup(null)
             const note = await onDeleteAccount()
             if (note) gotIt(note)
           },
         },
-        { label: 'Cancel', onClick: () => setPopup(null) },
+        { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
 
@@ -98,37 +108,38 @@ export default function MyPageScreen({
   type Row = { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }
   const rows: Row[] = ([
     {
-      label: 'Notification setting',
+      label: tr('Notification setting'),
       onClick: toggleNotify,
       right: notify ? <img src={toggleOn} alt="" className="h-[25px] w-[48px]" /> : <span className="block h-[23px] w-[46px]"><ToggleIcon on={false} /></span>,
     },
-    { label: 'Subway-TI', onClick: onInterview },
-    { label: 'Notice', onClick: () => gotIt('Notices are coming soon.') },
-    { label: 'FAQ', onClick: () => gotIt('FAQ is coming soon.') },
-    { label: 'Feedback', onClick: () => setSheet('feedback') },
+    { label: tr('Subway-TI'), onClick: onInterview },
+    { label: tr('Notice'), onClick: () => gotIt(tr('Notices are coming soon.')) },
+    { label: tr('FAQ'), onClick: () => gotIt(tr('FAQ is coming soon.')) },
+    { label: tr('Feedback'), onClick: () => setSheet('feedback') },
     canReset && {
       // testing helper for admins only: wipes towns, cards, nickname and intro on this device / account
-      label: 'Reset (test)',
+      label: tr('Reset (test)'),
       onClick: () =>
         setPopup({
-          message: "Reset all your towns and cards?\nThis can't be undone.",
+          message: tr("Reset all your towns and cards?\nThis can't be undone."),
           actions: [
-            { label: 'Reset', onClick: () => { setPopup(null); onReset() } },
-            { label: 'Cancel', onClick: () => setPopup(null) },
+            { label: tr('Reset'), onClick: () => { setPopup(null); onReset() } },
+            { label: tr('Cancel'), onClick: () => setPopup(null) },
           ],
         }),
     },
-    { label: 'Neighbors', tone: 'text-[#7e7e7e]', soon: true },
-    { label: 'Developers', tone: 'text-[#7e7e7e]', soon: true },
-    { label: 'Delete Account', tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
+    { label: tr('Neighbors'), tone: 'text-[#7e7e7e]', soon: true },
+    { label: tr('Developers'), tone: 'text-[#7e7e7e]', soon: true },
+    { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
   ] as (Row | false)[]).filter((r): r is Row => !!r)
 
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label="Back" onClick={onBack} className="absolute top-[85px] left-[24px] z-10 size-[40px]">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-10 size-[40px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[normal]">My Page</p>
+      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[normal]">{tr('My Page')}</p>
+      <LangButton className="top-[84px] left-[333px] z-10" />
 
       {/* settings list (scrolls on short phones) */}
       <div className="absolute inset-x-0 overflow-y-auto [scrollbar-width:none]" style={{ top: 340, bottom: 99 }}>
@@ -145,7 +156,7 @@ export default function MyPageScreen({
                   style={{ top: top - 6 }}
                 >
                   {r.label}
-                  {r.soon && <span className="text-[14px]">Coming Soon</span>}
+                  {r.soon && <span className="text-[14px]">{tr('Coming Soon')}</span>}
                   {r.right}
                 </Tag>
                 {i < rows.length - 1 && <img src={i % 2 ? lineB : lineA} alt="" className="pointer-events-none absolute left-[33px] h-[4.3px] w-[335px] max-w-none" style={{ top: top + 43 }} />}
@@ -157,8 +168,8 @@ export default function MyPageScreen({
 
       {/* bottom: log out / log in */}
       <Bottom>
-        <button onClick={() => (user ? setPopup({ message: 'Log out?', actions: [{ label: 'Log out', onClick: () => { setPopup(null); onLogout() } }, { label: 'Cancel', onClick: () => setPopup(null) }] }) : setSheet('login'))} className="absolute top-[785px] left-1/2 -translate-x-1/2 px-[10px] pb-[8px] text-[24px] leading-[normal] whitespace-nowrap text-[#8e8e8e]">
-          {user ? 'Log out' : 'Log in/Sign up'}
+        <button onClick={() => (user ? setPopup({ message: tr('Log out?'), actions: [{ label: tr('Log out'), onClick: () => { setPopup(null); onLogout() } }, { label: tr('Cancel'), onClick: () => setPopup(null) }] }) : setSheet('login'))} className="absolute top-[785px] left-1/2 -translate-x-1/2 px-[10px] pb-[8px] text-[24px] leading-[normal] whitespace-nowrap text-[#8e8e8e]">
+          {tr(user ? 'Log out' : 'Log in/Sign up')}
           <img src={underline} alt="" className="absolute bottom-[2px] left-1/2 h-[3px] w-[calc(100%-12px)] max-w-none -translate-x-1/2" />
         </button>
       </Bottom>
@@ -169,27 +180,33 @@ export default function MyPageScreen({
       {/* profile box */}
       <div className={`absolute top-[149px] left-[16px] w-[370px] transition-[height] duration-300 ${editing ? 'z-30 h-[318px]' : 'h-[171px]'}`}>
         <img src={boxSvg} alt="" className="absolute inset-0 size-full" />
-        <span className="absolute top-[20px] left-[21px] flex size-[70px] items-end justify-center overflow-hidden rounded-full border-[2.33px] border-[#2e2e2e] bg-white">
-          <img src={personSvg} alt="" className="mb-[-3px] h-[57.6px] w-[37.3px]" />
-        </span>
+        <button
+          disabled={!editing || !cards.length}
+          onClick={() => setSheet('picture')}
+          aria-label={tr('Change profile picture')}
+          className="absolute top-[20px] left-[21px] flex size-[70px] items-end justify-center overflow-hidden rounded-full border-[2.33px] border-[#2e2e2e] bg-white"
+        >
+          {profile ? <img src={profile.thumb || profile.image} alt="" className="size-full object-cover" /> : <img src={personSvg} alt="" className="mb-[-3px] h-[57.6px] w-[37.3px]" />}
+          {editing && !!cards.length && <span className="absolute inset-x-0 bottom-0 bg-black/55 py-[1px] text-center text-[12px] text-white">{tr('Change')}</span>}
+        </button>
         {editing ? (
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={20}
-            placeholder="Nickname"
-            aria-label="Nickname"
+            placeholder={tr('Nickname')}
+            aria-label={tr('Nickname')}
             className="absolute top-[14px] left-[112px] w-[230px] rounded-[6px] border-2 border-dashed border-[#707070] bg-white/70 px-[6px] text-[24px] leading-[1.3] outline-none placeholder:text-[#9a9a9a]"
           />
         ) : (
-          <p className={`absolute top-[17px] left-[112px] w-[240px] truncate text-[24px] leading-[normal] ${nickname ? '' : 'text-[#9a9a9a]'}`}>{nickname || 'No Profile'}</p>
+          <p className={`absolute top-[17px] left-[112px] w-[240px] truncate text-[24px] leading-[normal] ${nickname ? '' : 'text-[#9a9a9a]'}`}>{nickname || tr('No Profile')}</p>
         )}
         <p className="absolute top-[54px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
-          {cardCount} {cardCount === 1 ? 'Capture' : 'Captures'}
+          {tr(cardCount === 1 ? '{n} Capture' : '{n} Captures', { n: cardCount })}
         </p>
         <p className="absolute top-[72px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
-          {townCount} {townCount === 1 ? 'Town' : 'Towns'}
+          {tr(townCount === 1 ? '{n} Town' : '{n} Towns', { n: townCount })}
         </p>
         {user && <p className="absolute top-[54px] right-[18px] max-w-[120px] truncate text-[12px] text-[#9a9a9a]">{user.username}</p>}
         {editing ? (
@@ -199,13 +216,13 @@ export default function MyPageScreen({
               onChange={(e) => setAbout(e.target.value)}
               maxLength={120}
               rows={4}
-              placeholder="Write your introduction..."
-              aria-label="Introduction"
+              placeholder={tr('Write your introduction...')}
+              aria-label={tr('Introduction')}
               className="absolute top-[103px] left-[21px] h-[110px] w-[328px] resize-none rounded-[8px] border-2 border-dashed border-[#707070] bg-white/70 px-[8px] py-[6px] text-[17px] leading-[1.2] outline-none placeholder:text-[#c9c9c9]"
             />
             {user && (
               <button onClick={() => setSheet('password')} className="absolute top-[222px] left-[23px] text-[15px] text-[#686868] underline underline-offset-2">
-                Change password
+                {tr('Change password')}
               </button>
             )}
             <button
@@ -215,7 +232,7 @@ export default function MyPageScreen({
               <span className="absolute inset-0 rotate-[-178.73deg]">
                 <PillFinish />
               </span>
-              <span className="relative text-[22px] leading-[1.1] text-[#686868]">Discard</span>
+              <span className="relative text-[22px] leading-[1.1] text-[#686868]">{tr('Discard')}</span>
             </button>
             <button
               onClick={() => {
@@ -227,16 +244,16 @@ export default function MyPageScreen({
               <span className="absolute inset-0 rotate-[-177.79deg]">
                 <PillBack />
               </span>
-              <span className="relative text-[22px] leading-[1.1]">Save</span>
+              <span className="relative text-[22px] leading-[1.1]">{tr('Save')}</span>
             </button>
           </>
         ) : (
           <>
-            <p className={`absolute top-[105px] left-[21px] line-clamp-1 w-[283px] text-[17px] leading-[1.2] break-words ${intro ? 'text-[#3d3d3d]' : 'text-[#c9c9c9]'}`}>{intro || 'Write your introduction...'}</p>
-            <p className="absolute top-[133px] left-[21px] text-[14px] leading-[1.1] text-[#8e8e8e]">Since {since}</p>
-            <button onClick={startEdit} className="absolute top-[150px] left-[286px] flex h-[41px] w-[69px] items-center justify-center" aria-label="Edit profile">
+            <p className={`absolute top-[105px] left-[21px] line-clamp-1 w-[283px] text-[17px] leading-[1.2] break-words ${intro ? 'text-[#3d3d3d]' : 'text-[#c9c9c9]'}`}>{intro || tr('Write your introduction...')}</p>
+            <p className="absolute top-[133px] left-[21px] text-[14px] leading-[1.1] text-[#8e8e8e]">{tr('Since {date}', { date: since })}</p>
+            <button onClick={startEdit} className="absolute top-[150px] left-[286px] flex h-[41px] w-[69px] items-center justify-center" aria-label={tr('Edit profile')}>
               <img src={pill} alt="" className="absolute inset-[-2.5%_-1.5%] size-[calc(100%+3%)] max-w-none" />
-              <span className="relative text-[20px] leading-[1.3]">Edit</span>
+              <span className="relative text-[20px] leading-[1.3]">{tr('Edit')}</span>
             </button>
           </>
         )}
@@ -253,6 +270,28 @@ export default function MyPageScreen({
       )}
       {sheet === 'password' && user && <PasswordSheet user={user} onClose={() => setSheet(null)} />}
       {sheet === 'feedback' && <FeedbackSheet onClose={() => setSheet(null)} />}
+      {sheet === 'picture' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <p className="text-center text-[24px] leading-[1.2]">{tr('Profile picture')}</p>
+          <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your cards.')}</p>
+          <div className="mt-[16px] grid max-h-[360px] grid-cols-4 gap-[10px] overflow-y-auto p-[2px]">
+            {cards.map((c) => (
+              <button
+                key={c.id}
+                aria-label={c.nickname || c.serial}
+                aria-pressed={profile?.id === c.id}
+                onClick={() => {
+                  onPickProfile(c.id)
+                  setSheet(null)
+                }}
+                className={`aspect-square overflow-hidden rounded-full border-[2.33px] bg-white ${profile?.id === c.id ? 'border-[#2e2e2e] outline-2 outline-offset-2 outline-[#2e2e2e]' : 'border-[#b5b5b5]'}`}
+              >
+                <img src={c.thumb || c.image} alt="" className="size-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </Sheet>
+      )}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
   )

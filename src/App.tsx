@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
+import NotifyPrompt from './components/NotifyPrompt'
 import { PhoneChrome, Popup } from './components/ui'
-import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
+import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
 import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
-import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
+import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import GilbtiScreen from './screens/GilbtiScreen'
 import MainScreen from './screens/MainScreen'
 import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
+import { tr, useLang } from './lib/i18n'
 
 type Route =
   | { name: 'main'; townId: string; enter: 'left' | 'right' | 'center'; focus?: string }
@@ -21,7 +23,7 @@ type Route =
   | { name: 'migrate'; cardId: string; back: Route; to: 'main' | 'collection' }
   | { name: 'send' }
   | { name: 'collection'; townId: string; card?: string }
-  | { name: 'draw' }
+  | { name: 'draw'; tutorial?: boolean } // tutorial = onboarding "draw yourself" (that card becomes the profile picture)
   | { name: 'tada' }
   | { name: 'mypage' }
 
@@ -62,6 +64,7 @@ function sinceOf(s: State) {
 }
 
 export default function App({ onReady }: { onReady?: () => void }) {
+  useLang() // re-render everything when the language changes
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const userRef = useRef<User | null>(null)
@@ -70,9 +73,10 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
   const [loginPrompt, setLoginPrompt] = useState(false)
-  // Onboarding gate: 길BTI first, then log in, then the app ('first' until both are done).
-  // 'mypage' = taken again from My Page (closable).
-  const [interview, setInterview] = useState<'first' | 'mypage' | null>(null)
+  // Onboarding: log in / sign up → nickname → 길BTI → draw yourself (route draw + tutorial) → pick a town.
+  // `gate` = the step still missing; null = in the app. `retake` = 길BTI opened again from My Page.
+  const [gate, setGate] = useState<'login' | 'nickname' | 'gilbti' | null>(null)
+  const [retake, setRetake] = useState(false)
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
 
@@ -82,10 +86,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const enter = useCallback(async (u: User | null) => {
     await flushRemote()
     if (!u) {
-      setInterview('first') // logged out (or the account couldn't be reached): back to the gate
+      setGate('login') // logged out (or the account couldn't be reached): back to the first screen
       userRef.current = null
       setUser(null)
-      identify(null)
       const guest = load(GUEST_KEY)
       setState(guest)
       setHomeId(guest.towns[0].id)
@@ -95,7 +98,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     const remote = await loadRemote(u)
     if (!remote.ok) {
       // can't tell what the account holds → don't merge or save over it; stay a guest (session kept, retried next start)
-      setError("Couldn't reach your account. Your town stays on this device — try again in a moment.")
+      setError(tr("Couldn't reach your account. Your town stays on this device — try again in a moment."))
       return enter(null)
     }
     // newer copy wins: a save that never reached the server (tab closed, offline) must not be overwritten
@@ -119,21 +122,29 @@ export default function App({ onReady }: { onReady?: () => void }) {
     if (merged) {
       // with a server, the server copy is what counts; without one, the device copy is
       if (usingSupabase ? stored : cached) localStorage.removeItem(GUEST_KEY)
-      else setError("Couldn't save your guest town to the account yet. It will be added the next time you log in.")
+      else setError(tr("Couldn't save your guest town to the account yet. It will be added the next time you log in."))
     }
-    if (unplaced > 0) setError(`${unplaced} card${unplaced > 1 ? 's' : ''} didn't fit in your towns.`)
+    if (unplaced > 0) setError(tr(unplaced > 1 ? "{n} cards didn't fit in your towns." : "{n} card didn't fit in your towns.", { n: unplaced }))
     localStorage.removeItem(LEGACY_GUEST_OWNER)
     claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
     setUser(u)
-    identify(u)
     setState(next)
     setHomeId(next.towns[0].id)
     setRoute(startRoute(next))
     return next
   }, [])
 
-  // leaving / hiding the page: send the batched account save instead of dropping it
+  // next missing onboarding step for this account; all done and no card yet → draw yourself
+  const advance = useCallback(async (s: State) => {
+    const u = userRef.current
+    if (!u) return setGate('login')
+    if (!s.nickname) return setGate('nickname')
+    if (!(savedResult() || (await doneOnServer(u)))) return setGate('gilbti')
+    setGate(null)
+    if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
+  }, [])
+
   // admin = listed in app_admins; re-checked whenever the account changes (log in / out)
   useEffect(() => {
     let live = true
@@ -144,6 +155,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     }
   }, [user])
 
+  // leaving / hiding the page: send the batched account save instead of dropping it
   useEffect(() => {
     const flush = () => document.visibilityState === 'hidden' && flushRemote()
     document.addEventListener('visibilitychange', flush)
@@ -172,14 +184,13 @@ export default function App({ onReady }: { onReady?: () => void }) {
     currentUser().then(async (u) => {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
       resendUnsent(u)
-      const who = userRef.current // null if the account couldn't be reached
-      if (!who || !(savedResult() || (await doneOnServer(who)))) setInterview('first')
+      await advance(s)
       // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
       await decodeAll(Object.values(s.cards).map((c) => c.image))
       setReady(true)
       onReady?.()
     })
-  }, [enter])
+  }, [enter, advance])
 
   // every change is saved (this device + the account); if storage is full the change is undone and the user is told
   const commit = useCallback((fn: (s: State) => State) => {
@@ -190,7 +201,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       try {
         save(next, keyFor(u?.id ?? null))
       } catch {
-        setError('Storage is full. Delete some cards to save new ones.')
+        setError(tr('Storage is full. Delete some cards to save new ones.'))
         return prev
       }
       if (u) saveRemote(u, next)
@@ -231,8 +242,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setHomeId(townId)
     setRoute({ name: 'main', townId, enter, focus })
   }
-
-  useEffect(() => trackScreen(interview ? 'gilbti' : route.name), [route.name, interview])
 
   // pending card vanished (e.g. storage reset) → go home
   const lost = (route.name === 'tada' || route.name === 'send') && !state.pending
@@ -278,7 +287,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onGo={() => {}}
           onPlace={(townId) => {
             commit((s) => placeCard(s, route.cardId, townId))
-            track('card_moved', { from: route.to })
             if (route.to === 'collection') setRoute({ name: 'collection', townId: route.back.name === 'collection' ? route.back.townId : townId })
             else goMain(townId, 'center', route.cardId)
           }}
@@ -298,7 +306,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onPlace={(townId) => {
             const id = state.pending!.id
             commit((s) => sendPending(s, townId))
-            track('card_sent')
             goMain(townId, 'center', id)
             if (!viewAsId && !userRef.current && !flag(PROMPTED)) {
               setFlag(PROMPTED, '1')
@@ -324,9 +331,11 @@ export default function App({ onReady }: { onReady?: () => void }) {
       screen = (
         <DrawScreen
           onExit={() => goMain(existing(homeId))}
+          tutorial={route.tutorial}
           onFinish={(draft) => {
             // save first: if storage is full, stay here so the drawing isn't lost
-            const next = makePending(state, draft)
+            let next = makePending(state, draft)
+            if (route.tutorial) next = { ...next, profile: next.pending!.id } // "draw yourself" → profile picture
             if (viewAsId) {
               setState(next)
               return setRoute({ name: 'tada' })
@@ -335,10 +344,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
               save(next, keyFor(user?.id ?? null))
               if (user) saveRemote(user, next)
             } catch {
-              return setError('Storage is full. Delete some cards to save new ones.')
+              return setError(tr('Storage is full. Delete some cards to save new ones.'))
             }
             setState(next)
-            track('card_made', { mood: draft.mood })
             setRoute({ name: 'tada' })
           }}
         />
@@ -352,6 +360,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
         <MyPageScreen
           user={user}
           canReset={isAdmin && !viewAsId}
+          profile={profileCard(state)}
+          cards={Object.values(state.cards).sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
+          onPickProfile={(id) => commit((s) => ({ ...s, profile: id }))}
           cardCount={Object.keys(state.cards).length}
           townCount={state.towns.length}
           since={sinceOf(state)}
@@ -359,7 +370,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           intro={state.intro ?? ''}
           onProfile={(nickname, intro) => commit((s) => ({ ...s, nickname: nickname || undefined, intro: intro || undefined }))}
           onBack={() => goMain(existing(homeId))}
-          onInterview={() => (viewAsId ? setError(READ_ONLY) : setInterview('mypage'))}
+          onInterview={() => (viewAsId ? setError(READ_ONLY) : setRetake(true))}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
             if (viewAsId) return setError(READ_ONLY)
@@ -369,7 +380,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
           }}
           onReset={() => {
             const fresh = initial()
-            track('reset')
             commit(() => fresh)
             setHomeId(fresh.towns[0].id)
           }}
@@ -383,7 +393,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
             } catch {
               /* private mode */
             }
-            track('delete_account', { ok: res.ok })
             await enter(null)
             setRoute({ name: 'mypage' })
             return res.note
@@ -396,19 +405,29 @@ export default function App({ onReady }: { onReady?: () => void }) {
   return (
     <>
       {ready &&
-        (interview ? (
+        (gate === 'login' ? (
+          <WelcomeScreen
+            onLogin={async (u) => {
+              const s = await enter(u)
+              if (s) await advance(s)
+            }}
+          />
+        ) : gate === 'nickname' ? (
+          <NicknameScreen
+            initial=""
+            onDone={(nickname) => {
+              commit((s) => ({ ...s, nickname }))
+              advance({ ...state, nickname })
+            }}
+          />
+        ) : gate === 'gilbti' || retake ? (
           <GilbtiScreen
             user={user}
-            saved={interview === 'first' ? savedResult() : null}
-            onClose={interview === 'mypage' ? () => setInterview(null) : undefined}
-            onDone={(r) => {
-              // the nickname from the interview, unless the town already has one
-              const name = typeof r.answers.name === 'string' ? r.answers.name.trim() : ''
-              if (name) commit((s) => (s.nickname ? s : { ...s, nickname: name }))
-              setInterview(userRef.current ? null : 'first') // the login didn't stick (account unreachable): stay at the gate
-            }}
-            onLogin={async (u) => {
-              await enter(u)
+            nickname={state.nickname ?? ''}
+            onClose={retake ? () => setRetake(false) : undefined}
+            onDone={() => {
+              if (retake) return setRetake(false)
+              advance(state)
             }}
           />
         ) : (
@@ -424,6 +443,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           }}
         />
       )}
+      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || (route.name === 'draw' && !!route.tutorial)} />
       <PhoneChrome />
       {viewAsId && ready && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[40px] z-[101] flex justify-center">
@@ -432,7 +452,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           </span>
         </div>
       )}
-      {error && <Popup message={error} actions={[{ label: 'Got it!', onClick: () => setError('') }]} />}
+      {error && <Popup message={error} actions={[{ label: tr('Got it!'), onClick: () => setError('') }]} />}
     </>
   )
 }

@@ -1,4 +1,3 @@
-import { track } from './analytics'
 import { supabase, type User } from './auth'
 
 // 길BTI (Subway-TI): the pre-interview that profiles testers (Figma slides "Pre-Interview: Profiling Our Users").
@@ -12,7 +11,6 @@ export type Question =
   | { id: string; section: Section; kind: 'scale'; prompt: string; low: string; high: string }
 
 export const QUESTIONS: Question[] = [
-  { id: 'name', section: 'About you', kind: 'text', prompt: 'What should we call you?', placeholder: 'Nickname', optional: true },
   { id: 'age', section: 'About you', kind: 'one', prompt: 'How old are you?', choices: ['Under 20', '20s', '30s', '40s', '50+'] },
   { id: 'ride_freq', section: 'Riding', kind: 'one', prompt: 'How often do you ride the subway?', choices: ['Every day', 'A few times a week', 'A few times a month', 'Rarely'] },
   { id: 'ride_when', section: 'Riding', kind: 'many', prompt: 'When do you usually ride?', choices: ['Morning commute', 'Daytime', 'Evening commute', 'Late night', 'Weekends'] },
@@ -122,7 +120,6 @@ export async function submit(answers: Answers, user: User | null): Promise<Resul
   const record = Number(answers.record) || 1
   const r: Result = { answers, type: typeOf(observe, record), observe, record, at: new Date().toISOString(), sent: false }
   write(RESULT, JSON.stringify(r))
-  track('gilbti_done', { type: r.type, observe, record })
   if (await send(r, user)) write(RESULT, JSON.stringify({ ...r, sent: true }))
   return r
 }

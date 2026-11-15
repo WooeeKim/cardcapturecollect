@@ -6,6 +6,7 @@ import tlBar from '../assets/proto/v2/tl-bar.svg'
 import tlClose from '../assets/proto/v2/tl-close.svg'
 import tlPill from '../assets/proto/v2/tl-edit.svg'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
+import { townName, tr } from '../lib/i18n'
 
 // Figma prototyping: townList · townList-detail · townList for migration · 마을 추가
 // browse  = Go / Edit
@@ -50,7 +51,7 @@ export default function TownListScreen({
   const openIndex = state.towns.findIndex((t) => t.id === openId)
   const chiefImage = (t: Town) => state.cards[t.residents[0] ?? '']?.image
   const chiefThumb = (t: Town) => state.cards[t.residents[0] ?? '']?.thumb
-  const gotIt = (message: string) => setPopup({ message, actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
+  const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const open = state.towns.find((t) => t.id === openId)
   const dirty = !!open && editing && (draft.name !== open.name || draft.bio !== open.bio)
 
@@ -80,22 +81,22 @@ export default function TownListScreen({
   }
   function askSave(then: () => void) {
     setPopup({
-      message: "There's unsaved changes.\nDo you wanna save?",
+      message: tr("There's unsaved changes.\nDo you wanna save?"),
       actions: [
-        { label: 'Discard', onClick: () => { setPopup(null); setEditing(false); then() } },
-        { label: 'Save', onClick: () => { setPopup(null); save(); then() } },
+        { label: tr('Discard'), onClick: () => { setPopup(null); setEditing(false); then() } },
+        { label: tr('Save'), onClick: () => { setPopup(null); save(); then() } },
       ],
     })
   }
   function askDelete(t: Town) {
     const why = canDeleteTown(state, t.id)
-    if (why === 'residents') return gotIt('You cannot delete town with resident.')
-    if (why === 'last') return gotIt('You need at least one town.')
+    if (why === 'residents') return gotIt(tr('You cannot delete town with resident.'))
+    if (why === 'last') return gotIt(tr('You need at least one town.'))
     setPopup({
-      message: 'Do you really want to delete?',
+      message: tr('Do you really want to delete?'),
       actions: [
-        { label: 'Delete', onClick: () => { commit((s) => deleteTown(s, t.id)); setPopup(null); setOpenId(null); setEditing(false) } },
-        { label: 'Cancel', onClick: () => setPopup(null) },
+        { label: tr('Delete'), onClick: () => { commit((s) => deleteTown(s, t.id)); setPopup(null); setOpenId(null); setEditing(false) } },
+        { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
   }
@@ -110,15 +111,15 @@ export default function TownListScreen({
   }
   function create() {
     if (!adding) return
-    const t = { ...adding, name: draft.name.trim() || `New Town ${state.towns.length + 1}`, bio: draft.bio.trim() }
+    const t = { ...adding, name: draft.name.trim() || tr('New Town {n}', { n: state.towns.length + 1 }), bio: draft.bio.trim() }
     commit((s) => addTown(s, t))
     setAdding(null)
     setOpenId(t.id)
   }
 
   function place(t: Town) {
-    if (mode === 'migrate' && t.id === homeId) return gotIt('This card already lives here.')
-    if (t.residents.length >= MAX_RESIDENTS) return gotIt('This town is full.')
+    if (mode === 'migrate' && t.id === homeId) return gotIt(tr('This card already lives here.'))
+    if (t.residents.length >= MAX_RESIDENTS) return gotIt(tr('This town is full.'))
     const from = cardEl.current?.getBoundingClientRect()
     const to = thumbs.current.get(t.id)?.querySelector('[data-thumb]')?.getBoundingClientRect()
     if (!from || !to) return onPlace(t.id)
@@ -159,7 +160,7 @@ export default function TownListScreen({
     setDragDy(0)
   }
 
-  const action = mode === 'migrate' ? 'Migration' : mode === 'send' ? 'Send' : null
+  const action = mode === 'migrate' ? tr('Migration') : mode === 'send' ? tr('Send') : null
 
   // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
   const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
@@ -191,14 +192,14 @@ export default function TownListScreen({
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             maxLength={20}
-            placeholder={isNew ? `New Town ${state.towns.length + 1}` : ''}
-            aria-label="Town name"
+            placeholder={isNew ? tr('New Town {n}', { n: state.towns.length + 1 }) : ''}
+            aria-label={tr('Town name')}
             className="absolute top-[22px] left-[135px] h-[27.3px] w-[205px] bg-transparent text-[21px] leading-[1.3] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
-          <p className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{t!.name}</p>
+          <p className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{townName(t!.name)}</p>
         )}
-        <button aria-label="Close" onClick={isNew ? () => setAdding(null) : close} className="absolute top-[14px] left-[344px] flex size-[28px] items-center justify-center">
+        <button aria-label={tr('Close')} onClick={isNew ? () => setAdding(null) : close} className="absolute top-[14px] left-[344px] flex size-[28px] items-center justify-center">
           <img src={tlClose} alt="" className="h-[14.8px] w-[12.3px]" />
         </button>
         <p className="absolute top-[54px] left-[135px] text-[14px] leading-[normal] text-[#8e8e8e]">
@@ -210,8 +211,8 @@ export default function TownListScreen({
             onChange={(e) => setDraft({ ...draft, bio: e.target.value })}
             maxLength={100}
             rows={2}
-            placeholder="Write your town biography."
-            aria-label="Town biography"
+            placeholder={tr('Write your town biography.')}
+            aria-label={tr('Town biography')}
             className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-black"
           />
         ) : (
@@ -220,18 +221,18 @@ export default function TownListScreen({
         <p className="absolute top-[127px] left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
         {isNew ? (
           <>
-            {pill('Discard', () => setAdding(null), 133, true)}
-            {pill('Create', create, 296)}
+            {pill(tr('Discard'), () => setAdding(null), 133, true)}
+            {pill(tr('Create'), create, 296)}
           </>
         ) : editing ? (
           <>
-            {pill('Delete', () => askDelete(t!), 133, true)}
-            {pill('Done', save, 311)}
+            {pill(tr('Delete'), () => askDelete(t!), 133, true)}
+            {pill(tr('Done'), save, 311)}
           </>
         ) : action ? (
           pill(action, () => place(t!), action.length > 4 ? 296 : 311)
         ) : (
-          pill('Edit', () => {
+          pill(tr('Edit'), () => {
             setDraft({ name: t!.name, bio: t!.bio })
             setEditing(true)
           }, 311)
@@ -242,7 +243,7 @@ export default function TownListScreen({
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
-          <button aria-label={`Go to ${t.name}`} onClick={() => onGo(t.id)} className="absolute top-[70px] left-[39px] z-10">
+          <button aria-label={tr('Go to {name}', { name: townName(t.name) })} onClick={() => onGo(t.id)} className="absolute top-[70px] left-[39px] z-10">
             <GoTag />
           </button>
         )}
@@ -252,7 +253,7 @@ export default function TownListScreen({
 
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <Header title="Town List" onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label="Add town" onClick={startAdd} />} />
+      <Header title={tr('Town List')} onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label={tr('Add town')} onClick={startAdd} />} />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[186px] bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0" />
 
       <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
@@ -282,10 +283,10 @@ export default function TownListScreen({
                       <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} grey={dimmed} outline />
                     </button>
                     <button onClick={() => toggle(t)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
-                      {t.name}
+                      {townName(t.name)}
                     </button>
                     <span
-                      aria-label="Reorder"
+                      aria-label={tr('Reorder')}
                       className="absolute top-[20px] left-[352px] flex size-[30px] touch-none items-center justify-center"
                       onPointerDown={(e) => onHandleDown(e, i)}
                       onPointerMove={onHandleMove}

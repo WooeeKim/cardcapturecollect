@@ -1,5 +1,6 @@
 import { fillInside } from '../lib/fillInside'
 import { useEffect, useRef, useState } from 'react'
+import { logEvent } from '../lib/events'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
 import backIcon from '../assets/proto/v2/back.svg'
 import checkIcon from '../assets/proto/v2/check.svg'
@@ -24,9 +25,10 @@ import { Bottom, CardView, Popup, shrink, type PopupAction } from '../components
 import { ToggleIcon } from '../components/drawIcons'
 import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, PillVillage, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
 import { MOODS } from '../lib/moods'
-import { toLocal } from '../lib/frame'
+import { framePoint, toLocal } from '../lib/frame'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
 import type { Card } from '../lib/store'
+import { tr } from '../lib/i18n'
 
 // New Figma GUI (prototyping › 그리기): Drawing | Memo tabs, hand-drawn toolbar, Colors panel with
 // eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "Choose a village" (719:11320).
@@ -41,7 +43,41 @@ const TOOLS = {
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
-export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; onFinish: (draft: Draft) => void }) {
+// Onboarding "draw yourself" tips: one speech bubble at a time over the real screen (frame coords; `bottom` = toolbar area)
+const TIPS: { text: string; top: number; arrow: number; down?: boolean; bottom?: boolean }[] = [
+  { text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', top: 250, arrow: 201, down: true },
+  { text: 'Pencil, highlighter and eraser. Tap the picked one again for thickness, the wheel for colors. Undo, redo and the guide are here too.', top: 600, arrow: 120, down: true, bottom: true },
+  { text: 'In Memo, add your mood, where you are, a name and a line for this card.', top: 128, arrow: 242 },
+  { text: 'Done? Tap ✓, then pick a town for your card. This first card becomes your profile picture (change it on My Page).', top: 128, arrow: 350 },
+]
+
+function Tip({ step, onNext }: { step: number; onNext: () => void }) {
+  const t = TIPS[step]
+  const last = step === TIPS.length - 1
+  const bubble = (
+    <div className="animate-pop-in absolute inset-x-[20px] z-50 rounded-[14px] border-[2.5px] border-[#2e2e2e] bg-white px-[16px] pt-[12px] pb-[10px]" style={{ top: t.top }}>
+      <span
+        className={`absolute size-[16px] rotate-45 border-[#2e2e2e] bg-white ${t.down ? 'bottom-[-9.5px] border-r-[2.5px] border-b-[2.5px]' : 'top-[-9.5px] border-t-[2.5px] border-l-[2.5px]'}`}
+        style={{ left: t.arrow - 20 - 8 }}
+      />
+      <p className="text-[20px] leading-[1.3]">{tr(t.text)}</p>
+      <div className="mt-[8px] flex items-center justify-between text-[16px] text-[#8a8a8a]">
+        <span>
+          {step + 1} / {TIPS.length}
+        </span>
+        <span className="text-[20px] text-[#2e2e2e] underline underline-offset-4">{tr(last ? 'Start drawing' : 'Next')}</span>
+      </div>
+    </div>
+  )
+  return (
+    <button aria-label={tr(last ? 'Start drawing' : 'Next')} onClick={onNext} className="animate-fade-in absolute inset-0 z-40 cursor-pointer bg-black/30 text-left">
+      {t.bottom ? <Bottom>{bubble}</Bottom> : bubble}
+    </button>
+  )
+}
+
+export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
+  const [tip, setTip] = useState(tutorial ? 0 : -1)
   const canvas = useRef<DrawingCanvasHandle>(null)
   const [tab, setTab] = useState<'draw' | 'memo'>('draw')
   const [tool, setTool] = useState<Tool>('pen')
@@ -79,6 +115,39 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const typedPlace = useRef(false)
   const memoRef = useRef<HTMLTextAreaElement>(null)
+  // while typing the nickname/memo, the writing box rides on top of the keyboard (frame px it moves up)
+  const writeRef = useRef<HTMLDivElement>(null)
+  const [lift, setLift] = useState(0)
+  const liftRef = useRef(0)
+  useEffect(() => {
+    const vv = window.visualViewport
+    const box = writeRef.current
+    if (!vv || !box) return
+    const update = () => {
+      let next = 0
+      if (box.contains(document.activeElement)) {
+        // visible bottom (above the keyboard) and the memo's bottom, both in frame px, without the current lift
+        const visible = framePoint(0, vv.offsetTop + vv.height).y
+        const bottom = framePoint(0, memoRef.current!.getBoundingClientRect().bottom).y - liftRef.current
+        next = Math.min(0, visible - 12 - bottom)
+      }
+      liftRef.current = next
+      setLift(next)
+    }
+    const later = () => setTimeout(update, 0)
+    box.addEventListener('focusin', update)
+    box.addEventListener('focusout', later)
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      box.removeEventListener('focusin', update)
+      box.removeEventListener('focusout', later)
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      liftRef.current = 0
+      setLift(0)
+    }
+  }, [tab, preview])
 
   useEffect(() => {
     locatePlace().then((p) => {
@@ -87,16 +156,32 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
     })
   }, [])
 
+  // event log for time-on-screen (admin → Stats): one row each time the screen changes state
+  const session = useRef(crypto.randomUUID()).current
+  const log = (event: string, data?: Record<string, unknown>) => logEvent(event, data, session)
+  const state = preview ? 'confirm' : tab
+  useEffect(() => {
+    const sync = () => log(document.hidden ? 'hidden' : state)
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => document.removeEventListener('visibilitychange', sync)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+  const exit = () => {
+    log('exit')
+    onExit()
+  }
+
   const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim() })
 
   function back() {
     if (preview) return setPreview(null)
-    if (empty && !nickname && !memo && !mood) return onExit()
+    if (empty && !nickname && !memo && !mood) return exit()
     setPopup({
-      message: 'Discard this drawing?',
+      message: tr('Discard this drawing?'),
       actions: [
-        { label: 'Discard', onClick: onExit },
-        { label: 'Cancel', onClick: () => setPopup(null) },
+        { label: tr('Discard'), onClick: exit },
+        { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
   }
@@ -107,7 +192,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
   async function check() {
     if (canvas.current?.isEmpty()) {
-      return setPopup({ message: 'Draw at least one line first.', actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
+      return setPopup({ message: tr('Draw at least one line first.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
     }
     // every Memo field is required: jump to Memo and mark what's empty
     if (missing.length) {
@@ -156,13 +241,13 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           }}
           paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
         >
-          {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">A few lines will do!</p>}
+          {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
       </div>
 
       {/* header */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
-      <button aria-label="Back" onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
+      <button aria-label={tr('Back')} onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {(['draw', 'memo'] as const).map((t) => (
@@ -178,11 +263,11 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] `}
           style={{ left: t === 'draw' ? 154 : 242.5 }}
         >
-          {t === 'draw' ? 'Drawing' : 'Memo'}
+          {tr(t === 'draw' ? 'Drawing' : 'Memo')}
         </button>
       ))}
       <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
-      <button aria-label="Finish card" onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
+      <button aria-label={tr('Finish card')} onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 
@@ -193,7 +278,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           <div className="absolute inset-0 top-[140px] z-20">
             {/* folder-tab box around the moods (Figma 787:3578 Vector 413) */}
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
-            <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>Mood</span>
+            <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>{tr('Mood')}</span>
             <label onClick={() => placeRef.current?.focus()} className={`absolute top-[11px] right-[25px] flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
               <input
                 value={place}
@@ -201,11 +286,11 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                   typedPlace.current = true
                   setPlace(e.target.value)
                 }}
-                placeholder={locating ? 'Finding where you are…' : 'Where are you?'}
+                placeholder={tr(locating ? 'Finding where you are…' : 'Where are you?')}
                 maxLength={30}
-                aria-label="Place"
+                aria-label={tr('Place')}
                 ref={placeRef}
-                size={Math.max(4, (place || (locating ? 'Finding where you are…' : 'Where are you?')).length)}
+                size={Math.max(4, (place || tr(locating ? 'Finding where you are…' : 'Where are you?')).length)}
                 className="max-w-[220px] bg-transparent text-right text-[17px] leading-[1.1] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#777]"
               />
             </label>
@@ -217,13 +302,18 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                     <span className="absolute inset-[-2.5%_-1%]">
                       {on ? <ChipShape on i={i} color={m.color} /> : <img src={i % 3 === 1 ? chipW2 : chipW1} alt="" className="size-full" />}
                     </span>
-                    <span className={`relative text-[19px] leading-[1.1] ${on ? '' : 'text-[#3d3d3d]'}`} style={on ? { color: m.ink } : undefined}>{m.name}</span>
+                    <span className={`relative text-[19px] leading-[1.1] ${on ? '' : 'text-[#3d3d3d]'}`} style={on ? { color: m.ink } : undefined}>{tr(m.name)}</span>
                   </button>
                 )
               })}
             </div>
             {/* the whole lower area starts writing the memo */}
-            <div onClick={() => memoRef.current?.focus()} className="absolute top-[262px] left-[21px] flex h-[258px] w-[360px] cursor-text flex-col items-start gap-[10px] rounded-[10px] p-[10px]">
+            <div
+              ref={writeRef}
+              onClick={() => memoRef.current?.focus()}
+              className={`absolute top-[262px] left-[21px] flex h-[258px] w-[360px] cursor-text flex-col items-start gap-[10px] rounded-[10px] p-[10px] transition-transform duration-200 ${lift ? 'bg-[#f0f0f0] shadow-[0_-2px_12px_rgba(0,0,0,0.15)]' : ''}`}
+              style={lift ? { transform: `translateY(${lift}px)` } : undefined}
+            >
               <label className={`flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('nickname')}`} onClick={(e) => {
                 e.stopPropagation()
                 nickRef.current?.focus()
@@ -231,9 +321,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 <input
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Nickname"
+                  placeholder={tr('Nickname')}
                   maxLength={24}
-                  aria-label="Nickname"
+                  aria-label={tr('Nickname')}
                   ref={nickRef}
                   size={Math.max(8, nickname.length + 1)}
                   className="max-w-[320px] bg-transparent text-[21px] leading-[1.1] tracking-[-0.42px] text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d]"
@@ -243,9 +333,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 value={memo}
                 ref={memoRef}
                 onChange={(e) => setMemo(e.target.value)}
-                placeholder="Save the moment."
+                placeholder={tr('Save the moment.')}
                 maxLength={180}
-                aria-label="Memo"
+                aria-label={tr('Memo')}
                 className={`h-[86px] w-full resize-none rounded-[10px] border-2 border-dashed px-[7px] py-[5px] text-[17px] leading-[1.15] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d] ${dashed('memo')}`}
               />
             </div>
@@ -262,7 +352,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             return (
               <button
                 key={t}
-                aria-label={t === 'pen' ? 'Pencil' : t === 'highlighter' ? 'Highlighter' : 'Eraser'}
+                aria-label={tr(t === 'pen' ? 'Pencil' : t === 'highlighter' ? 'Highlighter' : 'Eraser')}
                 aria-pressed={tool === t}
                 onClick={() => pickTool(t)}
                 className="absolute transition-transform duration-300 ease-[var(--ease-spring)]"
@@ -272,20 +362,20 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
               </button>
             )
           })}
-          <button aria-label="Undo" onClick={() => canvas.current?.undo()} className="absolute top-[801px] left-[201px] h-[24.6px] w-[22.7px]">
+          <button aria-label={tr('Undo')} onClick={() => canvas.current?.undo()} className="absolute top-[801px] left-[201px] h-[24.6px] w-[22.7px]">
             <UndoV2 on={history.undo} />
           </button>
-          <button aria-label="Redo" onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
+          <button aria-label={tr('Redo')} onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
             <RedoV2 on={history.redo} />
           </button>
-          <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label="Guide" className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
-            <span className="absolute inset-x-0 top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px]">Guide</span>
+          <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label={tr('Guide')} className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
+            <span className="absolute inset-x-[-14px] top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px] whitespace-nowrap">{tr('Guide')}</span>
             <span className="absolute top-[39px] left-[11px] h-[23px] w-[46px]">
               <ToggleIcon on={guide} />
             </span>
           </button>
           <button
-            aria-label="Color"
+            aria-label={tr('Color')}
             aria-expanded={open === 'color'}
             onClick={() => {
               setPicking(false)
@@ -305,7 +395,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 return (
                   <button
                     key={s}
-                    aria-label={`Size ${s}`}
+                    aria-label={tr('Size {n}', { n: s })}
                     aria-pressed={size === s}
                     onClick={() => {
                       setSize(s)
@@ -326,7 +416,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
-            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
+            <button aria-label={tr('Fit drawing')} onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
               {/* Figma drawing 719:10468 Frame 128, no fill */}
               <img src={fitIcon} alt="" className="size-full" />
             </button>
@@ -334,7 +424,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         </Bottom>
       )}
 
-      {picking && <p className="animate-fade-in pointer-events-none absolute inset-x-0 top-[124px] z-10 text-center text-[17px] text-[#555]">Tap the drawing to pick a color</p>}
+      {picking && <p className="animate-fade-in pointer-events-none absolute inset-x-0 top-[124px] z-10 text-center text-[17px] text-[#555]">{tr('Tap the drawing to pick a color')}</p>}
 
       {open === 'color' && (
         <ColorPanel
@@ -360,14 +450,13 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 <span className="absolute top-[673px] left-[17.8px] h-[122px] w-[368px]">
                   <ConfirmBubble />
                 </span>
-                <p className="absolute top-[689px] left-[203px] w-[370px] -translate-x-1/2 text-center text-[24.3px] leading-[1.2]">
-                  Ready to finish?
-                  <br />
-                  You won’t be able to edit this afterward.
+                <p className="absolute top-[689px] left-[203px] w-[370px] -translate-x-1/2 text-center text-[24.3px] leading-[1.2] whitespace-pre-line">
+                  {tr('Ready to finish?\nYou won’t be able to edit this afterward.')}
                 </p>
                 <button
                   onClick={() => {
                     rememberPlace(place.trim())
+                    log('finish', { mood })
                     onFinish(draft(preview))
                   }}
                   className="absolute top-[768.6px] left-[63.8px] h-[54.8px] w-[113px]"
@@ -375,13 +464,13 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                   <span className="absolute inset-0 rotate-[-178.73deg]">
                     <PillFinish />
                   </span>
-                  <span className="relative text-[24.3px] leading-[1.1]">Finish</span>
+                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
                 </button>
                 <button onClick={() => setPreview(null)} className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]">
                   <span className="absolute inset-0 rotate-[-177.79deg]">
                     <PillBack />
                   </span>
-                  <span className="relative text-[24.3px] leading-[1.1]">Go Back</span>
+                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Go Back')}</span>
                 </button>
               </div>
             </Bottom>
@@ -389,6 +478,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         </div>
       )}
 
+      {tip >= 0 && tip < TIPS.length && !preview && <Tip step={tip} onNext={() => setTip(tip + 1)} />}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
   )
@@ -424,15 +514,15 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
       <Bottom>
         <div
           role="dialog"
-          aria-label="Colors"
+          aria-label={tr('Colors')}
           className="animate-pop-in absolute top-[371px] left-[11px] h-[460px] w-[380px] overflow-hidden rounded-[20px] bg-white shadow-[0_3px_20px_rgba(0,0,0,0.1)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="absolute inset-x-0 top-[19px] text-center text-[20px] leading-[1.3] text-[#121212]">Colors</p>
-          <button aria-label="Pick a color from the drawing" onClick={onEyedropper} className="absolute top-[14px] left-[13px] flex size-[34px] items-center justify-center">
+          <p className="absolute inset-x-0 top-[19px] text-center text-[20px] leading-[1.3] text-[#121212]">{tr('Colors')}</p>
+          <button aria-label={tr('Pick a color from the drawing')} onClick={onEyedropper} className="absolute top-[14px] left-[13px] flex size-[34px] items-center justify-center">
             <img src={eyedropper} alt="" className="h-[34px] w-[11px] rotate-[42.59deg]" />
           </button>
-          <button aria-label="Close" onClick={onClose} className="absolute top-[18px] left-[349px] flex size-[26px] items-center justify-center">
+          <button aria-label={tr('Close')} onClick={onClose} className="absolute top-[18px] left-[349px] flex size-[26px] items-center justify-center">
             <img src={closeDark} alt="" className="h-[15px] w-[12.3px]" />
           </button>
           <div
@@ -450,7 +540,7 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
           >
             {knob && <span className="pointer-events-none absolute size-[22px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-[0_0_2px_rgba(0,0,0,0.4)]" style={{ left: `${knob.x * 100}%`, top: `${knob.y * 100}%`, background: base }} />}
           </div>
-          <p className="absolute top-[372px] left-[15px] text-[15px] leading-[1.3] uppercase">Opacity</p>
+          <p className="absolute top-[372px] left-[15px] text-[15px] leading-[1.3] uppercase">{tr('Opacity')}</p>
           <div className="absolute top-[396px] left-[15px] flex w-[350px] items-center gap-[11px]">
             <div
               ref={slider}
@@ -510,7 +600,7 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
           <span className="absolute inset-[-2.22%_-0.44%]">
             <PillVillage />
           </span>
-          <span className="relative text-[21px] leading-[1.1]">Choose a village</span>
+          <span className="relative text-[21px] leading-[1.1]">{tr('Choose a village')}</span>
         </button>
       </Bottom>
     </div>
