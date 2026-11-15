@@ -510,7 +510,12 @@ export default function MainScreen({
               </div>
             </>
           )}
-          <p className="pointer-events-none absolute inset-x-[90px] top-[77px] truncate text-center font-hand text-[24px] leading-[28px]">{townName(town.name)}</p>
+          {/* town name → Town List (only the name itself is tappable; the rest of the bar still pans the town) */}
+          <div className="pointer-events-none absolute inset-x-[90px] top-[69px] flex justify-center">
+            <button onClick={() => { setMenu(false); onTowns() }} className="pointer-events-auto max-w-full truncate px-[6px] py-[8px] font-hand text-[24px] leading-[28px]">
+              {townName(town.name)}
+            </button>
+          </div>
           {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
           <button aria-label={tr('My page')} onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
