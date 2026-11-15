@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import NotifyPrompt from './components/NotifyPrompt'
+import { syncPush } from './lib/push'
 import { PhoneChrome, Popup } from './components/ui'
 import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
@@ -143,6 +144,11 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setGate(null)
     if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
   }, [])
+
+  // keep this phone's notification subscription under whoever is logged in (lib/push.ts)
+  useEffect(() => {
+    if (ready && !viewAsId) syncPush()
+  }, [ready, user?.id])
 
   // leaving / hiding the page: send the batched account save instead of dropping it
   useEffect(() => {

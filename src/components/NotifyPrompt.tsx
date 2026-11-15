@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tr } from '../lib/i18n'
+import { syncPush } from '../lib/push'
 import { Popup } from './ui'
 
 // Asks to allow notifications: right after logging in / signing up, and again every time the app opens until the
@@ -37,7 +38,10 @@ export default function NotifyPrompt({ user, blocked }: { user: string | null; b
           onClick: () => {
             setOpen(false)
             Notification.requestPermission()
-              .then((p) => p !== 'default' && remember(p === 'granted'))
+              .then((p) => {
+                if (p !== 'default') remember(p === 'granted')
+                syncPush()
+              })
               .catch(() => {})
           },
         },

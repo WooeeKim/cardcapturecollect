@@ -13,6 +13,7 @@ import { Bottom, LangButton, Popup, type PopupAction } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import { type User } from '../lib/auth'
 import { tr } from '../lib/i18n'
+import { syncPush } from '../lib/push'
 import type { Card } from '../lib/store'
 
 // My Page (Figma mypage-login 830:814 / mypage-logout 838:2079 / edit 838:2365).
@@ -82,7 +83,8 @@ export default function MyPageScreen({
       /* private mode */
     }
     // turning it on before the phone was asked: ask now (this tap counts as the user's gesture on iPhone)
-    if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {})
+    if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().then(syncPush, () => {})
+    else syncPush()
   }
   const askDelete = () =>
     setPopup({

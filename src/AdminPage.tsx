@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CardList } from './admin/CardList'
 import { cardSessions, feedbacks, flatten, loadEvents, type CardSession, type Feedback, type Row } from './admin/data'
+import { Notify } from './admin/Notify'
 import { People } from './admin/People'
 import { Plaza } from './admin/Plaza'
 import { Stats } from './admin/Stats'
@@ -13,8 +14,9 @@ import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
 // - People: pick someone → the app as they see it (read-only, <site>/?viewAs=<id>)
 // - Stats: counts, cards per day / hour, moods, places, time on Drawing vs Memo, feedback (app_events)
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
-type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti'
-const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti']
+// - Notify: pick phones that allowed notifications and send them one (push_subscriptions, api/push.js)
+type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti' | 'notify'
+const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti', 'notify']
 const fromHash = (): { tab: Tab; person: string | null } => {
   const [t, person] = location.hash.slice(1).split('/')
   return (TABS as string[]).includes(t) ? { tab: t as Tab, person: (t === 'people' && person) || null } : { tab: 'plaza', person: null }
@@ -140,6 +142,7 @@ export default function AdminPage() {
               ['people', `People (${testers.length})`],
               ['stats', 'Stats'],
               ['gilbti', `Subway-TI (${latest.length})`],
+              ['notify', 'Notify'],
             ] as const
           ).map(([id, label]) => (
             <button key={id} onClick={() => pick(id)} className={`rounded-full px-3 py-1 ${tab === id ? 'bg-black text-white' : 'bg-neutral-100'}`}>
@@ -161,6 +164,7 @@ export default function AdminPage() {
       {tab === 'plaza' && <Plaza items={items} onViewAs={viewAs} />}
       {tab === 'list' && <CardList items={items} onViewAs={viewAs} />}
       {tab === 'people' && <People rows={testers} selected={person} onSelect={viewAs} />}
+      {tab === 'notify' && <Notify rows={rows ?? []} />}
       {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} sessions={sessions} feedback={feedback} eventsError={eventsError} />}
 
       {tab === 'gilbti' && (
