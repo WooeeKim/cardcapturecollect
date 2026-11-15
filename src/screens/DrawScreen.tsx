@@ -43,41 +43,107 @@ const TOOLS = {
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
-// Onboarding "draw yourself" tips: one speech bubble at a time over the real screen (frame coords; `bottom` = toolbar area)
-const TIPS: { text: string; top: number; arrow: number; down?: boolean; bottom?: boolean }[] = [
-  { text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', top: 250, arrow: 201, down: true },
-  { text: 'Pencil, highlighter and eraser. Tap the picked one again for thickness, the wheel for colors. Undo, redo and the guide are here too.', top: 600, arrow: 120, down: true, bottom: true },
-  { text: 'In Memo, add their mood, where you are, a name and a line about them.', top: 128, arrow: 242 },
-  { text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).', top: 128, arrow: 350 },
+// Onboarding "draw yourself" tour: the screen dims except one lit-up spot (white ring), and the step moves on
+// when that spot is actually used. `target` = the data-tour element that is lit; `next` = moves on with a Next
+// link instead (shown once there's something to move on from: a drawing, a filled-in memo).
+type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish'
+const STEPS: { id: StepId; target: string; text: string; next?: boolean }[] = [
+  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', next: true },
+  { id: 'size-open', target: 'pen', text: 'Pencil, highlighter and eraser, with undo and redo next to them. Tap the picked pencil again to change its thickness.' },
+  { id: 'size-pick', target: 'sizes', text: 'Pick a thickness.' },
+  { id: 'color-open', target: 'color', text: 'Tap the wheel to change the color.' },
+  { id: 'color-pick', target: 'colors', text: 'Choose a color, then close the panel.' },
+  { id: 'guide', target: 'guide', text: 'Tap to turn the dotted guide off or on.' },
+  // no auto-advance: play with it as long as you like (and a PC can't pinch)
+  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!', next: true },
+  { id: 'fit', target: 'fit', text: 'Tap here to put the paper back to its normal size.' },
+  { id: 'memo', target: 'memo', text: 'Now open Memo.' },
+  { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.', next: true },
+  { id: 'finish', target: 'finish', text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).' },
 ]
+type Rect = { x: number; y: number; w: number; h: number }
 
-function Tip({ step, onNext }: { step: number; onNext: () => void }) {
-  const t = TIPS[step]
-  const last = step === TIPS.length - 1
-  const bubble = (
-    <div className="animate-pop-in absolute inset-x-[20px] z-50 rounded-[14px] border-[2.5px] border-[#2e2e2e] bg-white px-[16px] pt-[12px] pb-[10px]" style={{ top: t.top }}>
-      <span
-        className={`absolute size-[16px] rotate-45 border-[#2e2e2e] bg-white ${t.down ? 'bottom-[-9.5px] border-r-[2.5px] border-b-[2.5px]' : 'top-[-9.5px] border-t-[2.5px] border-l-[2.5px]'}`}
-        style={{ left: t.arrow - 20 - 8 }}
-      />
-      <p className="text-[20px] leading-[1.3]">{tr(t.text)}</p>
-      <div className="mt-[8px] flex items-center justify-between text-[16px] text-[#8a8a8a]">
-        <span>
-          {step + 1} / {TIPS.length}
-        </span>
-        <span className="text-[20px] text-[#2e2e2e] underline underline-offset-4">{tr(last ? 'Start drawing' : 'Next')}</span>
+function Tour({ step, root, canNext, onNext, onSkip }: { step: number; root: React.RefObject<HTMLDivElement | null>; canNext: boolean; onNext: () => void; onSkip: () => void }) {
+  const s = STEPS[step]
+  const [hole, setHole] = useState<Rect | null>(null)
+  // follow the target every frame (tools lift, panels pop in, the paper zooms, the keyboard moves things)
+  useEffect(() => {
+    let raf = 0
+    const tick = () => {
+      const r = root.current
+      const el = r?.querySelector(`[data-tour="${s.target}"]`)
+      let next: Rect | null = null
+      if (r && el) {
+        const b = el.getBoundingClientRect()
+        const p = toLocal(b.left, b.top, r)
+        const q = toLocal(b.right, b.bottom, r)
+        next = { x: Math.min(p.x, q.x) - 6, y: Math.min(p.y, q.y) - 6, w: Math.abs(q.x - p.x) + 12, h: Math.abs(q.y - p.y) + 12 }
+      }
+      setHole((o) => (o && next && Math.abs(o.x - next.x) + Math.abs(o.y - next.y) + Math.abs(o.w - next.w) + Math.abs(o.h - next.h) < 0.5) || o === next ? o : next)
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => cancelAnimationFrame(raf)
+  }, [s.target, root])
+
+  const H = root.current?.clientHeight ?? 874
+  // bubble goes below the lit spot if there's room, else above (the top 40px are off-screen on phones)
+  const below = hole && (H - (hole.y + hole.h) >= 150 || H - (hole.y + hole.h) > hole.y - 48)
+  const arrow = hole ? Math.min(362, Math.max(40, hole.x + hole.w / 2)) : 201
+  const block = 'absolute pointer-events-auto' // touches outside the lit spot do nothing
+  return (
+    <div className="animate-fade-in pointer-events-none absolute inset-0 z-[45]">
+      {hole ? (
+        <>
+          <div className={block} style={{ left: 0, right: 0, top: 0, height: Math.max(0, hole.y) }} />
+          <div className={block} style={{ left: 0, right: 0, top: hole.y + hole.h, bottom: 0 }} />
+          <div className={block} style={{ left: 0, width: Math.max(0, hole.x), top: hole.y, height: hole.h }} />
+          <div className={block} style={{ left: hole.x + hole.w, right: 0, top: hole.y, height: hole.h }} />
+          <div
+            className="absolute rounded-[14px] border-[3px] border-white"
+            style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h, boxShadow: '0 0 16px 4px rgba(255,255,255,0.75), 0 0 0 9999px rgba(0,0,0,0.55)' }}
+          />
+        </>
+      ) : (
+        <div className={`${block} inset-0 bg-black/55`} />
+      )}
+      <div
+        key={step}
+        className="animate-pop-in absolute inset-x-[20px] rounded-[14px] border-[2.5px] border-[#2e2e2e] bg-white px-[16px] pt-[12px] pb-[10px]"
+        style={!hole ? { top: 160 } : below ? { top: hole.y + hole.h + 14 } : { bottom: Math.max(0, H - hole.y + 14) }}
+      >
+        {hole && (
+          <span
+            className={`absolute size-[16px] rotate-45 border-[#2e2e2e] bg-white ${below ? 'top-[-9.5px] border-t-[2.5px] border-l-[2.5px]' : 'bottom-[-9.5px] border-r-[2.5px] border-b-[2.5px]'}`}
+            style={{ left: arrow - 20 - 8 }}
+          />
+        )}
+        <p className="text-[19px] leading-[1.3]">{tr(s.text)}</p>
+        <div className="mt-[6px] flex items-center justify-between text-[16px] text-[#8a8a8a]">
+          <span>
+            {step + 1} / {STEPS.length}
+          </span>
+          <span className="flex items-center gap-[16px]">
+            <button onClick={onSkip} className="pointer-events-auto">
+              {tr('Skip tutorial')}
+            </button>
+            {s.next && canNext && (
+              <button onClick={onNext} className="pointer-events-auto text-[20px] text-[#2e2e2e] underline underline-offset-4">
+                {tr('Next')}
+              </button>
+            )}
+          </span>
+        </div>
       </div>
     </div>
-  )
-  return (
-    <button aria-label={tr(last ? 'Start drawing' : 'Next')} onClick={onNext} className="animate-fade-in absolute inset-0 z-40 cursor-pointer bg-black/30 text-left">
-      {t.bottom ? <Bottom>{bubble}</Bottom> : bubble}
-    </button>
   )
 }
 
 export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
   const [tip, setTip] = useState(tutorial ? 0 : -1)
+  const rootRef = useRef<HTMLDivElement>(null)
+  // tour step `id` was just done for real → next step
+  const done = (id: StepId) => setTip((t) => (STEPS[t]?.id === id ? t + 1 : t))
   const canvas = useRef<DrawingCanvasHandle>(null)
   const [tab, setTab] = useState<'draw' | 'memo'>('draw')
   const [tool, setTool] = useState<Tool>('pen')
@@ -118,7 +184,6 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
   // while typing the nickname/memo, the writing box rides on top of the keyboard (frame px it moves up)
   const writeRef = useRef<HTMLDivElement>(null)
   const [lift, setLift] = useState(0)
-  const liftRef = useRef(0)
   useEffect(() => {
     const vv = window.visualViewport
     const box = writeRef.current
@@ -126,12 +191,13 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     const update = () => {
       let next = 0
       if (box.contains(document.activeElement)) {
-        // visible bottom (above the keyboard) and the memo's bottom, both in frame px, without the current lift
+        // visible bottom (above the keyboard) and the memo's unlifted bottom, both in frame px
+        // (offsets ignore the transform, so a lift still animating doesn't skew the measure)
+        const ta = memoRef.current!
         const visible = framePoint(0, vv.offsetTop + vv.height).y
-        const bottom = framePoint(0, memoRef.current!.getBoundingClientRect().bottom).y - liftRef.current
+        const bottom = framePoint(0, box.offsetParent!.getBoundingClientRect().top).y + box.offsetTop + ta.offsetTop + ta.offsetHeight
         next = Math.min(0, visible - 12 - bottom)
       }
-      liftRef.current = next
       setLift(next)
     }
     const later = () => setTimeout(update, 0)
@@ -144,7 +210,6 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       box.removeEventListener('focusout', later)
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
-      liftRef.current = 0
       setLift(0)
     }
   }, [tab, preview])
@@ -209,19 +274,26 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
 
   function pickTool(t: Tool) {
     setPicking(false)
-    if (tool === t) setOpen(open === 'size' ? null : 'size')
-    else {
+    if (tool === t) {
+      setOpen(open === 'size' ? null : 'size')
+      if (open !== 'size') done('size-open')
+    } else {
       setTool(t)
       setOpen(null)
     }
   }
 
   const g = TOOLS[tool]
+  const step = STEPS[tip]?.id
+  // the fit button only exists while zoomed: no zoom (Next was used) → nothing to reset
+  useEffect(() => {
+    if (step === 'fit' && !zoomed) done('fit')
+  })
 
   return (
-    <div className="relative h-full touch-none overflow-hidden bg-[#f0f0f0] font-hand">
+    <div ref={rootRef} className="relative h-full touch-none overflow-hidden bg-[#f0f0f0] font-hand">
       {/* card-sized paper: two fingers zoom, tilt and move the whole card (it can go past the screen) */}
-      <div className="absolute top-[145px] left-[21px] h-[515px] w-[360px] transition-transform duration-300" style={tab === 'draw' ? shrink(515) : undefined}>
+      <div data-tour="paper" className="absolute top-[145px] left-[21px] h-[515px] w-[360px] transition-transform duration-300" style={tab === 'draw' ? shrink(515) : undefined}>
         <DrawingCanvas
           ref={canvas}
           tool={tool}
@@ -257,9 +329,13 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
             setTab(t)
             setOpen(null)
             setPicking(false)
-            if (t === 'memo') canvas.current?.resetView()
+            if (t === 'memo') {
+              canvas.current?.resetView()
+              done('memo')
+            }
           }}
           aria-pressed={tab === t}
+          data-tour={t === 'memo' ? 'memo' : undefined}
           className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] `}
           style={{ left: t === 'draw' ? 154 : 242.5 }}
         >
@@ -267,7 +343,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         </button>
       ))}
       <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
-      <button aria-label={tr('Finish drawing')} onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
+      <button
+        aria-label={tr('Finish drawing')}
+        data-tour="finish"
+        onClick={() => {
+          done('finish')
+          check()
+        }}
+        className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 
@@ -276,6 +359,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         <>
           <div className="animate-fade-in pointer-events-none absolute inset-0 z-10 bg-black/35 backdrop-blur-[1.5px]" />
           <div className="absolute inset-0 top-[140px] z-20">
+            <div data-tour="memo-fill" className="pointer-events-none absolute top-0 left-[16px] h-[520px] w-[370px]" />
             {/* folder-tab box around the moods (Figma 787:3578 Vector 413) */}
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
             <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>{tr('Mood')}</span>
@@ -310,6 +394,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
             {/* the whole lower area starts writing the memo */}
             <div
               ref={writeRef}
+              data-own-keyboard
               onClick={() => memoRef.current?.focus()}
               className={`absolute top-[262px] left-[21px] flex h-[258px] w-[360px] cursor-text flex-col items-start gap-[10px] rounded-[10px] p-[10px] transition-transform duration-200 ${lift ? 'bg-[#f0f0f0] shadow-[0_-2px_12px_rgba(0,0,0,0.15)]' : ''}`}
               style={lift ? { transform: `translateY(${lift}px)` } : undefined}
@@ -354,6 +439,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                 key={t}
                 aria-label={tr(t === 'pen' ? 'Pencil' : t === 'highlighter' ? 'Highlighter' : 'Eraser')}
                 aria-pressed={tool === t}
+                data-tour={t === 'pen' ? 'pen' : undefined}
                 onClick={() => pickTool(t)}
                 className="absolute transition-transform duration-300 ease-[var(--ease-spring)]"
                 style={{ left: s.left, top: s.top, width: s.w, height: s.h, transform: `translateY(${tool === t ? -s.up : 0}px)` }}
@@ -368,7 +454,13 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
           <button aria-label={tr('Redo')} onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
             <RedoV2 on={history.redo} />
           </button>
-          <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label={tr('Guide')} className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
+          <button
+            onClick={() => {
+              setGuide(!guide)
+              done('guide')
+            }}
+            data-tour="guide"
+            aria-pressed={guide} aria-label={tr('Guide')} className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
             <span className="absolute inset-x-[-14px] top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px] whitespace-nowrap">{tr('Guide')}</span>
             <span className="absolute top-[39px] left-[11px] h-[23px] w-[46px]">
               <ToggleIcon on={guide} />
@@ -380,7 +472,9 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
             onClick={() => {
               setPicking(false)
               setOpen(open === 'color' ? null : 'color')
+              if (open !== 'color') done('color-open')
             }}
+            data-tour="color"
             className="absolute top-[793px] left-[344.7px] h-[38.4px] w-[38.8px]"
           >
             <ColorWheelV2 color={color} />
@@ -388,7 +482,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
 
           {/* thickness: 5 steps in a bubble above the picked tool */}
           {open === 'size' && (
-            <div className="animate-pop-in absolute top-[713px] h-[43.6px] w-[148px]" style={{ left: g.bubble }}>
+            <div data-tour="sizes" className="animate-pop-in absolute top-[713px] h-[43.6px] w-[148px]" style={{ left: g.bubble }}>
               <SizeBubbleV2 />
               {SIZES.map((s, i) => {
                 const side = [7, 9, 12, 15, 18][i]
@@ -400,6 +494,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                     onClick={() => {
                       setSize(s)
                       setOpen(null)
+                      done('size-pick')
                     }}
                     className="absolute top-[9px] flex h-[24px] w-[26px] -translate-x-1/2 items-center justify-center"
                     style={{ left: [22, 42, 64, 90, 118][i] }}
@@ -416,7 +511,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
-            <button aria-label={tr('Fit drawing')} onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
+            <button
+              aria-label={tr('Fit drawing')}
+              data-tour="fit"
+              onClick={() => {
+                canvas.current?.resetView()
+                done('fit')
+              }}
+              className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
               {/* Figma drawing 719:10468 Frame 128, no fill */}
               <img src={fitIcon} alt="" className="size-full" />
             </button>
@@ -430,10 +532,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         <ColorPanel
           color={color}
           onChange={setColor}
-          onClose={() => setOpen(null)}
+          onClose={() => {
+            setOpen(null)
+            done('color-pick')
+          }}
           onEyedropper={() => {
             setOpen(null)
             setPicking(true)
+            done('color-pick')
           }}
         />
       )}
@@ -478,7 +584,9 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         </div>
       )}
 
-      {tip >= 0 && tip < TIPS.length && !preview && <Tip step={tip} onNext={() => setTip(tip + 1)} />}
+      {tip >= 0 && tip < STEPS.length && !preview && (
+        <Tour step={tip} root={rootRef} canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true} onNext={() => setTip(tip + 1)} onSkip={() => setTip(STEPS.length)} />
+      )}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
   )
@@ -515,6 +623,7 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
         <div
           role="dialog"
           aria-label={tr('Colors')}
+          data-tour="colors"
           className="animate-pop-in absolute top-[371px] left-[11px] h-[460px] w-[380px] overflow-hidden rounded-[20px] bg-white shadow-[0_3px_20px_rgba(0,0,0,0.1)]"
           onClick={(e) => e.stopPropagation()}
         >

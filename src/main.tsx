@@ -13,6 +13,8 @@ import { preloadAssets } from './lib/preload'
 //   The top TOP px (fake status bar area) are pushed off-screen. Held sideways, the app is rotated
 //   back so it always stays portrait.
 const TOP = 40
+// client px the whole frame is moved up so the focused text field sits above the on-screen keyboard
+let kbLift = 0
 
 function fit() {
   const root = document.getElementById('root')!
@@ -37,6 +39,7 @@ function fit() {
     height = h / k + TOP
     if (sideways) m = angle === 90 ? m.translate(0, innerHeight).rotate(-90) : m.translate(innerWidth, 0).rotate(90)
     m = m.translate(0, -TOP * k).scale(k)
+    if (!sideways && kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
   }
   html.classList.toggle('phone', phone)
   html.style.setProperty('--cut', String(874 - height))
@@ -85,6 +88,30 @@ function pinPage() {
   addEventListener('focusout', () => setTimeout(refit, 300))
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && setTimeout(refit, 50))
   setTimeout(refit, 500)
+
+  // The keyboard covers the bottom of the frame and the page can't scroll (see above), so the frame itself
+  // moves up until the focused field is above the keyboard (through the frame matrix, so touches stay right).
+  // A box marked data-own-keyboard (Draw › Memo) moves itself instead.
+  const lift = () => {
+    const el = document.activeElement
+    let next = 0
+    if (vv && typing() && el && !el.closest('[data-own-keyboard]') && document.documentElement.classList.contains('phone')) {
+      const r = el.getBoundingClientRect()
+      const visTop = vv.offsetTop + 8
+      const visBottom = vv.offsetTop + vv.height - 12
+      // field position without the current lift; a field taller than the space keeps its top visible
+      next = Math.min(0, Math.max(visTop - (r.top - kbLift), visBottom - (r.bottom - kbLift)))
+    }
+    if (next !== kbLift) {
+      kbLift = next
+      fit()
+    }
+  }
+  const liftLater = () => setTimeout(lift, 0)
+  document.addEventListener('focusin', liftLater)
+  document.addEventListener('focusout', liftLater)
+  vv?.addEventListener('resize', liftLater)
+  vv?.addEventListener('scroll', liftLater)
 }
 
 // The app name (Splash) shows right away while the handwriting font and every icon load, so the wait never
