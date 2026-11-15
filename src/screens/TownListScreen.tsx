@@ -118,7 +118,7 @@ export default function TownListScreen({
   }
 
   function place(t: Town) {
-    if (mode === 'migrate' && t.id === homeId) return gotIt(tr('This card already lives here.'))
+    if (mode === 'migrate' && t.id === homeId) return gotIt(tr('This person already lives here.'))
     if (t.residents.length >= MAX_RESIDENTS) return gotIt(tr('This town is full.'))
     const from = cardEl.current?.getBoundingClientRect()
     const to = thumbs.current.get(t.id)?.querySelector('[data-thumb]')?.getBoundingClientRect()

@@ -124,16 +124,16 @@ export default function CollectionScreen({
     if (!inDeck) return // cards can't be taken out of a town by dragging
     const at = slot ? Number(slot.dataset.slot) : deck.length
     if (from === 'rest' && deck.length >= MAX_RESIDENTS) {
-      return setPopup({ message: tr('This town is full. Drop it on a card to swap.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
+      return setPopup({ message: tr('This town is full. Drop them on someone to swap places.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
     }
     commit((s) => placeCard(s, id, town.id, at))
   }
 
   function askDelete(card: Card) {
     setPopup({
-      message: tr('Do you really want to delete?'),
+      message: tr('Let this person go?'),
       actions: [
-        { label: tr('Delete'), onClick: () => { commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
+        { label: tr('Let go'), onClick: () => { commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
         { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
@@ -179,7 +179,7 @@ export default function CollectionScreen({
       <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">{tr('Collection')}</p>
+      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">{tr('Residents')}</p>
       <TextButton onClick={() => setNewest(!newest)} className="absolute top-[93px] right-[24px] z-20 text-[17px]">
         {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
@@ -231,7 +231,7 @@ export default function CollectionScreen({
                   <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: 31 - CLIP_L + (k % 3) * COL, top: 20 + Math.floor(k / 3) * 116, width: TILE, height: TILE }}>
                     {c ? (
                       <>
-                        {tile(c, 'deck', `${c.nickname || tr('Card')}${at === 0 ? tr(', head') : ''}`)}
+                        {tile(c, 'deck', `${c.nickname || tr('Someone')}${at === 0 ? tr(', head') : ''}`)}
                         {at === 0 && (
                           <span className="pointer-events-none absolute inset-x-[2px] top-[67px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]">{tr('Head')}</span>
                         )}
@@ -255,12 +255,12 @@ export default function CollectionScreen({
       {/* everyone else (only this part scrolls) */}
       <div className="absolute inset-x-0 top-[500px] bottom-0 overflow-y-auto [scrollbar-width:none]">
         {rest.length === 0 ? (
-          <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">{tr('Cards in other towns show up here.')}</p>
+          <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">{tr('People in other towns show up here.')}</p>
         ) : (
           <div className="grid grid-cols-[repeat(3,90px)] gap-x-[35px] gap-y-[25px] pt-[25px] pb-[70px] pl-[31px]">
             {rest.map((c) => (
               <div key={c.id} className="size-[90px]">
-                {tile(c, 'rest', c.nickname || tr('Card'))}
+                {tile(c, 'rest', c.nickname || tr('Someone'))}
               </div>
             ))}
           </div>
@@ -344,7 +344,7 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
       <Bottom>
         <button onClick={onDelete} className="absolute top-[735px] left-[280px] flex h-[43px] w-[102px] items-center justify-center">
           <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
-          <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Discard')}</span>
+          <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
         </button>
       </Bottom>
     </div>

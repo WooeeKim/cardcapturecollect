@@ -47,8 +47,8 @@ const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 const TIPS: { text: string; top: number; arrow: number; down?: boolean; bottom?: boolean }[] = [
   { text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', top: 250, arrow: 201, down: true },
   { text: 'Pencil, highlighter and eraser. Tap the picked one again for thickness, the wheel for colors. Undo, redo and the guide are here too.', top: 600, arrow: 120, down: true, bottom: true },
-  { text: 'In Memo, add your mood, where you are, a name and a line for this card.', top: 128, arrow: 242 },
-  { text: 'Done? Tap ✓, then pick a town for your card. This first card becomes your profile picture (change it on My Page).', top: 128, arrow: 350 },
+  { text: 'In Memo, add their mood, where you are, a name and a line about them.', top: 128, arrow: 242 },
+  { text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).', top: 128, arrow: 350 },
 ]
 
 function Tip({ step, onNext }: { step: number; onNext: () => void }) {
@@ -267,7 +267,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         </button>
       ))}
       <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
-      <button aria-label={tr('Finish card')} onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
+      <button aria-label={tr('Finish drawing')} onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 

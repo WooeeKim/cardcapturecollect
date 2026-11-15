@@ -124,7 +124,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       if (usingSupabase ? stored : cached) localStorage.removeItem(GUEST_KEY)
       else setError(tr("Couldn't save your guest town to the account yet. It will be added the next time you log in."))
     }
-    if (unplaced > 0) setError(tr(unplaced > 1 ? "{n} cards didn't fit in your towns." : "{n} card didn't fit in your towns.", { n: unplaced }))
+    if (unplaced > 0) setError(tr(unplaced > 1 ? "{n} people didn't fit in your towns." : "{n} person didn't fit in your towns.", { n: unplaced }))
     localStorage.removeItem(LEGACY_GUEST_OWNER)
     claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
@@ -201,7 +201,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       try {
         save(next, keyFor(u?.id ?? null))
       } catch {
-        setError(tr('Storage is full. Delete some cards to save new ones.'))
+        setError(tr('Storage is full. Let a few people go to make room for new ones.'))
         return prev
       }
       if (u) saveRemote(u, next)
@@ -344,7 +344,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
               save(next, keyFor(user?.id ?? null))
               if (user) saveRemote(user, next)
             } catch {
-              return setError(tr('Storage is full. Delete some cards to save new ones.'))
+              return setError(tr('Storage is full. Let a few people go to make room for new ones.'))
             }
             setState(next)
             setRoute({ name: 'tada' })

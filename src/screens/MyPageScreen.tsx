@@ -88,7 +88,7 @@ export default function MyPageScreen({
   }
   const askDelete = () =>
     setPopup({
-      message: tr("Delete your account and all your towns and cards?\nThis can't be undone."),
+      message: tr("Delete your account, your towns and everyone in them?\nThis can't be undone."),
       actions: [
         {
           label: tr('Delete'),
@@ -121,7 +121,7 @@ export default function MyPageScreen({
       label: tr('Reset (test)'),
       onClick: () =>
         setPopup({
-          message: tr("Reset all your towns and cards?\nThis can't be undone."),
+          message: tr("Reset all your towns and everyone in them?\nThis can't be undone."),
           actions: [
             { label: tr('Reset'), onClick: () => { setPopup(null); onReset() } },
             { label: tr('Cancel'), onClick: () => setPopup(null) },
@@ -203,7 +203,7 @@ export default function MyPageScreen({
           <p className={`absolute top-[17px] left-[112px] w-[240px] truncate text-[24px] leading-[normal] ${nickname ? '' : 'text-[#9a9a9a]'}`}>{nickname || tr('No Profile')}</p>
         )}
         <p className="absolute top-[54px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
-          {tr(cardCount === 1 ? '{n} Capture' : '{n} Captures', { n: cardCount })}
+          {tr(cardCount === 1 ? '{n} Person' : '{n} People', { n: cardCount })}
         </p>
         <p className="absolute top-[72px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
           {tr(townCount === 1 ? '{n} Town' : '{n} Towns', { n: townCount })}
@@ -273,7 +273,7 @@ export default function MyPageScreen({
       {sheet === 'picture' && (
         <Sheet onClose={() => setSheet(null)}>
           <p className="text-center text-[24px] leading-[1.2]">{tr('Profile picture')}</p>
-          <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your cards.')}</p>
+          <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your people.')}</p>
           <div className="mt-[16px] grid max-h-[360px] grid-cols-4 gap-[10px] overflow-y-auto p-[2px]">
             {cards.map((c) => (
               <button

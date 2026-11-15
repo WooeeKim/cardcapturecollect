@@ -501,7 +501,7 @@ export default function MainScreen({
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
               <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
-                <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Residents')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
                 <button aria-label={tr('Town list')} onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
@@ -537,7 +537,7 @@ export default function MainScreen({
 
       {/* draw a new card */}
       {!open && !follow && (
-        <button aria-label={tr('Draw a card')} onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
+        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
           {/* the Figma + card, with rounded corners */}
           <span className="absolute top-1/2 left-1/2 flex h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg] items-center justify-center rounded-[9px] border-[2.6px] border-[#222] bg-white">
             <svg viewBox="0 0 28 28" className="size-[28px]" aria-hidden>
