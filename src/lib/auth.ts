@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { State } from './store'
+import { tr } from './i18n'
 
 // Email + password login, Supabase's default rules (valid email, password 6+ characters).
 // - With VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (.env.local): real accounts via Supabase Auth,
@@ -22,7 +23,7 @@ const norm = (email: string) => email.trim().toLowerCase()
 
 function check(email: string, password: string): string | null {
   if (!EMAIL.test(norm(email))) return 'Enter a valid email.'
-  if (password.length < MIN_PASSWORD) return `Password needs at least ${MIN_PASSWORD} characters.`
+  if (password.length < MIN_PASSWORD) return tr('Password needs at least {n} characters.', { n: MIN_PASSWORD })
   return null
 }
 
@@ -73,13 +74,13 @@ export async function signUp(username: string, password: string): Promise<AuthRe
   const name = norm(username)
   if (sb) {
     const { data, error } = await sb.auth.signUp({ email: name, password })
-    if (error) return { ok: false, error: /registered|exists/i.test(error.message) ? 'This email already has an account.' : error.message }
+    if (error) return { ok: false, error: /registered|exists/i.test(error.message) ? tr('This email already has an account.') : error.message }
     // "Confirm email" on (Supabase default): no session until the link in the email is clicked
-    if (!data.session || !data.user) return { ok: false, error: 'Check your email and open the link, then log in.' }
+    if (!data.session || !data.user) return { ok: false, error: tr('Check your email and open the link, then log in.') }
     return { ok: true, user: { id: data.user.id, username: name } }
   }
   const users = readUsers()
-  if (users[name]) return { ok: false, error: 'This email already has an account.' }
+  if (users[name]) return { ok: false, error: tr('This email already has an account.') }
   const user = { id: crypto.randomUUID(), username: name }
   users[name] = { id: user.id, hash: await hash(`${name}:${password}`) }
   localStorage.setItem(USERS, JSON.stringify(users))
@@ -93,12 +94,12 @@ export async function logIn(username: string, password: string): Promise<AuthRes
   const name = norm(username)
   if (sb) {
     const { data, error } = await sb.auth.signInWithPassword({ email: name, password })
-    if (error?.message && /confirm/i.test(error.message)) return { ok: false, error: 'Open the link in your email first, then log in.' }
-    if (error || !data.user) return { ok: false, error: 'Wrong email or password.' }
+    if (error?.message && /confirm/i.test(error.message)) return { ok: false, error: tr('Open the link in your email first, then log in.') }
+    if (error || !data.user) return { ok: false, error: tr('Wrong email or password.') }
     return { ok: true, user: { id: data.user.id, username: data.user.email ?? name } }
   }
   const found = readUsers()[name]
-  if (!found || found.hash !== (await hash(`${name}:${password}`))) return { ok: false, error: 'Wrong email or password.' }
+  if (!found || found.hash !== (await hash(`${name}:${password}`))) return { ok: false, error: tr('Wrong email or password.') }
   const user = { id: found.id, username: name }
   localStorage.setItem(SESSION, JSON.stringify(user))
   return { ok: true, user }
@@ -135,7 +136,7 @@ export async function deleteAccount(user: User): Promise<{ ok: boolean; note?: s
 }
 
 export async function changePassword(user: User, password: string): Promise<{ ok: boolean; error?: string }> {
-  if (password.length < MIN_PASSWORD) return { ok: false, error: `Password needs at least ${MIN_PASSWORD} characters.` }
+  if (password.length < MIN_PASSWORD) return { ok: false, error: tr('Password needs at least {n} characters.', { n: MIN_PASSWORD }) }
   if (sb) {
     const { error } = await sb.auth.updateUser({ password })
     return error ? { ok: false, error: error.message } : { ok: true }

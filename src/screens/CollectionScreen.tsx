@@ -8,6 +8,7 @@ import bandImg from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
+import { townName, tr } from '../lib/i18n'
 
 // New Figma GUI (prototyping › 콜렉션 725:*): town strip → selected town's deck (3×2 pages, slot 1 = Head)
 // → other towns' cards. Long-press to drag: into the deck (moves in), onto a card (the two swap), or
@@ -123,17 +124,17 @@ export default function CollectionScreen({
     if (!inDeck) return // cards can't be taken out of a town by dragging
     const at = slot ? Number(slot.dataset.slot) : deck.length
     if (from === 'rest' && deck.length >= MAX_RESIDENTS) {
-      return setPopup({ message: 'This town is full. Drop it on a card to swap.', actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
+      return setPopup({ message: tr('This town is full. Drop it on a card to swap.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
     }
     commit((s) => placeCard(s, id, town.id, at))
   }
 
   function askDelete(card: Card) {
     setPopup({
-      message: 'Do you really want to delete?',
+      message: tr('Do you really want to delete?'),
       actions: [
-        { label: 'Delete', onClick: () => { commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
-        { label: 'Cancel', onClick: () => setPopup(null) },
+        { label: tr('Delete'), onClick: () => { commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
+        { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
   }
@@ -175,12 +176,12 @@ export default function CollectionScreen({
 
   return (
     <div ref={root} className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label="Back" onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">Collection</p>
+      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">{tr('Collection')}</p>
       <TextButton onClick={() => setNewest(!newest)} className="absolute top-[93px] right-[24px] z-20 text-[17px]">
-        {newest ? 'Newest' : 'Oldest'}
+        {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
 
       {/* towns on one grey band; the picked one gets the dark ring */}
@@ -202,7 +203,7 @@ export default function CollectionScreen({
               <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: 61 + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
                 <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} outline={!on} />
                 <span className="absolute left-1/2 w-[100px] -translate-x-1/2 truncate text-center text-[16px] leading-[normal]" style={{ top: on ? 72 : 66 }}>
-                  {t.name}
+                  {townName(t.name)}
                 </span>
               </button>
             )
@@ -230,9 +231,9 @@ export default function CollectionScreen({
                   <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: 31 - CLIP_L + (k % 3) * COL, top: 20 + Math.floor(k / 3) * 116, width: TILE, height: TILE }}>
                     {c ? (
                       <>
-                        {tile(c, 'deck', `${c.nickname || 'Card'}${at === 0 ? ', head' : ''}`)}
+                        {tile(c, 'deck', `${c.nickname || tr('Card')}${at === 0 ? tr(', head') : ''}`)}
                         {at === 0 && (
-                          <span className="pointer-events-none absolute inset-x-[2px] top-[67px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]">Head</span>
+                          <span className="pointer-events-none absolute inset-x-[2px] top-[67px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]">{tr('Head')}</span>
                         )}
                       </>
                     ) : (
@@ -254,12 +255,12 @@ export default function CollectionScreen({
       {/* everyone else (only this part scrolls) */}
       <div className="absolute inset-x-0 top-[500px] bottom-0 overflow-y-auto [scrollbar-width:none]">
         {rest.length === 0 ? (
-          <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">Cards in other towns show up here.</p>
+          <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">{tr('Cards in other towns show up here.')}</p>
         ) : (
           <div className="grid grid-cols-[repeat(3,90px)] gap-x-[35px] gap-y-[25px] pt-[25px] pb-[70px] pl-[31px]">
             {rest.map((c) => (
               <div key={c.id} className="size-[90px]">
-                {tile(c, 'rest', c.nickname || 'Card')}
+                {tile(c, 'rest', c.nickname || tr('Card'))}
               </div>
             ))}
           </div>
@@ -298,7 +299,7 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
   return (
     <div className="animate-fade-in absolute inset-0 z-30 bg-black/35 text-white backdrop-blur-[1.5px]">
       <p className="absolute top-[170.5px] left-[21px] text-[25px] leading-[1.1]">{townName}</p>
-      <button aria-label="Close" onClick={onClose} className="absolute top-[166px] left-[349px] flex h-[37px] w-[35px] items-center justify-center">
+      <button aria-label={tr('Close')} onClick={onClose} className="absolute top-[166px] left-[349px] flex h-[37px] w-[35px] items-center justify-center">
         <img src={closeRing} alt="" className="absolute inset-0 size-full" />
         <img src={closeX} alt="" className="relative h-[14.8px] w-[12.3px]" />
       </button>
@@ -343,7 +344,7 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
       <Bottom>
         <button onClick={onDelete} className="absolute top-[735px] left-[280px] flex h-[43px] w-[102px] items-center justify-center">
           <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
-          <span className="relative text-[23px] leading-[1.1] text-[#686868]">Discard</span>
+          <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Discard')}</span>
         </button>
       </Bottom>
     </div>

@@ -14,6 +14,7 @@ import GilbtiScreen from './screens/GilbtiScreen'
 import MainScreen from './screens/MainScreen'
 import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
+import { tr, useLang } from './lib/i18n'
 
 type Route =
   | { name: 'main'; townId: string; enter: 'left' | 'right' | 'center'; focus?: string }
@@ -62,6 +63,7 @@ function sinceOf(s: State) {
 }
 
 export default function App({ onReady }: { onReady?: () => void }) {
+  useLang() // re-render everything when the language changes
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const userRef = useRef<User | null>(null)
@@ -94,7 +96,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     const remote = await loadRemote(u)
     if (!remote.ok) {
       // can't tell what the account holds → don't merge or save over it; stay a guest (session kept, retried next start)
-      setError("Couldn't reach your account. Your town stays on this device — try again in a moment.")
+      setError(tr("Couldn't reach your account. Your town stays on this device — try again in a moment."))
       return enter(null)
     }
     // newer copy wins: a save that never reached the server (tab closed, offline) must not be overwritten
@@ -118,9 +120,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
     if (merged) {
       // with a server, the server copy is what counts; without one, the device copy is
       if (usingSupabase ? stored : cached) localStorage.removeItem(GUEST_KEY)
-      else setError("Couldn't save your guest town to the account yet. It will be added the next time you log in.")
+      else setError(tr("Couldn't save your guest town to the account yet. It will be added the next time you log in."))
     }
-    if (unplaced > 0) setError(`${unplaced} card${unplaced > 1 ? 's' : ''} didn't fit in your towns.`)
+    if (unplaced > 0) setError(tr(unplaced > 1 ? "{n} cards didn't fit in your towns." : "{n} card didn't fit in your towns.", { n: unplaced }))
     localStorage.removeItem(LEGACY_GUEST_OWNER)
     claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
@@ -179,7 +181,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       try {
         save(next, keyFor(u?.id ?? null))
       } catch {
-        setError('Storage is full. Delete some cards to save new ones.')
+        setError(tr('Storage is full. Delete some cards to save new ones.'))
         return prev
       }
       if (u) saveRemote(u, next)
@@ -324,7 +326,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
               save(next, keyFor(user?.id ?? null))
               if (user) saveRemote(user, next)
             } catch {
-              return setError('Storage is full. Delete some cards to save new ones.')
+              return setError(tr('Storage is full. Delete some cards to save new ones.'))
             }
             setState(next)
             track('card_made', { mood: draft.mood })
@@ -420,7 +422,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           </span>
         </div>
       )}
-      {error && <Popup message={error} actions={[{ label: 'Got it!', onClick: () => setError('') }]} />}
+      {error && <Popup message={error} actions={[{ label: tr('Got it!'), onClick: () => setError('') }]} />}
     </>
   )
 }

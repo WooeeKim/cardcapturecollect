@@ -27,6 +27,7 @@ import { MOODS } from '../lib/moods'
 import { toLocal } from '../lib/frame'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
 import type { Card } from '../lib/store'
+import { tr } from '../lib/i18n'
 
 // New Figma GUI (prototyping › 그리기): Drawing | Memo tabs, hand-drawn toolbar, Colors panel with
 // eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "Choose a village" (719:11320).
@@ -93,10 +94,10 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
     if (preview) return setPreview(null)
     if (empty && !nickname && !memo && !mood) return onExit()
     setPopup({
-      message: 'Discard this drawing?',
+      message: tr('Discard this drawing?'),
       actions: [
-        { label: 'Discard', onClick: onExit },
-        { label: 'Cancel', onClick: () => setPopup(null) },
+        { label: tr('Discard'), onClick: onExit },
+        { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
   }
@@ -107,7 +108,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
   async function check() {
     if (canvas.current?.isEmpty()) {
-      return setPopup({ message: 'Draw at least one line first.', actions: [{ label: 'Got it!', onClick: () => setPopup(null) }] })
+      return setPopup({ message: tr('Draw at least one line first.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
     }
     // every Memo field is required: jump to Memo and mark what's empty
     if (missing.length) {
@@ -156,13 +157,13 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           }}
           paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
         >
-          {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">A few lines will do!</p>}
+          {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
       </div>
 
       {/* header */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
-      <button aria-label="Back" onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
+      <button aria-label={tr('Back')} onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {(['draw', 'memo'] as const).map((t) => (
@@ -178,11 +179,11 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] `}
           style={{ left: t === 'draw' ? 154 : 242.5 }}
         >
-          {t === 'draw' ? 'Drawing' : 'Memo'}
+          {tr(t === 'draw' ? 'Drawing' : 'Memo')}
         </button>
       ))}
       <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
-      <button aria-label="Finish card" onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
+      <button aria-label={tr('Finish card')} onClick={check} className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 
@@ -193,7 +194,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
           <div className="absolute inset-0 top-[140px] z-20">
             {/* folder-tab box around the moods (Figma 787:3578 Vector 413) */}
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
-            <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>Mood</span>
+            <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>{tr('Mood')}</span>
             <label onClick={() => placeRef.current?.focus()} className={`absolute top-[11px] right-[25px] flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
               <input
                 value={place}
@@ -201,11 +202,11 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                   typedPlace.current = true
                   setPlace(e.target.value)
                 }}
-                placeholder={locating ? 'Finding where you are…' : 'Where are you?'}
+                placeholder={tr(locating ? 'Finding where you are…' : 'Where are you?')}
                 maxLength={30}
-                aria-label="Place"
+                aria-label={tr('Place')}
                 ref={placeRef}
-                size={Math.max(4, (place || (locating ? 'Finding where you are…' : 'Where are you?')).length)}
+                size={Math.max(4, (place || tr(locating ? 'Finding where you are…' : 'Where are you?')).length)}
                 className="max-w-[220px] bg-transparent text-right text-[17px] leading-[1.1] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#777]"
               />
             </label>
@@ -217,7 +218,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                     <span className="absolute inset-[-2.5%_-1%]">
                       {on ? <ChipShape on i={i} color={m.color} /> : <img src={i % 3 === 1 ? chipW2 : chipW1} alt="" className="size-full" />}
                     </span>
-                    <span className={`relative text-[19px] leading-[1.1] ${on ? '' : 'text-[#3d3d3d]'}`} style={on ? { color: m.ink } : undefined}>{m.name}</span>
+                    <span className={`relative text-[19px] leading-[1.1] ${on ? '' : 'text-[#3d3d3d]'}`} style={on ? { color: m.ink } : undefined}>{tr(m.name)}</span>
                   </button>
                 )
               })}
@@ -231,9 +232,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 <input
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  placeholder="Nickname"
+                  placeholder={tr('Nickname')}
                   maxLength={24}
-                  aria-label="Nickname"
+                  aria-label={tr('Nickname')}
                   ref={nickRef}
                   size={Math.max(8, nickname.length + 1)}
                   className="max-w-[320px] bg-transparent text-[21px] leading-[1.1] tracking-[-0.42px] text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d]"
@@ -243,9 +244,9 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 value={memo}
                 ref={memoRef}
                 onChange={(e) => setMemo(e.target.value)}
-                placeholder="Save the moment."
+                placeholder={tr('Save the moment.')}
                 maxLength={180}
-                aria-label="Memo"
+                aria-label={tr('Memo')}
                 className={`h-[86px] w-full resize-none rounded-[10px] border-2 border-dashed px-[7px] py-[5px] text-[17px] leading-[1.15] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d] ${dashed('memo')}`}
               />
             </div>
@@ -262,7 +263,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
             return (
               <button
                 key={t}
-                aria-label={t === 'pen' ? 'Pencil' : t === 'highlighter' ? 'Highlighter' : 'Eraser'}
+                aria-label={tr(t === 'pen' ? 'Pencil' : t === 'highlighter' ? 'Highlighter' : 'Eraser')}
                 aria-pressed={tool === t}
                 onClick={() => pickTool(t)}
                 className="absolute transition-transform duration-300 ease-[var(--ease-spring)]"
@@ -272,20 +273,20 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
               </button>
             )
           })}
-          <button aria-label="Undo" onClick={() => canvas.current?.undo()} className="absolute top-[801px] left-[201px] h-[24.6px] w-[22.7px]">
+          <button aria-label={tr('Undo')} onClick={() => canvas.current?.undo()} className="absolute top-[801px] left-[201px] h-[24.6px] w-[22.7px]">
             <UndoV2 on={history.undo} />
           </button>
-          <button aria-label="Redo" onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
+          <button aria-label={tr('Redo')} onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
             <RedoV2 on={history.redo} />
           </button>
-          <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label="Guide" className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
-            <span className="absolute inset-x-0 top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px]">Guide</span>
+          <button onClick={() => setGuide(!guide)} aria-pressed={guide} aria-label={tr('Guide')} className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
+            <span className="absolute inset-x-[-14px] top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px] whitespace-nowrap">{tr('Guide')}</span>
             <span className="absolute top-[39px] left-[11px] h-[23px] w-[46px]">
               <ToggleIcon on={guide} />
             </span>
           </button>
           <button
-            aria-label="Color"
+            aria-label={tr('Color')}
             aria-expanded={open === 'color'}
             onClick={() => {
               setPicking(false)
@@ -305,7 +306,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 return (
                   <button
                     key={s}
-                    aria-label={`Size ${s}`}
+                    aria-label={tr('Size {n}', { n: s })}
                     aria-pressed={size === s}
                     onClick={() => {
                       setSize(s)
@@ -326,7 +327,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
-            <button aria-label="Fit drawing" onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
+            <button aria-label={tr('Fit drawing')} onClick={() => canvas.current?.resetView()} className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
               {/* Figma drawing 719:10468 Frame 128, no fill */}
               <img src={fitIcon} alt="" className="size-full" />
             </button>
@@ -334,7 +335,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         </Bottom>
       )}
 
-      {picking && <p className="animate-fade-in pointer-events-none absolute inset-x-0 top-[124px] z-10 text-center text-[17px] text-[#555]">Tap the drawing to pick a color</p>}
+      {picking && <p className="animate-fade-in pointer-events-none absolute inset-x-0 top-[124px] z-10 text-center text-[17px] text-[#555]">{tr('Tap the drawing to pick a color')}</p>}
 
       {open === 'color' && (
         <ColorPanel
@@ -360,10 +361,8 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 <span className="absolute top-[673px] left-[17.8px] h-[122px] w-[368px]">
                   <ConfirmBubble />
                 </span>
-                <p className="absolute top-[689px] left-[203px] w-[370px] -translate-x-1/2 text-center text-[24.3px] leading-[1.2]">
-                  Ready to finish?
-                  <br />
-                  You won’t be able to edit this afterward.
+                <p className="absolute top-[689px] left-[203px] w-[370px] -translate-x-1/2 text-center text-[24.3px] leading-[1.2] whitespace-pre-line">
+                  {tr('Ready to finish?\nYou won’t be able to edit this afterward.')}
                 </p>
                 <button
                   onClick={() => {
@@ -375,13 +374,13 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                   <span className="absolute inset-0 rotate-[-178.73deg]">
                     <PillFinish />
                   </span>
-                  <span className="relative text-[24.3px] leading-[1.1]">Finish</span>
+                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
                 </button>
                 <button onClick={() => setPreview(null)} className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]">
                   <span className="absolute inset-0 rotate-[-177.79deg]">
                     <PillBack />
                   </span>
-                  <span className="relative text-[24.3px] leading-[1.1]">Go Back</span>
+                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Go Back')}</span>
                 </button>
               </div>
             </Bottom>
@@ -424,15 +423,15 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
       <Bottom>
         <div
           role="dialog"
-          aria-label="Colors"
+          aria-label={tr('Colors')}
           className="animate-pop-in absolute top-[371px] left-[11px] h-[460px] w-[380px] overflow-hidden rounded-[20px] bg-white shadow-[0_3px_20px_rgba(0,0,0,0.1)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="absolute inset-x-0 top-[19px] text-center text-[20px] leading-[1.3] text-[#121212]">Colors</p>
-          <button aria-label="Pick a color from the drawing" onClick={onEyedropper} className="absolute top-[14px] left-[13px] flex size-[34px] items-center justify-center">
+          <p className="absolute inset-x-0 top-[19px] text-center text-[20px] leading-[1.3] text-[#121212]">{tr('Colors')}</p>
+          <button aria-label={tr('Pick a color from the drawing')} onClick={onEyedropper} className="absolute top-[14px] left-[13px] flex size-[34px] items-center justify-center">
             <img src={eyedropper} alt="" className="h-[34px] w-[11px] rotate-[42.59deg]" />
           </button>
-          <button aria-label="Close" onClick={onClose} className="absolute top-[18px] left-[349px] flex size-[26px] items-center justify-center">
+          <button aria-label={tr('Close')} onClick={onClose} className="absolute top-[18px] left-[349px] flex size-[26px] items-center justify-center">
             <img src={closeDark} alt="" className="h-[15px] w-[12.3px]" />
           </button>
           <div
@@ -450,7 +449,7 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
           >
             {knob && <span className="pointer-events-none absolute size-[22px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-[0_0_2px_rgba(0,0,0,0.4)]" style={{ left: `${knob.x * 100}%`, top: `${knob.y * 100}%`, background: base }} />}
           </div>
-          <p className="absolute top-[372px] left-[15px] text-[15px] leading-[1.3] uppercase">Opacity</p>
+          <p className="absolute top-[372px] left-[15px] text-[15px] leading-[1.3] uppercase">{tr('Opacity')}</p>
           <div className="absolute top-[396px] left-[15px] flex w-[350px] items-center gap-[11px]">
             <div
               ref={slider}
@@ -510,7 +509,7 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
           <span className="absolute inset-[-2.22%_-0.44%]">
             <PillVillage />
           </span>
-          <span className="relative text-[21px] leading-[1.1]">Choose a village</span>
+          <span className="relative text-[21px] leading-[1.1]">{tr('Choose a village')}</span>
         </button>
       </Bottom>
     </div>

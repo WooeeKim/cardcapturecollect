@@ -10,6 +10,8 @@ import batteryIcon from '../assets/proto/battery.svg'
 import { type ReactNode } from 'react'
 import { moodOf } from '../lib/moods'
 import type { Card } from '../lib/store'
+import { cycleLang, tr } from '../lib/i18n'
+import globe from '../assets/proto/v2/globe.svg'
 
 // ---------- line icons (thin strokes like the Figma frames) ----------
 
@@ -32,7 +34,7 @@ export function GoTag() {
   return (
     <span className="relative block h-[37px] w-[54px]">
       <img src={goBox} alt="" className="absolute inset-0 size-full" />
-      <span className="absolute top-[3px] left-[13px] font-hand text-[25px] leading-[normal]">Go</span>
+      <span className="absolute top-[3px] left-[13px] font-hand text-[25px] leading-[normal]">{tr('Go')}</span>
     </span>
   )
 }
@@ -51,7 +53,7 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
 export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
   return (
     <>
-      <button aria-label="Back" onClick={onBack} className="absolute top-[72px] left-[17px] z-20 p-[10px]">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[72px] left-[17px] z-20 p-[10px]">
         <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
       </button>
       <h1 className="pointer-events-none absolute inset-x-0 top-[77px] z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black]">{title}</h1>
@@ -162,7 +164,7 @@ export function MoodChip({ mood, size = 21 }: { mood: string; size?: number }) {
   const m = moodOf(mood)
   return (
     <span className="inline-block rounded-full font-hand leading-[1.1]" style={{ background: m.color, color: m.ink, fontSize: size, padding: `${size * 0.33}px ${size * 0.6}px` }}>
-      {mood}
+      {tr(mood)}
     </span>
   )
 }
@@ -172,7 +174,7 @@ export function MoodChip({ mood, size = 21 }: { mood: string; size?: number }) {
 export function CardView({ card, plain = false, onImage }: { card: Card; plain?: boolean; onImage?: () => void }) {
   return (
     <div className="relative aspect-[360/515] w-full overflow-hidden rounded-[10px] bg-white font-hand text-black [container-type:inline-size]">
-      <button aria-label="Show drawing only" onClick={onImage} className="absolute inset-[3%_4%_6%] block">
+      <button aria-label={tr('Show drawing only')} onClick={onImage} className="absolute inset-[3%_4%_6%] block">
         <img src={card.image} alt={card.nickname || 'drawing'} className="size-full object-contain" />
       </button>
       {!plain && (
@@ -201,7 +203,7 @@ function ChipCq({ mood }: { mood: string }) {
   const m = moodOf(mood)
   return (
     <span className="block rounded-full px-[3.3cqw] py-[1.8cqw] text-[5.8cqw] leading-[1.1]" style={{ background: m.color, color: m.ink }}>
-      {mood}
+      {tr(mood)}
     </span>
   )
 }
@@ -264,5 +266,14 @@ export function SketchyBox({ w, h, seed = 1, stroke = '#000', width = 2.6, class
     <svg viewBox={`0 0 ${w} ${h}`} className={`pointer-events-none absolute inset-0 size-full overflow-visible ${className}`} aria-hidden>
       <path d={d} fill="none" stroke={stroke} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+// Language button (Figma gilbti-intro 925:2832): English → 한국어 → 日本語 → English
+export function LangButton({ className = '' }: { className?: string }) {
+  return (
+    <button aria-label={tr('Change language')} onClick={cycleLang} className={`absolute h-[41px] w-[45px] ${className}`}>
+      <img src={globe} alt="" className="size-full" />
+    </button>
   )
 }

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { LoginSheet } from '../components/LoginSheet'
-import { Bottom, TextButton } from '../components/ui'
+import { Bottom, LangButton, TextButton } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import type { User } from '../lib/auth'
 import { QUESTIONS, TYPES, answered, submit, type Answer, type Answers, type Result, type TypeId } from '../lib/gilbti'
+import { tr } from '../lib/i18n'
 
 // 길BTI (Subway-TI) pre-interview: intro → one question per page → result (the 2×2 persona) → log in.
 // Onboarding gate: nobody gets into the app without answering and logging in (email), so every tester's
@@ -31,17 +32,17 @@ export function TypeGrid({ type }: { type: TypeId }) {
   return (
     <div className="grid grid-cols-[64px_1fr_1fr] grid-rows-[28px_1fr_1fr] gap-[4px] text-[14px] leading-[1.15]">
       <span />
-      <span className="self-end text-center text-[#6b6b6b]">Likes observing</span>
-      <span className="self-end text-center text-[#6b6b6b]">Not into it</span>
+      <span className="self-end text-center text-[#6b6b6b]">{tr('Likes observing')}</span>
+      <span className="self-end text-center text-[#6b6b6b]">{tr('Not into it')}</span>
       {cells.map((c) => (
         <div key={c.id} className="contents">
-          {c.col === 0 && <span className="self-center text-right text-[#6b6b6b]">{c.row === 0 ? 'Likes recording' : 'Not into recording'}</span>}
+          {c.col === 0 && <span className="self-center text-right text-[#6b6b6b]">{tr(c.row === 0 ? 'Likes recording' : 'Not into recording')}</span>}
           <span
             className={`flex h-[64px] items-center justify-center rounded-[8px] border-[2px] px-[6px] text-center text-[16px] ${
               c.id === type ? 'border-[#2e2e2e] bg-[#2e2e2e] text-white' : 'border-dashed border-[#b5b5b5] text-[#9a9a9a]'
             }`}
           >
-            {TYPES[c.id].name}
+            {tr(TYPES[c.id].name)}
           </span>
         </div>
       ))}
@@ -84,22 +85,23 @@ export default function GilbtiScreen({
   if (step === -1)
     return (
       <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+        <LangButton className="top-[90px] left-[324px] z-10" />
         <div className="absolute inset-x-[36px] top-[180px]">
-          <p className="text-[18px] text-[#7a7a7a]">Before you start</p>
-          <h1 className="mt-[6px] text-[44px] leading-[1.05]">Subway-TI</h1>
+          <p className="text-[18px] text-[#7a7a7a]">{tr('Before you start')}</p>
+          <h1 className="mt-[6px] text-[44px] leading-[1.05]">{tr('Subway-TI')}</h1>
           <p className="mt-[22px] text-[22px] leading-[1.35] text-[#3d3d3d]">
-            A few quick questions about how you ride, watch and record.
+            {tr('A few quick questions about how you ride, watch and record.')}
             <br />
-            About 2 minutes.
+            {tr('About 2 minutes.')}
           </p>
-          <p className="mt-[18px] text-[16px] leading-[1.35] text-[#8a8a8a]">Only our team sees your answers. They help us understand who uses the app.</p>
+          <p className="mt-[18px] text-[16px] leading-[1.35] text-[#8a8a8a]">{tr('Only our team sees your answers. They help us understand who uses the app.')}</p>
         </div>
         <Bottom>
           <div className="absolute top-[730px] inset-x-0 flex flex-col items-center gap-[22px]">
-            <Pill label="Start" onClick={() => setStep(0)} />
+            <Pill label={tr('Start')} onClick={() => setStep(0)} />
             {onClose && (
               <TextButton dim className="text-[19px]" onClick={onClose}>
-                Close
+                {tr('Close')}
               </TextButton>
             )}
           </div>
@@ -112,26 +114,26 @@ export default function GilbtiScreen({
     return (
       <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
         <div className="absolute inset-x-[30px] top-[120px]">
-          <p className="text-[18px] text-[#7a7a7a]">Your Subway-TI</p>
-          <h1 className="animate-pop-in mt-[4px] text-[38px] leading-[1.1]">{TYPES[result.type].name}</h1>
-          <p className="mt-[10px] text-[19px] leading-[1.35] text-[#3d3d3d]">{TYPES[result.type].line}</p>
+          <p className="text-[18px] text-[#7a7a7a]">{tr('Your Subway-TI')}</p>
+          <h1 className="animate-pop-in mt-[4px] text-[38px] leading-[1.1]">{tr(TYPES[result.type].name)}</h1>
+          <p className="mt-[10px] text-[19px] leading-[1.35] text-[#3d3d3d]">{tr(TYPES[result.type].line)}</p>
           <div className="mt-[28px]">
             <TypeGrid type={result.type} />
           </div>
           {!user && (
             <p className="mt-[26px] text-[19px] leading-[1.35] text-[#3d3d3d]">
-              Last step: log in or sign up with your email.
+              {tr('Last step: log in or sign up with your email.')}
               <br />
-              <span className="text-[16px] text-[#8a8a8a]">Your answers, towns and cards stay with your account.</span>
+              <span className="text-[16px] text-[#8a8a8a]">{tr('Your answers, towns and cards stay with your account.')}</span>
             </p>
           )}
         </div>
         <Bottom>
           <div className="absolute top-[730px] inset-x-0 flex flex-col items-center gap-[22px]">
-            {user ? <Pill label="Let's go" onClick={() => onDone(result)} /> : <Pill label="Log in" onClick={() => setLogin(true)} />}
+            {user ? <Pill label={tr("Let's go")} onClick={() => onDone(result)} /> : <Pill label={tr('Log in')} onClick={() => setLogin(true)} />}
             {!user && saved && (
               <TextButton dim className="text-[19px]" onClick={() => setStep(-1)}>
-                Answer again
+                {tr('Answer again')}
               </TextButton>
             )}
           </div>
@@ -163,7 +165,7 @@ export default function GilbtiScreen({
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <div className="absolute inset-x-[30px] top-[84px]">
         <div className="flex items-baseline justify-between text-[16px] text-[#7a7a7a]">
-          <span>{q.section}</span>
+          <span>{tr(q.section)}</span>
           <span>
             {step + 1} / {n}
           </span>
@@ -176,8 +178,8 @@ export default function GilbtiScreen({
       </div>
 
       <div key={q.id} className="animate-fade-in absolute inset-x-[30px] top-[150px] bottom-[126px] overflow-y-auto [scrollbar-width:none]">
-        <p className="text-[28px] leading-[1.2]">{q.prompt}</p>
-        {q.kind === 'many' && <p className="mt-[6px] text-[15px] text-[#8a8a8a]">Pick all that fit</p>}
+        <p className="text-[28px] leading-[1.2]">{tr(q.prompt)}</p>
+        {q.kind === 'many' && <p className="mt-[6px] text-[15px] text-[#8a8a8a]">{tr('Pick all that fit')}</p>}
 
         <div className="mt-[24px] flex flex-col gap-[10px] pb-[16px]">
           {(q.kind === 'one' || q.kind === 'many') &&
@@ -196,7 +198,7 @@ export default function GilbtiScreen({
                     on ? 'border-[#2e2e2e] bg-[#2e2e2e] text-white' : 'border-[#2e2e2e] bg-white'
                   }`}
                 >
-                  {c}
+                  {tr(c)}
                 </button>
               )
             })}
@@ -217,8 +219,8 @@ export default function GilbtiScreen({
                 ))}
               </div>
               <div className="mt-[10px] flex justify-between text-[16px] text-[#6b6b6b]">
-                <span>{q.low}</span>
-                <span>{q.high}</span>
+                <span>{tr(q.low)}</span>
+                <span>{tr(q.high)}</span>
               </div>
             </div>
           )}
@@ -231,8 +233,8 @@ export default function GilbtiScreen({
                 maxLength={300}
                 value={typeof a === 'string' ? a : ''}
                 onChange={(e) => set(q.id, e.target.value)}
-                placeholder={q.placeholder}
-                aria-label={q.prompt}
+                placeholder={tr(q.placeholder)}
+                aria-label={tr(q.prompt)}
                 className={`${field} resize-none py-[8px] leading-[1.3]`}
               />
             ) : (
@@ -242,8 +244,8 @@ export default function GilbtiScreen({
                 value={typeof a === 'string' ? a : ''}
                 onChange={(e) => set(q.id, e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && next()}
-                placeholder={q.placeholder}
-                aria-label={q.prompt}
+                placeholder={tr(q.placeholder)}
+                aria-label={tr(q.prompt)}
                 className={`${field} h-[50px]`}
               />
             ))}
@@ -252,9 +254,9 @@ export default function GilbtiScreen({
 
       <Bottom>
         <div className="absolute top-[760px] inset-x-[30px] flex justify-between">
-          <Pill back label="Back" onClick={() => setStep(step - 1)} />
+          <Pill back label={tr('Back')} onClick={() => setStep(step - 1)} />
           <Pill
-            label={busy ? '…' : step === n - 1 ? 'Done' : q.kind === 'text' && q.optional && !(typeof a === 'string' && a.trim()) ? 'Skip' : 'Next'}
+            label={busy ? '…' : tr(step === n - 1 ? 'Done' : q.kind === 'text' && q.optional && !(typeof a === 'string' && a.trim()) ? 'Skip' : 'Next')}
             off={!ok || busy}
             onClick={() => ok && !busy && next()}
           />

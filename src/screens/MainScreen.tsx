@@ -19,6 +19,7 @@ import groundSvg from '../assets/proto/ground/ground.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
+import { townName, tr } from '../lib/i18n'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
@@ -459,7 +460,7 @@ export default function MainScreen({
                     className="pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
                     style={{ animation: `bubble-blink 9s ease-in-out ${-(c.serial.charCodeAt(c.serial.length - 1) % 9)}s infinite`, opacity: 0 }}
                   >
-                    {m.word}
+                    {tr(m.word)}
                   </span>
                 )}
               </div>
@@ -475,7 +476,7 @@ export default function MainScreen({
             }}
             className={`animate-pop-in pointer-events-none absolute font-hand ${side > 0 ? 'left-[18px] text-left' : 'right-[18px] text-right'}`}
           >
-            <p className="text-[18px] leading-[1.2]">{hint.name}</p>
+            <p className="text-[18px] leading-[1.2]">{townName(hint.name)}</p>
             <p className="text-[24px] leading-none tracking-[-2px]">
               {[0, 1, 2].map((i) => (
                 <span key={i} style={{ animation: `chevron-wave 1s ease-in-out ${(side > 0 ? i : 2 - i) * 0.15}s infinite` }}>
@@ -492,7 +493,7 @@ export default function MainScreen({
         <>
           {/* Figma main 803:951 (closed: ▽) / 803:922 (open: △ with the icon box under it).
               The triangle stays in one spot (center 50, 91) so it flips in place. */}
-          <button aria-label={menu ? 'Close menu' : 'Menu'} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
+          <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
             <img src={menu ? triUp : triDown} alt="" className="h-[20.5px] w-[28.7px] max-w-none" />
           </button>
           {menu && (
@@ -500,18 +501,18 @@ export default function MainScreen({
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
               <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
-                <button aria-label="Collection" onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
-                <button aria-label="Town list" onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Town list')} onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>
             </>
           )}
-          <p className="pointer-events-none absolute inset-x-[90px] top-[77px] truncate text-center font-hand text-[24px] leading-[28px]">{town.name}</p>
+          <p className="pointer-events-none absolute inset-x-[90px] top-[77px] truncate text-center font-hand text-[24px] leading-[28px]">{townName(town.name)}</p>
           {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
-          <button aria-label="My page" onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
+          <button aria-label={tr('My page')} onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
@@ -524,18 +525,14 @@ export default function MainScreen({
           <img src={bubble} alt="" className="absolute bottom-[281px] left-[97px] h-[140px] w-[248px]" />
           {/* centered over the bubble's oval body (the tail sits below it) */}
           <div className="absolute bottom-[316px] left-[97px] flex h-[105px] w-[248px] items-center justify-center">
-            <p className="text-center font-hand text-[27px] leading-[1.1] tracking-[-0.54px]">
-              Invite your
-              <br />
-              eye catcher!
-            </p>
+            <p className="text-center font-hand text-[27px] leading-[1.1] tracking-[-0.54px] whitespace-pre-line">{tr('Invite your\neye catcher!')}</p>
           </div>
         </div>
       )}
 
       {/* draw a new card */}
       {!open && !follow && (
-        <button aria-label="Draw a card" onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
+        <button aria-label={tr('Draw a card')} onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
           {/* the Figma + card, with rounded corners */}
           <span className="absolute top-1/2 left-1/2 flex h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg] items-center justify-center rounded-[9px] border-[2.6px] border-[#222] bg-white">
             <svg viewBox="0 0 28 28" className="size-[28px]" aria-hidden>
@@ -583,7 +580,7 @@ function Detail({ card, onClose, onFollow, onMigrate, onOpen }: { card: Card; on
         {card.mood && (
           <span className="absolute top-[25px] left-[20px] flex h-[35px] w-[70.4px] items-center justify-center">
             <img src={chipPanel} alt="" className="absolute inset-[-2.85%_-1.42%] size-[calc(100%+2.84%)] max-w-none" />
-            <span className="relative text-[19px] leading-[1.1]">{card.mood}</span>
+            <span className="relative text-[19px] leading-[1.1]">{tr(card.mood)}</span>
           </span>
         )}
         {card.place && <p className="absolute top-[33px] right-[20px] text-[17px] leading-[1.1]">{card.place}</p>}
@@ -592,11 +589,11 @@ function Detail({ card, onClose, onFollow, onMigrate, onOpen }: { card: Card; on
         <p className="absolute top-[207px] right-[20px] text-[14px] leading-[1.1] text-[#8e8e8e]">{card.serial}</p>
         <button onClick={onFollow} className="absolute top-[225px] left-[44px] flex h-[55px] w-[113px] items-center justify-center">
           <img src={pillFollow} alt="" className="absolute inset-0 size-full" />
-          <span className="relative text-[24.3px] leading-[1.1]">Follow</span>
+          <span className="relative text-[24.3px] leading-[1.1]">{tr('Follow')}</span>
         </button>
         <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
           <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
-          <span className="relative text-[24.3px] leading-[1.1]">Migration</span>
+          <span className="relative text-[24.3px] leading-[1.1]">{tr('Migration')}</span>
         </button>
       </div>
     </Bottom>
