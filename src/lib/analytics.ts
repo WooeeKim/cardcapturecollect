@@ -1,11 +1,13 @@
 import posthog from 'posthog-js'
 import type { User } from './auth'
+import { viewAsId } from './viewAs'
 
 // Usability-test logging via PostHog: session replay, heatmaps (autocapture clicks),
 // time per screen ($pageview + $prev_pageview_duration), custom events, feedback.
 // Off unless VITE_POSTHOG_KEY is set (.env.local / Vercel env). The key is a public project key.
 
-const key = import.meta.env.VITE_POSTHOG_KEY as string | undefined
+// off in the admin's read-only "view as" mode, so admin browsing never shows up as a tester
+const key = viewAsId ? undefined : (import.meta.env.VITE_POSTHOG_KEY as string | undefined)
 const host = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ?? 'https://us.i.posthog.com'
 export const analyticsOn = !!key
 

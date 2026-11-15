@@ -72,6 +72,11 @@ body {
   display: none;
 }
 
+/* admin "view as" (lib/viewAs.ts): the phone sits on the admin page's white */
+.view-as body {
+  background: #fff;
+}
+
 /* #/admin card gallery: a plain scrolling page */
 .admin body {
   overflow: auto;

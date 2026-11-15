@@ -5,7 +5,8 @@ import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { loadImage } from './lib/preload'
-import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, usingSupabase, type User } from './lib/auth'
+import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
+import { viewAsId } from './lib/viewAs'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
@@ -42,6 +43,8 @@ const setFlag = (k: string, v: string) => {
     /* private mode */
   }
 }
+
+const READ_ONLY = 'Admin view: read-only. Nothing here is saved or sent.'
 
 const startRoute = (s: State): Route => (s.pending ? { name: 'tada' } : { name: 'main', townId: s.towns[0].id, enter: 'center' })
 
@@ -137,6 +140,24 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [])
 
   useEffect(() => {
+    if (viewAsId) {
+      // admin "view as": that account's saved state, shown read-only (lib/viewAs.ts)
+      ;(async () => {
+        const { data, error } = supabase
+          ? await supabase.from('user_states').select('state, email').eq('user_id', viewAsId).maybeSingle()
+          : { data: null, error: { message: 'No Supabase key' } }
+        if (error || !data) setError(error ? `Couldn't load this account: ${error.message}` : 'Nothing saved for this account (or you are not an admin).')
+        const s = (data?.state as State | undefined) ?? initial()
+        setUser({ id: viewAsId!, username: (data?.email as string | null) ?? viewAsId! })
+        setState(s)
+        setHomeId(s.towns[0].id)
+        setRoute(startRoute(s))
+        await decodeAll(Object.values(s.cards).map((c) => c.image))
+        setReady(true)
+        onReady?.()
+      })()
+      return
+    }
     currentUser().then(async (u) => {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
       resendUnsent(u)
@@ -151,6 +172,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   // every change is saved (this device + the account); if storage is full the change is undone and the user is told
   const commit = useCallback((fn: (s: State) => State) => {
+    if (viewAsId) return setState(fn) // view as: in memory only, never saved
     setState((prev) => {
       const next = fn(prev)
       const u = userRef.current
@@ -167,7 +189,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
 
   // one-time: drawings made before the white inside-fill get it now (new ones get it when finished)
   useEffect(() => {
-    if (!ready || state.insideFilled3) return
+    if (!ready || state.insideFilled3 || viewAsId) return
     const who = userRef.current
     let stale = false
     ;(async () => {
@@ -267,7 +289,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
             commit((s) => sendPending(s, townId))
             track('card_sent')
             goMain(townId, 'center', id)
-            if (!userRef.current && !flag(PROMPTED)) {
+            if (!viewAsId && !userRef.current && !flag(PROMPTED)) {
               setFlag(PROMPTED, '1')
               setTimeout(() => setLoginPrompt(true), 1200)
             }
@@ -294,6 +316,10 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onFinish={(draft) => {
             // save first: if storage is full, stay here so the drawing isn't lost
             const next = makePending(state, draft)
+            if (viewAsId) {
+              setState(next)
+              return setRoute({ name: 'tada' })
+            }
             try {
               save(next, keyFor(user?.id ?? null))
               if (user) saveRemote(user, next)
@@ -321,9 +347,10 @@ export default function App({ onReady }: { onReady?: () => void }) {
           intro={state.intro ?? ''}
           onProfile={(nickname, intro) => commit((s) => ({ ...s, nickname: nickname || undefined, intro: intro || undefined }))}
           onBack={() => goMain(existing(homeId))}
-          onInterview={() => setInterview('mypage')}
+          onInterview={() => (viewAsId ? setError(READ_ONLY) : setInterview('mypage'))}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
+            if (viewAsId) return setError(READ_ONLY)
             await logOut()
             await enter(null)
             setRoute({ name: 'mypage' })
@@ -335,6 +362,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
             setHomeId(fresh.towns[0].id)
           }}
           onDeleteAccount={async () => {
+            if (viewAsId) return READ_ONLY
             const u = userRef.current
             if (!u) return
             const res = await deleteAccount(u)
@@ -385,6 +413,13 @@ export default function App({ onReady }: { onReady?: () => void }) {
         />
       )}
       <PhoneChrome />
+      {viewAsId && ready && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[40px] z-[101] flex justify-center">
+          <span className="max-w-[90%] truncate rounded-full bg-black/75 px-[14px] py-[6px] font-[system-ui] text-[14px] text-white">
+            Viewing as {state.nickname || user?.username} · read-only
+          </span>
+        </div>
+      )}
       {error && <Popup message={error} actions={[{ label: 'Got it!', onClick: () => setError('') }]} />}
     </>
   )
