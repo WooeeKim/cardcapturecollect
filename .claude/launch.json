@@ -14,6 +14,12 @@
       "url": "https://localhost:5173"
     },
     {
+      "name": "dev-http",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--mode", "http", "--port", "5174"],
+      "port": 5174
+    },
+    {
       "name": "dist-http",
       "runtimeExecutable": "python3",
       "runtimeArgs": [
