@@ -57,7 +57,8 @@ export function answered(q: Question, a: Answer | undefined) {
 
 // ---------- this device ----------
 
-export type Result = { answers: Answers; type: TypeId; observe: number; record: number; at: string; sent: boolean }
+// user = account that answered (the device copy only counts for that account; older copies have none)
+export type Result = { answers: Answers; type: TypeId; observe: number; record: number; at: string; sent: boolean; user?: string | null }
 
 const RESULT = 'subwayseal.gilbti'
 const DEVICE = 'subwayseal.device'
@@ -86,12 +87,18 @@ export function deviceId() {
   return id
 }
 
-export function savedResult(): Result | null {
+function deviceResult(): Result | null {
   try {
     return JSON.parse(read(RESULT) ?? 'null')
   } catch {
     return null
   }
+}
+
+// this account's answers kept on this device (another account's on the same device don't count)
+export function savedResult(user: User): Result | null {
+  const r = deviceResult()
+  return r && r.user === user.id ? r : null
 }
 
 // ---------- server ----------
@@ -118,7 +125,7 @@ async function send(r: Result, user: User | null): Promise<boolean> {
 export async function submit(answers: Answers, user: User | null): Promise<Result> {
   const observe = Number(answers.observe) || 1
   const record = Number(answers.record) || 1
-  const r: Result = { answers, type: typeOf(observe, record), observe, record, at: new Date().toISOString(), sent: false }
+  const r: Result = { answers, type: typeOf(observe, record), observe, record, at: new Date().toISOString(), sent: false, user: user?.id ?? null }
   write(RESULT, JSON.stringify(r))
   if (await send(r, user)) write(RESULT, JSON.stringify({ ...r, sent: true }))
   return r
@@ -126,8 +133,11 @@ export async function submit(answers: Answers, user: User | null): Promise<Resul
 
 // App start: answers that never reached the server go now.
 export async function resendUnsent(user: User | null) {
-  const r = savedResult()
-  if (r && !r.sent && (await send(r, user))) write(RESULT, JSON.stringify({ ...r, sent: true }))
+  const r = deviceResult()
+  if (!r || r.sent) return
+  // sent as the account that answered; an old copy with no account goes as this device's guest answers
+  const who = r.user === undefined ? null : r.user === user?.id ? user : undefined
+  if (who !== undefined && (await send(r, who))) write(RESULT, JSON.stringify({ ...r, sent: true }))
 }
 
 // Logged in on a device that has no answers yet: did this account already answer somewhere else?
