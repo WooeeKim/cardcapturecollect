@@ -274,8 +274,9 @@ export default function MyPageScreen({
         <Sheet onClose={() => setSheet(null)}>
           <p className="text-center text-[24px] leading-[1.2]">{tr('Profile picture')}</p>
           <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your cards.')}</p>
-          <div className="mt-[16px] grid max-h-[360px] grid-cols-4 gap-[10px] overflow-y-auto p-[2px]">
-            {cards.map((c) => (
+          {/* 4 per row, scrolls down; the current picture first. p-[6px] leaves room for its outline */}
+          <div className="mt-[16px] grid max-h-[360px] grid-cols-4 gap-[10px] overflow-y-auto p-[6px]">
+            {[...cards].sort((a, b) => Number(b.id === profile?.id) - Number(a.id === profile?.id)).map((c) => (
               <button
                 key={c.id}
                 aria-label={c.nickname || c.serial}
