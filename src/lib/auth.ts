@@ -104,6 +104,14 @@ export async function logIn(username: string, password: string): Promise<AuthRes
   return { ok: true, user }
 }
 
+// Is the signed-in account listed in app_admins? (public.is_admin(), 005_admin_gallery.sql)
+// Guests, the browser-only stand-in and any error count as not admin.
+export async function checkAdmin(user: User | null): Promise<boolean> {
+  if (!sb || !user) return false
+  const { data, error } = await sb.rpc('is_admin')
+  return !error && data === true
+}
+
 export async function logOut() {
   await flushRemote() // while the session still allows writing this account's row
   if (sb) await sb.auth.signOut()

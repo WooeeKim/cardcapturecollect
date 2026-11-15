@@ -5,7 +5,7 @@ import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { loadImage } from './lib/preload'
-import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
+import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
@@ -65,6 +65,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const userRef = useRef<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false) // app_admins only: shows My Page → Reset
   const [state, setState] = useState<State>(() => load(GUEST_KEY))
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
@@ -133,6 +134,16 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [])
 
   // leaving / hiding the page: send the batched account save instead of dropping it
+  // admin = listed in app_admins; re-checked whenever the account changes (log in / out)
+  useEffect(() => {
+    let live = true
+    setIsAdmin(false)
+    checkAdmin(user).then((ok) => live && setIsAdmin(ok))
+    return () => {
+      live = false
+    }
+  }, [user])
+
   useEffect(() => {
     const flush = () => document.visibilityState === 'hidden' && flushRemote()
     document.addEventListener('visibilitychange', flush)
@@ -340,6 +351,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       screen = (
         <MyPageScreen
           user={user}
+          canReset={isAdmin && !viewAsId}
           cardCount={Object.keys(state.cards).length}
           townCount={state.towns.length}
           since={sinceOf(state)}
