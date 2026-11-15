@@ -11,7 +11,6 @@ export type Question =
   | { id: string; section: Section; kind: 'scale'; prompt: string; low: string; high: string }
 
 export const QUESTIONS: Question[] = [
-  { id: 'name', section: 'About you', kind: 'text', prompt: 'What should we call you?', placeholder: 'Nickname', optional: true },
   { id: 'age', section: 'About you', kind: 'one', prompt: 'How old are you?', choices: ['Under 20', '20s', '30s', '40s', '50+'] },
   { id: 'ride_freq', section: 'Riding', kind: 'one', prompt: 'How often do you ride the subway?', choices: ['Every day', 'A few times a week', 'A few times a month', 'Rarely'] },
   { id: 'ride_when', section: 'Riding', kind: 'many', prompt: 'When do you usually ride?', choices: ['Morning commute', 'Daytime', 'Evening commute', 'Late night', 'Weekends'] },

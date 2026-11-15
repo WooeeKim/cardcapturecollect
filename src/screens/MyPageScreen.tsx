@@ -7,12 +7,13 @@ import lineB from '../assets/proto/v2/mp-line-b.svg'
 import underline from '../assets/proto/v2/mp-underline.svg'
 import toggleOn from '../assets/proto/v2/mp-toggle.svg'
 import pill from '../assets/proto/v2/tl-edit.svg'
-import { FeedbackSheet, LoginSheet, PasswordSheet } from '../components/LoginSheet'
+import { FeedbackSheet, LoginSheet, PasswordSheet, Sheet } from '../components/LoginSheet'
 import { ToggleIcon } from '../components/drawIcons'
 import { Bottom, LangButton, Popup, type PopupAction } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import { type User } from '../lib/auth'
 import { tr } from '../lib/i18n'
+import type { Card } from '../lib/store'
 
 // My Page (Figma mypage-login 830:814 / mypage-logout 838:2079 / edit 838:2365).
 const NOTIFY = 'subwayseal.notify'
@@ -26,6 +27,9 @@ const readNotify = () => {
 
 export default function MyPageScreen({
   user,
+  profile,
+  cards,
+  onPickProfile,
   cardCount,
   townCount,
   since,
@@ -40,6 +44,9 @@ export default function MyPageScreen({
   onReset,
 }: {
   user: User | null
+  profile: Card | null // profile picture card (store.profileCard)
+  cards: Card[] // newest first, to pick the profile picture from
+  onPickProfile: (cardId: string) => void
   cardCount: number
   townCount: number
   since: string // YY.MM.DD
@@ -53,7 +60,7 @@ export default function MyPageScreen({
   onDeleteAccount: () => Promise<string | undefined>
   onReset: () => void
 }) {
-  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | null>(null)
+  const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | 'picture' | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(nickname)
@@ -170,9 +177,15 @@ export default function MyPageScreen({
       {/* profile box */}
       <div className={`absolute top-[149px] left-[16px] w-[370px] transition-[height] duration-300 ${editing ? 'z-30 h-[318px]' : 'h-[171px]'}`}>
         <img src={boxSvg} alt="" className="absolute inset-0 size-full" />
-        <span className="absolute top-[20px] left-[21px] flex size-[70px] items-end justify-center overflow-hidden rounded-full border-[2.33px] border-[#2e2e2e] bg-white">
-          <img src={personSvg} alt="" className="mb-[-3px] h-[57.6px] w-[37.3px]" />
-        </span>
+        <button
+          disabled={!editing || !cards.length}
+          onClick={() => setSheet('picture')}
+          aria-label={tr('Change profile picture')}
+          className="absolute top-[20px] left-[21px] flex size-[70px] items-end justify-center overflow-hidden rounded-full border-[2.33px] border-[#2e2e2e] bg-white"
+        >
+          {profile ? <img src={profile.thumb || profile.image} alt="" className="size-full object-cover" /> : <img src={personSvg} alt="" className="mb-[-3px] h-[57.6px] w-[37.3px]" />}
+          {editing && !!cards.length && <span className="absolute inset-x-0 bottom-0 bg-black/55 py-[1px] text-center text-[12px] text-white">{tr('Change')}</span>}
+        </button>
         {editing ? (
           <input
             autoFocus
@@ -254,6 +267,28 @@ export default function MyPageScreen({
       )}
       {sheet === 'password' && user && <PasswordSheet user={user} onClose={() => setSheet(null)} />}
       {sheet === 'feedback' && <FeedbackSheet onClose={() => setSheet(null)} />}
+      {sheet === 'picture' && (
+        <Sheet onClose={() => setSheet(null)}>
+          <p className="text-center text-[24px] leading-[1.2]">{tr('Profile picture')}</p>
+          <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your cards.')}</p>
+          <div className="mt-[16px] grid max-h-[360px] grid-cols-4 gap-[10px] overflow-y-auto p-[2px]">
+            {cards.map((c) => (
+              <button
+                key={c.id}
+                aria-label={c.nickname || c.serial}
+                aria-pressed={profile?.id === c.id}
+                onClick={() => {
+                  onPickProfile(c.id)
+                  setSheet(null)
+                }}
+                className={`aspect-square overflow-hidden rounded-full border-[2.33px] bg-white ${profile?.id === c.id ? 'border-[#2e2e2e] outline-2 outline-offset-2 outline-[#2e2e2e]' : 'border-[#b5b5b5]'}`}
+              >
+                <img src={c.thumb || c.image} alt="" className="size-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </Sheet>
+      )}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
   )

@@ -16,14 +16,15 @@ export function Sheet({ children, onClose }: { children: React.ReactNode; onClos
   )
 }
 
-// Email + password (Supabase rules). `prompt` = shown right after the first card moves in (closable with "Later").
-export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boolean; onDone: (user: User) => void; onClose: () => void }) {
+// Email + password (Supabase rules): the fields + Log in / Sign up. Used by the sheet and the onboarding first screen.
+export function LoginForm({ onDone }: { onDone: (user: User) => void }) {
   const [id, setId] = useState('')
   const [pw, setPw] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function run(kind: 'login' | 'signup') {
+    if (busy) return
     setBusy(true)
     setError('')
     const res = kind === 'login' ? await logIn(id, pw) : await signUp(id, pw)
@@ -33,39 +34,48 @@ export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boole
   }
 
   return (
+    <form
+      className="flex flex-col gap-[10px]"
+      onSubmit={(e) => {
+        e.preventDefault()
+        run('login')
+      }}
+    >
+      <input value={id} onChange={(e) => setId(e.target.value)} type="email" inputMode="email" placeholder={tr('Email')} autoComplete="email" aria-label={tr('Email')} className={field} />
+      <input
+        value={pw}
+        onChange={(e) => setPw(e.target.value)}
+        type="password"
+        placeholder={tr('Password ({n}+ characters)', { n: MIN_PASSWORD })}
+        autoComplete="current-password"
+        aria-label={tr('Password')}
+        className={field}
+      />
+      <p className="min-h-[20px] text-[15px] text-[#c0392b]" role="alert">
+        {error}
+      </p>
+      <div className="flex justify-around text-[20px]">
+        <TextButton onClick={() => run('login')} className={busy ? 'opacity-40' : ''}>
+          {tr('Log in')}
+        </TextButton>
+        <TextButton onClick={() => run('signup')} className={busy ? 'opacity-40' : ''}>
+          {tr('Sign up')}
+        </TextButton>
+      </div>
+      <button type="submit" className="hidden" />
+    </form>
+  )
+}
+
+// `prompt` = shown right after the first card moves in (closable with "Later").
+export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boolean; onDone: (user: User) => void; onClose: () => void }) {
+  return (
     <Sheet onClose={onClose}>
       <p className="text-center text-[24px] leading-[1.2]">{tr(prompt ? 'Keep your town' : 'Log in')}</p>
       {prompt && <p className="mt-[6px] text-center text-[16px] leading-[1.3] text-[#555]">{tr('Log in to save your town and cards to your account.')}</p>}
-      <form
-        className="mt-[18px] flex flex-col gap-[10px]"
-        onSubmit={(e) => {
-          e.preventDefault()
-          run('login')
-        }}
-      >
-        <input value={id} onChange={(e) => setId(e.target.value)} type="email" inputMode="email" placeholder={tr('Email')} autoComplete="email" aria-label={tr('Email')} className={field} />
-        <input
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          type="password"
-          placeholder={tr('Password ({n}+ characters)', { n: MIN_PASSWORD })}
-          autoComplete="current-password"
-          aria-label={tr('Password')}
-          className={field}
-        />
-        <p className="min-h-[20px] text-[15px] text-[#c0392b]" role="alert">
-          {error}
-        </p>
-        <div className="flex justify-around text-[20px]">
-          <TextButton onClick={() => run('login')} className={busy ? 'opacity-40' : ''}>
-            {tr('Log in')}
-          </TextButton>
-          <TextButton onClick={() => run('signup')} className={busy ? 'opacity-40' : ''}>
-            {tr('Sign up')}
-          </TextButton>
-        </div>
-        <button type="submit" className="hidden" />
-      </form>
+      <div className="mt-[18px]">
+        <LoginForm onDone={onDone} />
+      </div>
       <div className="mt-[16px] text-center text-[17px]">
         <TextButton dim onClick={onClose}>
           {tr(prompt ? 'Later' : 'Cancel')}

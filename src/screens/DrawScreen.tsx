@@ -25,7 +25,7 @@ import { Bottom, CardView, Popup, shrink, type PopupAction } from '../components
 import { ToggleIcon } from '../components/drawIcons'
 import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, PillVillage, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
 import { MOODS } from '../lib/moods'
-import { toLocal } from '../lib/frame'
+import { framePoint, toLocal } from '../lib/frame'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
 import type { Card } from '../lib/store'
 import { tr } from '../lib/i18n'
@@ -43,7 +43,41 @@ const TOOLS = {
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
-export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; onFinish: (draft: Draft) => void }) {
+// Onboarding "draw yourself" tips: one speech bubble at a time over the real screen (frame coords; `bottom` = toolbar area)
+const TIPS: { text: string; top: number; arrow: number; down?: boolean; bottom?: boolean }[] = [
+  { text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', top: 250, arrow: 201, down: true },
+  { text: 'Pencil, highlighter and eraser. Tap the picked one again for thickness, the wheel for colors. Undo, redo and the guide are here too.', top: 600, arrow: 120, down: true, bottom: true },
+  { text: 'In Memo, add your mood, where you are, a name and a line for this card.', top: 128, arrow: 242 },
+  { text: 'Done? Tap ✓, then pick a town for your card. This first card becomes your profile picture (change it on My Page).', top: 128, arrow: 350 },
+]
+
+function Tip({ step, onNext }: { step: number; onNext: () => void }) {
+  const t = TIPS[step]
+  const last = step === TIPS.length - 1
+  const bubble = (
+    <div className="animate-pop-in absolute inset-x-[20px] z-50 rounded-[14px] border-[2.5px] border-[#2e2e2e] bg-white px-[16px] pt-[12px] pb-[10px]" style={{ top: t.top }}>
+      <span
+        className={`absolute size-[16px] rotate-45 border-[#2e2e2e] bg-white ${t.down ? 'bottom-[-9.5px] border-r-[2.5px] border-b-[2.5px]' : 'top-[-9.5px] border-t-[2.5px] border-l-[2.5px]'}`}
+        style={{ left: t.arrow - 20 - 8 }}
+      />
+      <p className="text-[20px] leading-[1.3]">{tr(t.text)}</p>
+      <div className="mt-[8px] flex items-center justify-between text-[16px] text-[#8a8a8a]">
+        <span>
+          {step + 1} / {TIPS.length}
+        </span>
+        <span className="text-[20px] text-[#2e2e2e] underline underline-offset-4">{tr(last ? 'Start drawing' : 'Next')}</span>
+      </div>
+    </div>
+  )
+  return (
+    <button aria-label={tr(last ? 'Start drawing' : 'Next')} onClick={onNext} className="animate-fade-in absolute inset-0 z-40 cursor-pointer bg-black/30 text-left">
+      {t.bottom ? <Bottom>{bubble}</Bottom> : bubble}
+    </button>
+  )
+}
+
+export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
+  const [tip, setTip] = useState(tutorial ? 0 : -1)
   const canvas = useRef<DrawingCanvasHandle>(null)
   const [tab, setTab] = useState<'draw' | 'memo'>('draw')
   const [tool, setTool] = useState<Tool>('pen')
@@ -81,6 +115,39 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const typedPlace = useRef(false)
   const memoRef = useRef<HTMLTextAreaElement>(null)
+  // while typing the nickname/memo, the writing box rides on top of the keyboard (frame px it moves up)
+  const writeRef = useRef<HTMLDivElement>(null)
+  const [lift, setLift] = useState(0)
+  const liftRef = useRef(0)
+  useEffect(() => {
+    const vv = window.visualViewport
+    const box = writeRef.current
+    if (!vv || !box) return
+    const update = () => {
+      let next = 0
+      if (box.contains(document.activeElement)) {
+        // visible bottom (above the keyboard) and the memo's bottom, both in frame px, without the current lift
+        const visible = framePoint(0, vv.offsetTop + vv.height).y
+        const bottom = framePoint(0, memoRef.current!.getBoundingClientRect().bottom).y - liftRef.current
+        next = Math.min(0, visible - 12 - bottom)
+      }
+      liftRef.current = next
+      setLift(next)
+    }
+    const later = () => setTimeout(update, 0)
+    box.addEventListener('focusin', update)
+    box.addEventListener('focusout', later)
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      box.removeEventListener('focusin', update)
+      box.removeEventListener('focusout', later)
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      liftRef.current = 0
+      setLift(0)
+    }
+  }, [tab, preview])
 
   useEffect(() => {
     locatePlace().then((p) => {
@@ -241,7 +308,12 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
               })}
             </div>
             {/* the whole lower area starts writing the memo */}
-            <div onClick={() => memoRef.current?.focus()} className="absolute top-[262px] left-[21px] flex h-[258px] w-[360px] cursor-text flex-col items-start gap-[10px] rounded-[10px] p-[10px]">
+            <div
+              ref={writeRef}
+              onClick={() => memoRef.current?.focus()}
+              className={`absolute top-[262px] left-[21px] flex h-[258px] w-[360px] cursor-text flex-col items-start gap-[10px] rounded-[10px] p-[10px] transition-transform duration-200 ${lift ? 'bg-[#f0f0f0] shadow-[0_-2px_12px_rgba(0,0,0,0.15)]' : ''}`}
+              style={lift ? { transform: `translateY(${lift}px)` } : undefined}
+            >
               <label className={`flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('nickname')}`} onClick={(e) => {
                 e.stopPropagation()
                 nickRef.current?.focus()
@@ -406,6 +478,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
         </div>
       )}
 
+      {tip >= 0 && tip < TIPS.length && !preview && <Tip step={tip} onNext={() => setTip(tip + 1)} />}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
   )

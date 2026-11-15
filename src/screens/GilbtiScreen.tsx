@@ -1,19 +1,18 @@
 import { useState } from 'react'
-import { LoginSheet } from '../components/LoginSheet'
 import { Bottom, LangButton, TextButton } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import type { User } from '../lib/auth'
 import { QUESTIONS, TYPES, answered, submit, type Answer, type Answers, type Result, type TypeId } from '../lib/gilbti'
 import { tr } from '../lib/i18n'
 
-// 길BTI (Subway-TI) pre-interview: intro → one question per page → result (the 2×2 persona) → log in.
-// Onboarding gate: nobody gets into the app without answering and logging in (email), so every tester's
-// answers are tied to an account. Also opened from My Page to answer again (then closable).
+// 길BTI (Subway-TI) pre-interview: intro → one question per page → result (the 2×2 persona).
+// Onboarding step after log in + nickname (App.tsx), so every tester's answers are tied to an account.
+// Also opened from My Page to answer again (then closable).
 // Monotone, hand-drawn like the rest of the app.
 
 const field = 'w-full rounded-[8px] border-[2px] border-dashed border-[#555] bg-white px-[12px] text-[20px] outline-none placeholder:text-[#9a9a9a]'
 
-function Pill({ label, onClick, back = false, off = false }: { label: string; onClick: () => void; back?: boolean; off?: boolean }) {
+export function Pill({ label, onClick, back = false, off = false }: { label: string; onClick: () => void; back?: boolean; off?: boolean }) {
   return (
     <button onClick={onClick} aria-disabled={off || undefined} className={`relative flex h-[54px] w-[118px] items-center justify-center ${off ? 'opacity-35' : ''}`}>
       <span className={`absolute inset-0 ${back ? 'rotate-[-178.73deg]' : 'rotate-[-177.79deg]'}`}>{back ? <PillFinish /> : <PillBack />}</span>
@@ -52,30 +51,27 @@ export function TypeGrid({ type }: { type: TypeId }) {
 
 export default function GilbtiScreen({
   user,
-  saved,
+  nickname,
   onDone,
   onClose,
-  onLogin,
 }: {
   user: User | null
-  saved: Result | null // answered already on this device (only logging in is left)
+  nickname: string // from the nickname step; saved with the answers
   onDone: (r: Result) => void
-  onClose?: () => void // only from My Page; the onboarding gate can't be skipped
-  onLogin: (u: User) => Promise<void>
+  onClose?: () => void // only from My Page; onboarding can't be skipped
 }) {
   const n = QUESTIONS.length
-  const [step, setStep] = useState(saved ? n : -1) // -1 intro, 0..n-1 questions, n result (+ log in)
+  const [step, setStep] = useState(-1) // -1 intro, 0..n-1 questions, n result
   const [answers, setAnswers] = useState<Answers>({})
-  const [result, setResult] = useState<Result | null>(saved)
+  const [result, setResult] = useState<Result | null>(null)
   const [busy, setBusy] = useState(false)
-  const [login, setLogin] = useState(false)
 
   const set = (id: string, a: Answer) => setAnswers((s) => ({ ...s, [id]: a }))
 
   async function next() {
     if (step < n - 1) return setStep(step + 1)
     setBusy(true)
-    const r = await submit(answers, user)
+    const r = await submit({ ...answers, name: nickname }, user)
     setBusy(false)
     setResult(r)
     setStep(n)
@@ -120,34 +116,12 @@ export default function GilbtiScreen({
           <div className="mt-[28px]">
             <TypeGrid type={result.type} />
           </div>
-          {!user && (
-            <p className="mt-[26px] text-[19px] leading-[1.35] text-[#3d3d3d]">
-              {tr('Last step: log in or sign up with your email.')}
-              <br />
-              <span className="text-[16px] text-[#8a8a8a]">{tr('Your answers, towns and cards stay with your account.')}</span>
-            </p>
-          )}
         </div>
         <Bottom>
           <div className="absolute top-[730px] inset-x-0 flex flex-col items-center gap-[22px]">
-            {user ? <Pill label={tr("Let's go")} onClick={() => onDone(result)} /> : <Pill label={tr('Log in')} onClick={() => setLogin(true)} />}
-            {!user && saved && (
-              <TextButton dim className="text-[19px]" onClick={() => setStep(-1)}>
-                {tr('Answer again')}
-              </TextButton>
-            )}
+            <Pill label={tr(onClose ? 'Done' : 'Next')} onClick={() => onDone(result)} />
           </div>
         </Bottom>
-        {login && (
-          <LoginSheet
-            onClose={() => setLogin(false)}
-            onDone={async (u) => {
-              setLogin(false)
-              await onLogin(u) // guest town + these answers join the account
-              onDone(result)
-            }}
-          />
-        )}
       </div>
     )
 
