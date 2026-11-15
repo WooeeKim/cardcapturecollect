@@ -140,7 +140,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     const u = userRef.current
     if (!u) return setGate('login')
     if (!s.nickname) return setGate('nickname')
-    if (!(savedResult() || (await doneOnServer(u)))) return setGate('gilbti')
+    if (!(savedResult(u) || (await doneOnServer(u)))) return setGate('gilbti')
     setGate(null)
     if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
   }, [])
