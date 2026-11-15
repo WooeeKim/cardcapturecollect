@@ -42,8 +42,10 @@ export default function MyPageScreen({
   onLogout,
   onDeleteAccount,
   onReset,
+  canReset,
 }: {
   user: User | null
+  canReset: boolean // app_admins only
   profile: Card | null // profile picture card (store.profileCard)
   cards: Card[] // newest first, to pick the profile picture from
   onPickProfile: (cardId: string) => void
@@ -86,7 +88,7 @@ export default function MyPageScreen({
   }
   const askDelete = () =>
     setPopup({
-      message: tr("Delete your account and all your towns and cards?\nThis can't be undone."),
+      message: tr("Delete your account, your towns and everyone in them?\nThis can't be undone."),
       actions: [
         {
           label: tr('Delete'),
@@ -103,7 +105,8 @@ export default function MyPageScreen({
   // list rows: Figma pitch 59.8, first at 359
   const ROW0 = 359
   const PITCH = 59.8
-  const rows: { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }[] = [
+  type Row = { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }
+  const rows: Row[] = ([
     {
       label: tr('Notification setting'),
       onClick: toggleNotify,
@@ -113,12 +116,12 @@ export default function MyPageScreen({
     { label: tr('Notice'), onClick: () => gotIt(tr('Notices are coming soon.')) },
     { label: tr('FAQ'), onClick: () => gotIt(tr('FAQ is coming soon.')) },
     { label: tr('Feedback'), onClick: () => setSheet('feedback') },
-    {
-      // testing helper: wipes towns, cards, nickname and intro on this device / account (guests too)
+    canReset && {
+      // testing helper for admins only: wipes towns, cards, nickname and intro on this device / account
       label: tr('Reset (test)'),
       onClick: () =>
         setPopup({
-          message: tr("Reset all your towns and cards?\nThis can't be undone."),
+          message: tr("Reset all your towns and everyone in them?\nThis can't be undone."),
           actions: [
             { label: tr('Reset'), onClick: () => { setPopup(null); onReset() } },
             { label: tr('Cancel'), onClick: () => setPopup(null) },
@@ -128,7 +131,7 @@ export default function MyPageScreen({
     { label: tr('Neighbors'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Developers'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
-  ]
+  ] as (Row | false)[]).filter((r): r is Row => !!r)
 
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
@@ -200,7 +203,7 @@ export default function MyPageScreen({
           <p className={`absolute top-[17px] left-[112px] w-[240px] truncate text-[24px] leading-[normal] ${nickname ? '' : 'text-[#9a9a9a]'}`}>{nickname || tr('No Profile')}</p>
         )}
         <p className="absolute top-[54px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
-          {tr(cardCount === 1 ? '{n} Capture' : '{n} Captures', { n: cardCount })}
+          {tr(cardCount === 1 ? '{n} Person' : '{n} People', { n: cardCount })}
         </p>
         <p className="absolute top-[72px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
           {tr(townCount === 1 ? '{n} Town' : '{n} Towns', { n: townCount })}
@@ -270,7 +273,7 @@ export default function MyPageScreen({
       {sheet === 'picture' && (
         <Sheet onClose={() => setSheet(null)}>
           <p className="text-center text-[24px] leading-[1.2]">{tr('Profile picture')}</p>
-          <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your cards.')}</p>
+          <p className="mt-[6px] text-center text-[16px] text-[#555]">{tr('Pick one of your people.')}</p>
           {/* 4 per row, scrolls down; the current picture first. p-[6px] leaves room for its outline */}
           <div className="mt-[16px] grid max-h-[360px] grid-cols-4 gap-[10px] overflow-y-auto p-[6px]">
             {[...cards].sort((a, b) => Number(b.id === profile?.id) - Number(a.id === profile?.id)).map((c) => (
