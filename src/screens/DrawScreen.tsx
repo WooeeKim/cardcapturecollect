@@ -58,8 +58,8 @@ const STEPS: { id: StepId; target: string; text: string; next?: boolean }[] = [
   { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!', next: true },
   { id: 'fit', target: 'fit', text: 'Tap here to put the paper back to its normal size.' },
   { id: 'memo', target: 'memo', text: 'Now open Memo.' },
-  { id: 'memo-fill', target: 'memo-fill', text: 'Add your mood, where you are, a name and a line for this card.', next: true },
-  { id: 'finish', target: 'finish', text: 'Done? Tap ✓, then pick a town for your card. This first card becomes your profile picture (change it on My Page).' },
+  { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.', next: true },
+  { id: 'finish', target: 'finish', text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).' },
 ]
 type Rect = { x: number; y: number; w: number; h: number }
 
@@ -344,7 +344,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       ))}
       <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
       <button
-        aria-label={tr('Finish card')}
+        aria-label={tr('Finish drawing')}
         data-tour="finish"
         onClick={() => {
           done('finish')

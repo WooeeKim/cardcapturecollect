@@ -72,7 +72,7 @@ export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boole
   return (
     <Sheet onClose={onClose}>
       <p className="text-center text-[24px] leading-[1.2]">{tr(prompt ? 'Keep your town' : 'Log in')}</p>
-      {prompt && <p className="mt-[6px] text-center text-[16px] leading-[1.3] text-[#555]">{tr('Log in to save your town and cards to your account.')}</p>}
+      {prompt && <p className="mt-[6px] text-center text-[16px] leading-[1.3] text-[#555]">{tr('Log in to keep your town and its people in your account.')}</p>}
       <div className="mt-[18px]">
         <LoginForm onDone={onDone} />
       </div>

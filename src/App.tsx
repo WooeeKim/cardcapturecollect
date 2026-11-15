@@ -7,7 +7,7 @@ import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
-import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
+import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
@@ -69,6 +69,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const userRef = useRef<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false) // app_admins only: shows My Page → Reset
   const [state, setState] = useState<State>(() => load(GUEST_KEY))
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
@@ -124,7 +125,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       if (usingSupabase ? stored : cached) localStorage.removeItem(GUEST_KEY)
       else setError(tr("Couldn't save your guest town to the account yet. It will be added the next time you log in."))
     }
-    if (unplaced > 0) setError(tr(unplaced > 1 ? "{n} cards didn't fit in your towns." : "{n} card didn't fit in your towns.", { n: unplaced }))
+    if (unplaced > 0) setError(tr(unplaced > 1 ? "{n} people didn't fit in your towns." : "{n} person didn't fit in your towns.", { n: unplaced }))
     localStorage.removeItem(LEGACY_GUEST_OWNER)
     claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
@@ -149,6 +150,16 @@ export default function App({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     if (ready && !viewAsId) syncPush()
   }, [ready, user?.id])
+
+  // admin = listed in app_admins; re-checked whenever the account changes (log in / out)
+  useEffect(() => {
+    let live = true
+    setIsAdmin(false)
+    checkAdmin(user).then((ok) => live && setIsAdmin(ok))
+    return () => {
+      live = false
+    }
+  }, [user])
 
   // leaving / hiding the page: send the batched account save instead of dropping it
   useEffect(() => {
@@ -196,7 +207,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       try {
         save(next, keyFor(u?.id ?? null))
       } catch {
-        setError(tr('Storage is full. Delete some cards to save new ones.'))
+        setError(tr('Storage is full. Let a few people go to make room for new ones.'))
         return prev
       }
       if (u) saveRemote(u, next)
@@ -339,7 +350,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
               save(next, keyFor(user?.id ?? null))
               if (user) saveRemote(user, next)
             } catch {
-              return setError(tr('Storage is full. Delete some cards to save new ones.'))
+              return setError(tr('Storage is full. Let a few people go to make room for new ones.'))
             }
             setState(next)
             setRoute({ name: 'tada' })
@@ -354,6 +365,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       screen = (
         <MyPageScreen
           user={user}
+          canReset={isAdmin && !viewAsId}
           profile={profileCard(state)}
           cards={Object.values(state.cards).sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
           onPickProfile={(id) => commit((s) => ({ ...s, profile: id }))}
