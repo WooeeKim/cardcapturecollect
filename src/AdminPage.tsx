@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CardList } from './admin/CardList'
-import { flatten, type Row } from './admin/data'
+import { cardSessions, flatten, loadEvents, type CardSession, type Row } from './admin/data'
 import { People } from './admin/People'
 import { Plaza } from './admin/Plaza'
 import { Stats } from './admin/Stats'
@@ -11,7 +11,7 @@ import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
 // (supabase/migrations/005_admin_gallery.sql, 007_gilbti.sql). Tabs (each has its own #hash):
 // - Plaza: everyone's drawings in one wall          - List: every drawing as a table (+ CSV)
 // - People: pick someone → the app as they see it (read-only, <site>/?viewAs=<id>)
-// - Stats: counts, cards per day / hour, moods, places
+// - Stats: counts, cards per day / hour, moods, places, time on Drawing vs Memo (app_events)
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
 type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti'
 const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti']
@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [gil, setGil] = useState<Gil[] | null>(null)
   const [error, setError] = useState('')
   const [gilError, setGilError] = useState('')
+  const [sessions, setSessions] = useState<CardSession[] | null>(null)
+  const [eventsError, setEventsError] = useState('')
   const [email, setEmail] = useState('')
   const [pw, setPw] = useState('')
   const [allAnswers, setAllAnswers] = useState(false)
@@ -51,10 +53,13 @@ export default function AdminPage() {
   async function load() {
     setError('')
     setGilError('')
-    const [cards, answers] = await Promise.all([
+    const [cards, answers, events] = await Promise.all([
       supabase!.from('user_states').select('user_id, email, state, updated_at').order('updated_at', { ascending: false }),
       supabase!.from('gilbti_responses').select('*').order('created_at', { ascending: false }),
+      loadEvents(supabase!),
     ])
+    setEventsError(events.error)
+    setSessions(cardSessions(events.data))
     if (cards.error) setError(cards.error.message)
     else setRows(cards.data as Row[])
     if (answers.error) setGilError(`${answers.error.message} — run supabase/migrations/007_gilbti.sql`)
@@ -154,7 +159,7 @@ export default function AdminPage() {
       {tab === 'plaza' && <Plaza items={items} onViewAs={viewAs} />}
       {tab === 'list' && <CardList items={items} onViewAs={viewAs} />}
       {tab === 'people' && <People rows={testers} selected={person} onSelect={viewAs} />}
-      {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} />}
+      {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} sessions={sessions} eventsError={eventsError} />}
 
       {tab === 'gilbti' && (
         <>

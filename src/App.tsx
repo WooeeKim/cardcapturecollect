@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
 import { PhoneChrome, Popup } from './components/ui'
-import { identify, track, trackScreen } from './lib/analytics'
 import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { loadImage } from './lib/preload'
@@ -86,7 +85,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
       setInterview('first') // logged out (or the account couldn't be reached): back to the gate
       userRef.current = null
       setUser(null)
-      identify(null)
       const guest = load(GUEST_KEY)
       setState(guest)
       setHomeId(guest.towns[0].id)
@@ -127,7 +125,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
     claim() // this device's 길BTI answers (made as a guest) now belong to the account
     userRef.current = u
     setUser(u)
-    identify(u)
     setState(next)
     setHomeId(next.towns[0].id)
     setRoute(startRoute(next))
@@ -223,8 +220,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setRoute({ name: 'main', townId, enter, focus })
   }
 
-  useEffect(() => trackScreen(interview ? 'gilbti' : route.name), [route.name, interview])
-
   // pending card vanished (e.g. storage reset) → go home
   const lost = (route.name === 'tada' || route.name === 'send') && !state.pending
   useEffect(() => {
@@ -269,7 +264,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onGo={() => {}}
           onPlace={(townId) => {
             commit((s) => placeCard(s, route.cardId, townId))
-            track('card_moved', { from: route.to })
             if (route.to === 'collection') setRoute({ name: 'collection', townId: route.back.name === 'collection' ? route.back.townId : townId })
             else goMain(townId, 'center', route.cardId)
           }}
@@ -289,7 +283,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onPlace={(townId) => {
             const id = state.pending!.id
             commit((s) => sendPending(s, townId))
-            track('card_sent')
             goMain(townId, 'center', id)
             if (!viewAsId && !userRef.current && !flag(PROMPTED)) {
               setFlag(PROMPTED, '1')
@@ -329,7 +322,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
               return setError(tr('Storage is full. Delete some cards to save new ones.'))
             }
             setState(next)
-            track('card_made', { mood: draft.mood })
             setRoute({ name: 'tada' })
           }}
         />
@@ -359,7 +351,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
           }}
           onReset={() => {
             const fresh = initial()
-            track('reset')
             commit(() => fresh)
             setHomeId(fresh.towns[0].id)
           }}
@@ -373,7 +364,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
             } catch {
               /* private mode */
             }
-            track('delete_account', { ok: res.ok })
             await enter(null)
             setRoute({ name: 'mypage' })
             return res.note

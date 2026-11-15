@@ -1,12 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { moodOf } from '../lib/moods'
-import { cardCount, dayKey, who, type Item, type Row } from './data'
+import { cardCount, dayKey, when, who, type CardSession, type Item, type Row } from './data'
 
 const INK = '#3d5a80' // single hue for every magnitude bar
 
 // 통계: how much people draw, when, with which moods / places, and how complete their cards are.
 // Only accounts are counted: guest towns live on their own device and never reach the server.
-export function Stats({ rows, items, gilCount }: { rows: Row[]; items: Item[]; gilCount: number | null }) {
+export function Stats({ rows, items, gilCount, sessions, eventsError }: { rows: Row[]; items: Item[]; gilCount: number | null; sessions: CardSession[] | null; eventsError: string }) {
   const [range, setRange] = useState<14 | 30 | 90>(30)
   const s = useMemo(() => {
     const now = new Date()
@@ -104,11 +104,91 @@ export function Stats({ rows, items, gilCount }: { rows: Row[]; items: Item[]; g
         </Panel>
       </div>
 
+      <TimePanel sessions={sessions} error={eventsError} />
+
       <Panel title="How complete are cards (% of cards with each field)">
         <Bars rows={s.filled.map(([k, p]) => ({ label: k, n: p }))} total={100} unit="%" />
       </Panel>
       <p className="text-xs text-neutral-500">Counts accounts only: a guest's town stays on their own device until they log in.</p>
     </div>
+  )
+}
+
+// Time on the card screen, from app_events (draw / memo / confirm / hidden / finish / exit with timestamps)
+const median = (xs: number[]) => {
+  if (!xs.length) return 0
+  const a = [...xs].sort((x, y) => x - y)
+  const m = a.length >> 1
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2
+}
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0)
+const dur = (sec: number) => (sec >= 60 ? `${Math.floor(sec / 60)}m ${Math.round(sec % 60)}s` : `${Math.round(sec)}s`)
+
+function TimePanel({ sessions, error }: { sessions: CardSession[] | null; error: string }) {
+  if (error) return <Panel title="Time on the card screen"><p className="text-sm text-red-700">{error} — run supabase/migrations/009_app_events.sql</p></Panel>
+  if (!sessions) return null
+  const done = sessions.filter((x) => x.result === 'finish')
+  const exits = sessions.filter((x) => x.result === 'exit').length
+  const draw = done.map((x) => x.draw)
+  const memo = done.map((x) => x.memo)
+  const csv = () => {
+    const head = ['started_at', 'who', 'result', 'draw_sec', 'memo_sec', 'session_id']
+    const lines = sessions.map((x) => [x.start, x.who, x.result, x.draw.toFixed(1), x.memo.toFixed(1), x.id].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + [head.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' }))
+    a.download = `subwayseal-card-time-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+  return (
+    <Panel
+      title="Time on the card screen (Drawing vs Memo, finished cards)"
+      right={
+        sessions.length ? (
+          <button className="text-xs underline" onClick={csv}>
+            Download CSV
+          </button>
+        ) : null
+      }
+    >
+      {sessions.length ? (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Tile label="Drawing (median)" value={dur(median(draw))} note={`mean ${dur(mean(draw))}`} />
+            <Tile label="Memo (median)" value={dur(median(memo))} note={`mean ${dur(mean(memo))}`} />
+            <Tile label="Drawing share" value={`${Math.round((mean(draw) / (mean(draw) + mean(memo) || 1)) * 100)}%`} note="of Drawing + Memo time" />
+            <Tile label="Visits" value={sessions.length} note={`${done.length} finished · ${exits} left without saving`} />
+          </div>
+          <div className="mt-4 max-h-80 overflow-auto rounded-xl border border-neutral-200">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-neutral-50 text-left text-neutral-500">
+                <tr>
+                  <th className="px-3 py-2 font-normal">Started</th>
+                  <th className="px-3 py-2 font-normal">Who</th>
+                  <th className="px-3 py-2 font-normal">Result</th>
+                  <th className="px-3 py-2 text-right font-normal">Drawing</th>
+                  <th className="px-3 py-2 text-right font-normal">Memo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sessions.map((x) => (
+                  <tr key={x.id} className="border-t border-neutral-100">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-neutral-600">{when(x.start)}</td>
+                    <td className="px-3 py-1.5">{x.who}</td>
+                    <td className="px-3 py-1.5 text-neutral-600">{x.result === 'finish' ? 'saved' : x.result === 'exit' ? 'left' : 'unknown'}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{dur(x.draw)}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{dur(x.memo)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-neutral-500">Time with the app in the background and on the final “Ready to finish?” check is not counted. Includes guests. “unknown” = the app closed before saving or leaving.</p>
+        </>
+      ) : (
+        <Empty />
+      )}
+    </Panel>
   )
 }
 

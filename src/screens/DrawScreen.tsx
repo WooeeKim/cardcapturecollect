@@ -1,5 +1,6 @@
 import { fillInside } from '../lib/fillInside'
 import { useEffect, useRef, useState } from 'react'
+import { logEvent } from '../lib/events'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
 import backIcon from '../assets/proto/v2/back.svg'
 import checkIcon from '../assets/proto/v2/check.svg'
@@ -88,15 +89,31 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
     })
   }, [])
 
+  // event log for time-on-screen (admin → Stats): one row each time the screen changes state
+  const session = useRef(crypto.randomUUID()).current
+  const log = (event: string, data?: Record<string, unknown>) => logEvent(event, data, session)
+  const state = preview ? 'confirm' : tab
+  useEffect(() => {
+    const sync = () => log(document.hidden ? 'hidden' : state)
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => document.removeEventListener('visibilitychange', sync)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
+  const exit = () => {
+    log('exit')
+    onExit()
+  }
+
   const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim() })
 
   function back() {
     if (preview) return setPreview(null)
-    if (empty && !nickname && !memo && !mood) return onExit()
+    if (empty && !nickname && !memo && !mood) return exit()
     setPopup({
       message: tr('Discard this drawing?'),
       actions: [
-        { label: tr('Discard'), onClick: onExit },
+        { label: tr('Discard'), onClick: exit },
         { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
@@ -367,6 +384,7 @@ export default function DrawScreen({ onExit, onFinish }: { onExit: () => void; o
                 <button
                   onClick={() => {
                     rememberPlace(place.trim())
+                    log('finish', { mood })
                     onFinish(draft(preview))
                   }}
                   className="absolute top-[768.6px] left-[63.8px] h-[54.8px] w-[113px]"
