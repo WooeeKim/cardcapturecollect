@@ -85,7 +85,7 @@ const DICT: Record<string, [string, string]> = {
   // main / menu / card detail
   Menu: ['메뉴', 'メニュー'],
   'Close menu': ['메뉴 닫기', 'メニューを閉じる'],
-  'Residents': ['주민들', '住民たち'],
+  Collection: ['콜렉션', 'コレクション'],
   'Town list': ['마을 목록', '町リスト'],
   'Town List': ['마을 목록', '町リスト'],
   'My page': ['마이페이지', 'マイページ'],

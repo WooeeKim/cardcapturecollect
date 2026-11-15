@@ -501,7 +501,7 @@ export default function MainScreen({
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
               <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
-                <button aria-label={tr('Residents')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
                 <button aria-label={tr('Town list')} onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">

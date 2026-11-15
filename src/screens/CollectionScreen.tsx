@@ -179,7 +179,7 @@ export default function CollectionScreen({
       <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">{tr('Residents')}</p>
+      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">{tr('Collection')}</p>
       <TextButton onClick={() => setNewest(!newest)} className="absolute top-[93px] right-[24px] z-20 text-[17px]">
         {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
