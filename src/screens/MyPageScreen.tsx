@@ -74,10 +74,12 @@ export default function MyPageScreen({
     } catch {
       /* private mode */
     }
+    // turning it on before the phone was asked: ask now (this tap counts as the user's gesture on iPhone)
+    if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {})
   }
   const askDelete = () =>
     setPopup({
-      message: tr("Delete your account and all your towns and cards?\\nThis can't be undone."),
+      message: tr("Delete your account and all your towns and cards?\nThis can't be undone."),
       actions: [
         {
           label: tr('Delete'),
@@ -109,7 +111,7 @@ export default function MyPageScreen({
       label: tr('Reset (test)'),
       onClick: () =>
         setPopup({
-          message: tr("Reset all your towns and cards?\\nThis can't be undone."),
+          message: tr("Reset all your towns and cards?\nThis can't be undone."),
           actions: [
             { label: tr('Reset'), onClick: () => { setPopup(null); onReset() } },
             { label: tr('Cancel'), onClick: () => setPopup(null) },

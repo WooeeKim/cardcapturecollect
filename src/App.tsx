@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoginSheet } from './components/LoginSheet'
+import NotifyPrompt from './components/NotifyPrompt'
 import { PhoneChrome, Popup } from './components/ui'
 import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
@@ -404,6 +405,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           }}
         />
       )}
+      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error} />
       <PhoneChrome />
       {viewAsId && ready && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[40px] z-[101] flex justify-center">

@@ -81,7 +81,7 @@ export default function TownListScreen({
   }
   function askSave(then: () => void) {
     setPopup({
-      message: tr("There's unsaved changes.\\nDo you wanna save?"),
+      message: tr("There's unsaved changes.\nDo you wanna save?"),
       actions: [
         { label: tr('Discard'), onClick: () => { setPopup(null); setEditing(false); then() } },
         { label: tr('Save'), onClick: () => { setPopup(null); save(); then() } },

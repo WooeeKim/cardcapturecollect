@@ -74,6 +74,9 @@ const DICT: Record<string, [string, string]> = {
   'Do you really want to delete?': ['정말 삭제할까요?', '本当に削除しますか?'],
   'Change language': ['언어 바꾸기', '言語を変える'],
   'Sign up': ['회원가입', '新規登録'],
+  'Allow notifications?\nWe’ll send you a little nudge now and then.': ['알림을 허용할까요?\n가끔 살짝 알려 드릴게요.', '通知を許可しますか?\nときどき、そっとお知らせします。'],
+  'Not now': ['나중에', 'あとで'],
+  'Allow': ['허용', '許可'],
   'Invite your\neye catcher!': ['눈에 띈 사람을\n초대해 보세요!', '気になった人を\n招待しよう!'],
   'Ready to finish?\nYou won’t be able to edit this afterward.': ['완성할까요?\n완성하면 다시 고칠 수 없어요.', '完成にしますか?\nあとから直せません。'],
 
