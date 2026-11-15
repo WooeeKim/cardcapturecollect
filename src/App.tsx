@@ -6,7 +6,7 @@ import { fillInsideImage } from './lib/fillInside'
 import { claim, doneOnServer, resendUnsent, savedResult } from './lib/gilbti'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
-import { currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
+import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
@@ -68,6 +68,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const userRef = useRef<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false) // app_admins only: shows My Page → Reset
   const [state, setState] = useState<State>(() => load(GUEST_KEY))
   const [error, setError] = useState('')
   const [route, setRoute] = useState<Route>(() => startRoute(load(GUEST_KEY)))
@@ -143,6 +144,16 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setGate(null)
     if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
   }, [])
+
+  // admin = listed in app_admins; re-checked whenever the account changes (log in / out)
+  useEffect(() => {
+    let live = true
+    setIsAdmin(false)
+    checkAdmin(user).then((ok) => live && setIsAdmin(ok))
+    return () => {
+      live = false
+    }
+  }, [user])
 
   // leaving / hiding the page: send the batched account save instead of dropping it
   useEffect(() => {
@@ -348,6 +359,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       screen = (
         <MyPageScreen
           user={user}
+          canReset={isAdmin && !viewAsId}
           profile={profileCard(state)}
           cards={Object.values(state.cards).sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
           onPickProfile={(id) => commit((s) => ({ ...s, profile: id }))}

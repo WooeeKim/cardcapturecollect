@@ -42,8 +42,10 @@ export default function MyPageScreen({
   onLogout,
   onDeleteAccount,
   onReset,
+  canReset,
 }: {
   user: User | null
+  canReset: boolean // app_admins only
   profile: Card | null // profile picture card (store.profileCard)
   cards: Card[] // newest first, to pick the profile picture from
   onPickProfile: (cardId: string) => void
@@ -103,7 +105,8 @@ export default function MyPageScreen({
   // list rows: Figma pitch 59.8, first at 359
   const ROW0 = 359
   const PITCH = 59.8
-  const rows: { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }[] = [
+  type Row = { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }
+  const rows: Row[] = ([
     {
       label: tr('Notification setting'),
       onClick: toggleNotify,
@@ -113,8 +116,8 @@ export default function MyPageScreen({
     { label: tr('Notice'), onClick: () => gotIt(tr('Notices are coming soon.')) },
     { label: tr('FAQ'), onClick: () => gotIt(tr('FAQ is coming soon.')) },
     { label: tr('Feedback'), onClick: () => setSheet('feedback') },
-    {
-      // testing helper: wipes towns, cards, nickname and intro on this device / account (guests too)
+    canReset && {
+      // testing helper for admins only: wipes towns, cards, nickname and intro on this device / account
       label: tr('Reset (test)'),
       onClick: () =>
         setPopup({
@@ -128,7 +131,7 @@ export default function MyPageScreen({
     { label: tr('Neighbors'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Developers'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
-  ]
+  ] as (Row | false)[]).filter((r): r is Row => !!r)
 
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
