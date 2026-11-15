@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { track } from '../lib/analytics'
+import { logEvent } from '../lib/events'
 import { MIN_PASSWORD, changePassword, logIn, signUp, type User } from '../lib/auth'
 import { TextButton } from './ui'
 import { tr } from '../lib/i18n'
@@ -28,7 +28,6 @@ export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boole
     setError('')
     const res = kind === 'login' ? await logIn(id, pw) : await signUp(id, pw)
     setBusy(false)
-    track(kind === 'login' ? 'log_in' : 'sign_up', { ok: res.ok })
     if (res.ok) onDone(res.user)
     else setError(res.error)
   }
@@ -112,7 +111,7 @@ export function PasswordSheet({ user, onClose }: { user: User; onClose: () => vo
   )
 }
 
-// Free-text feedback from testers → PostHog event "feedback" (with the screen it was sent from).
+// Free-text feedback from testers → app_events row "feedback" (data.text).
 export function FeedbackSheet({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState('')
   const [sent, setSent] = useState(false)
@@ -140,7 +139,7 @@ export function FeedbackSheet({ onClose }: { onClose: () => void }) {
             className={text.trim() ? '' : 'opacity-40'}
             onClick={() => {
               if (!text.trim()) return
-              track('feedback', { text: text.trim() })
+              logEvent('feedback', { text: text.trim() })
               setSent(true)
             }}
           >

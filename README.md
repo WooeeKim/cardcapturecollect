@@ -34,7 +34,7 @@ Figma "prototyping" 섹션을 그대로 옮긴 웹앱이에요. 폰 세로 화�
 | 마이페이지 | 로그인·가입, 로그아웃, 비밀번호 변경, 그린 카드 수, 초기화, Feedback |
 | 카드 갤러리 | `/#/admin`, 팀 관리자용. 테스터별·마을별 카드 전부 보기 |
 
-- 기술: Vite + React + TypeScript + Tailwind CSS, 계정·저장은 Supabase, 사용성 로그는 PostHog, 배포는 Vercel
+- 기술: Vite + React + TypeScript + Tailwind CSS, 계정·저장은 Supabase, 사용성 로그는 Supabase `app_events`, 배포는 Vercel
 - 처음엔 게스트로 시작하고 데이터는 이 기기에 저장돼요. 로그인하면 게스트 데이터가 그 계정에 합쳐지고, 이후로는 계정별로 서버에 저장돼요
 - PC 브라우저에서는 폰 비율(402×874) 틀로 보여요 (확인용)
 - 장소 자동 입력: 위치 권한을 주면 5km 안 가장 가까운 지하철·기차역으로 채워요. 못 찾으면 마지막에 쓴 장소로 채워요. 역 이름 데이터 © OpenStreetMap contributors (ODbL)
@@ -124,7 +124,7 @@ npm install
 
 ### 7. 키 넣기 (`.env.local`)
 
-키가 없어도 앱은 열려요. 이 경우 로그인은 이 브라우저 안의 가짜 계정으로 동작하고, 사용성 로그는 보내지 않아요.
+키가 없어도 앱은 열려요. 이 경우 로그인은 이 브라우저 안의 가짜 계정으로 동작하고, 사용성 로그(`app_events`)는 보내지 않아요.
 
 1. 팀 채팅에서 키를 받으세요. 키는 레포에 올리지 않습니다.
 2. 예시 파일을 복사해 `.env.local`을 만들고, 받은 값을 채워 넣습니다.
@@ -138,8 +138,6 @@ npm install
    |---|---|
    | `VITE_SUPABASE_URL` | Supabase 프로젝트 주소 (예시 파일에 이미 들어 있음) |
    | `VITE_SUPABASE_ANON_KEY` | Supabase anon(publishable) 키 |
-   | `VITE_POSTHOG_KEY` | PostHog Project API key (없으면 로그 안 보냄) |
-   | `VITE_POSTHOG_HOST` | 기본 `https://us.i.posthog.com` (EU면 `https://eu.i.posthog.com`) |
 
 - `.env.local`은 git이 무시하는 파일이라 커밋되지 않습니다. **`.env.example`에는 키를 넣지 마세요** (이 파일은 커밋됩니다).
 - `service_role`/`secret` 키는 절대 쓰지 마세요. 앱에는 anon 키만 씁니다.
@@ -227,23 +225,17 @@ Supabase 대시보드 → **SQL Editor**에서 [supabase/migrations/](supabase/m
 - 프로젝트: Vercel `subwayseal` (GitHub `WooeeKim/cardcapturecollect` 연결), **Production Branch = `main`**
 - 주소: https://cardcapturecollect.vercel.app (예전 주소 https://subwayseal.vercel.app 도 같은 앱으로 계속 열려요)
 - main에 머지되면 자동으로 https://cardcapturecollect.vercel.app 에 배포되고, 다른 브랜치·PR은 미리보기 주소로 배포돼요
-- 환경 변수(Vercel → Settings → Environment Variables): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST` (시크릿 키 금지). 바꾼 뒤에는 다시 배포해야 적용돼요
+- 환경 변수(Vercel → Settings → Environment Variables): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (시크릿 키 금지). 바꾼 뒤에는 다시 배포해야 적용돼요
 
-## 사용성 테스트 로그 (PostHog)
+## 사용성 테스트 로그 (Supabase `app_events`)
 
-- 화면 녹화(세션 리플레이), 히트맵, 화면별 체류시간, 주요 행동 이벤트, 피드백을 PostHog로 보냄. 키가 없으면 아무것도 안 보냄
-- 화면마다 주소가 바뀜(`#/main`, `#/draw`, `#/towns`, `#/collection`, `#/mypage` …) → PostHog에서 화면별로 나눠 봄
-- 체류시간: `$pageview` 이벤트의 `$prev_pageview_duration`(초)
-- 이벤트: `card_made`(mood), `card_sent`, `card_moved`, `log_in`/`sign_up`(ok), `reset`, `feedback`(text) + 자동 클릭 수집
-- 로그인한 테스터는 PostHog 사람 목록에 이메일로 보임. 입력칸 글자는 녹화에서 가려짐
-- 피드백: 마이페이지 → Feedback
+- 앱 이벤트를 Supabase 테이블 `app_events`에 한 줄씩 저장 (이벤트 이름 + 기기 시각 + 계정/기기 id). 팀 어드민만 읽음
+- 그리기 화면 한 번 방문 = 한 세션. 상태가 바뀔 때마다 기록: `draw` / `memo` / `confirm`(최종 확인) / `hidden`(앱 백그라운드) → 끝은 `finish`(저장) 또는 `exit`(저장 안 하고 나감)
+- 어드민 → Stats → **Time on the card screen**: Drawing·Memo 체류시간 중앙값/평균, 세션별 표, CSV. 각 상태는 다음 이벤트까지의 시간, `confirm`·`hidden` 시간은 빠짐
+- 피드백(마이페이지 → Feedback)도 `feedback` 이벤트(`data.text`)로 저장
+- Supabase 키가 없거나 어드민 "view as" 모드면 보내지 않음
 
-**설정 (한 번)**
-
-1. posthog.com 가입 → 프로젝트 생성 → Project API key를 `.env.local`과 Vercel 환경 변수의 `VITE_POSTHOG_KEY`에
-2. PostHog → Settings → Session replay 켜기. 그리기 화면까지 녹화하려면 **Capture canvas** 켜기
-3. Settings → Heatmaps 켜기 (Toolbar로 배포 주소를 열어 화면별 확인)
-4. 화면을 녹화하므로 테스터에게 미리 알리고 동의 받기
+**설정 (한 번):** Supabase SQL Editor에서 `supabase/migrations/009_app_events.sql` 실행
 
 ## 문서
 
