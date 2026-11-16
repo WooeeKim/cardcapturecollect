@@ -16,15 +16,6 @@ const LINES: Record<Lang, string[]> = {
     'Waiting for the paint delivery...',
     'How about a little stretch?',
   ],
-  ja: [
-    'まわりを観察してみて！',
-    '風邪に気をつけてね *^-^*',
-    '鉛筆けずり中...',
-    '消しカスおそうじ中...',
-    '紙をカードの大きさに切ってるところ...',
-    '絵の具の配達を待ってるところ...',
-    'ちょっとストレッチしませんか？',
-  ],
 }
 
 let count = 0
