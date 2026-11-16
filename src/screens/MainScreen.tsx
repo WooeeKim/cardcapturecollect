@@ -29,7 +29,7 @@ const DETAIL_S = 2.1
 const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
 const BUZZ = [70, 50, 70] // "웅웅" while undecided
 const TAP = 8
-// ground + grass drawn in Figma (UX › 스케치 확정 › Section 2, 905:994), used as-is.
+// ground + grass drawn in Figma (UX › 스케치 확정 › Section 2, 905:994), used as-is; grey version from UX › 02 메인 마을 (990:4781).
 // Figma ground box = 1109.76 × 474.39; it stretches over the world's ground area (0..W, groundTop..H).
 const GROUND_D = groundSvg.match(/ d="([^"]+)"/)![1]
 const GW = 1111.76 // ground.svg viewBox (path box + 1px stroke each side)
@@ -426,7 +426,7 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <path ref={groundEl} d={GROUND_D} fill="#4BA012" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path ref={groundEl} d={GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
         <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
           {tufts.map((t, i) => (
