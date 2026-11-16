@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CardList } from './admin/CardList'
-import { cardSessions, feedbacks, flatten, loadEvents, type CardSession, type Feedback, type Row } from './admin/data'
+import { feedbacks, flatten, loadEvents, type Ev, type Feedback, type Row } from './admin/data'
 import { Interview } from './admin/Interview'
 import { Notify } from './admin/Notify'
 import { People } from './admin/People'
@@ -13,7 +13,8 @@ import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
 // (supabase/migrations/005_admin_gallery.sql, 007_gilbti.sql). Tabs (each has its own #hash):
 // - Plaza: everyone's drawings in one wall          - List: every drawing as a table (+ CSV)
 // - People: pick someone → the app as they see it (read-only, <site>/?viewAs=<id>)
-// - Stats: counts, cards per day / hour, moods, places, time on Drawing vs Memo, feedback (app_events)
+// - Stats: time in the app / per screen, when, drawing tools, cards, moods, feedback — everyone or one person,
+//          by Subway-TI type (app_events, docs/logging-plan.md)
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
 // - 8pm: the daily 8 p.m. interview answers (interview_responses), per day + CSV
 // - Notify: pick phones that allowed notifications and send them one (push_subscriptions, api/push.js)
@@ -48,7 +49,7 @@ export default function AdminPage() {
   const [gil, setGil] = useState<Gil[] | null>(null)
   const [error, setError] = useState('')
   const [gilError, setGilError] = useState('')
-  const [sessions, setSessions] = useState<CardSession[] | null>(null)
+  const [events, setEvents] = useState<Ev[] | null>(null)
   const [eventsError, setEventsError] = useState('')
   const [feedback, setFeedback] = useState<Feedback[] | null>(null)
   const [email, setEmail] = useState('')
@@ -64,7 +65,7 @@ export default function AdminPage() {
       loadEvents(supabase!),
     ])
     setEventsError(events.error)
-    setSessions(cardSessions(events.data))
+    setEvents(events.data)
     setFeedback(feedbacks(events.data))
     if (cards.error) setError(cards.error.message)
     else setRows(cards.data as Row[])
@@ -169,7 +170,7 @@ export default function AdminPage() {
       {tab === 'people' && <People rows={testers} selected={person} onSelect={viewAs} />}
       {tab === 'notify' && <Notify rows={rows ?? []} />}
       {tab === 'interview' && <Interview rows={rows ?? []} />}
-      {tab === 'stats' && <Stats rows={testers} items={items} gilCount={gil ? latest.length : null} sessions={sessions} feedback={feedback} eventsError={eventsError} />}
+      {tab === 'stats' && <Stats rows={testers} items={items} gil={gil ? latest : null} events={events} feedback={feedback} eventsError={eventsError} admin={user.id} />}
 
       {tab === 'gilbti' && (
         <>
