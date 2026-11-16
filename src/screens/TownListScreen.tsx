@@ -7,6 +7,8 @@ import tlClose from '../assets/proto/v2/tl-close.svg'
 import tlPill from '../assets/proto/v2/tl-edit.svg'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
+import { useLayout } from '../lib/layout'
+import { Shift } from '../components/wide'
 
 // Figma prototyping: townList · townList-detail · townList for migration · 마을 추가
 // browse  = Go / Edit
@@ -36,6 +38,7 @@ export default function TownListScreen({
   onGo: (townId: string) => void
   onPlace: (townId: string) => void // after the card flew into the town
 }) {
+  const { wide, w } = useLayout()
   const [openId, setOpenId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({ name: '', bio: '' })
@@ -163,7 +166,11 @@ export default function TownListScreen({
   const action = mode === 'migrate' ? tr('Migration') : mode === 'send' ? tr('Send') : null
 
   // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
-  const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
+  // (sideways tablet: rows never grow, the open town shows in the right pane instead)
+  const rowTop = (i: number) => 44 + i * ROW + (!wide && openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
+  const LIST_X = 40
+  const LIST_TOP = 104
+  const PANE_X = LIST_X + 402 + 60
   const listHeight = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0) + 120
 
   // hand-drawn pill button (Figma Vector 406); grey label for the "leave it" side
@@ -254,9 +261,9 @@ export default function TownListScreen({
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <Header title={tr('Town List')} onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label={tr('Add town')} onClick={startAdd} />} />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[186px] bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0" />
+      <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0 ${wide ? 'h-[120px]' : 'h-[186px]'}`} />
 
-      <div ref={listEl} className="absolute inset-x-0 top-[149px] bottom-0 overflow-y-auto [scrollbar-width:none]">
+      <div ref={listEl} className={`absolute bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? '' : 'inset-x-0 top-[149px]'}`} style={wide ? { left: LIST_X, width: 402, top: LIST_TOP } : undefined}>
         <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight }}>
           {/* the grey line every town hangs on; it runs past the end and is clipped, so its bottom end never shows */}
           <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: `calc(100% - 37px + 160px)` }} />
@@ -269,18 +276,18 @@ export default function TownListScreen({
               <div
                 key={t.id}
                 className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
-                style={{ top: rowTop(i) + (lifted ? dragDy : 0), height: isOpen ? ROW + OPEN_EXTRA : ROW }}
+                style={{ top: rowTop(i) + (lifted ? dragDy : 0), height: isOpen && !wide ? ROW + OPEN_EXTRA : ROW }}
                 ref={(el) => {
                   if (el) thumbs.current.set(t.id, el)
                   else thumbs.current.delete(t.id)
                 }}
               >
-                {isOpen ? (
+                {isOpen && !wide ? (
                   detail(t)
                 ) : (
                   <>
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
-                      <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} grey={dimmed} outline />
+                      <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} grey={dimmed && !(wide && isOpen)} outline />
                     </button>
                     <button onClick={() => toggle(t)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                       {townName(t.name)}
@@ -301,7 +308,7 @@ export default function TownListScreen({
             )
           })}
 
-          {adding && (
+          {adding && !wide && (
             <div className="absolute inset-x-0" style={{ top: rowTop(state.towns.length), height: ROW + OPEN_EXTRA }}>
               {detail(null)}
             </div>
@@ -309,13 +316,23 @@ export default function TownListScreen({
         </div>
       </div>
 
+      {/* sideways tablet: the open (or new) town beside the list, level with its row */}
+      {wide && (open || adding) && (
+        <Shift from={[0, 0]} to={[PANE_X, open ? Math.max(LIST_TOP, LIST_TOP + rowTop(openIndex) - (listEl.current?.scrollTop ?? 0)) : LIST_TOP + 44]}>
+          <div key={open?.id ?? 'new'} className="absolute top-0 left-0 isolate h-[244px] w-[402px]">
+            {detail(open ?? null)}
+          </div>
+        </Shift>
+      )}
+
       {/* card waiting to move in (townList for migration) */}
       {card && (
         <div
           ref={cardEl}
-          className="pointer-events-none absolute left-[290px] z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
+          className="pointer-events-none absolute z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
           style={{
-            top: fromBottom(676),
+            left: wide ? w - 190 : 290,
+            top: wide ? 600 : fromBottom(676),
             transform: flying ? `translate(${flying.x}px, ${flying.y}px) scale(0.15) rotate(0deg)` : 'rotate(6deg)',
             opacity: flying ? 0.2 : 1,
             transition: 'transform 0.6s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.6s ease-in',
