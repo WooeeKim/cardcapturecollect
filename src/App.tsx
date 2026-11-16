@@ -17,6 +17,7 @@ import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, 
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import GilbtiScreen from './screens/GilbtiScreen'
+import { Column } from './components/wide'
 import MainScreen from './screens/MainScreen'
 import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
@@ -489,13 +490,15 @@ export default function App({ onReady }: { onReady?: () => void }) {
             }}
           />
         ) : gate === 'nickname' ? (
-          <NicknameScreen
-            initial=""
-            onDone={(nickname) => {
-              commit((s) => ({ ...s, nickname }))
-              waiting(advance({ ...state, nickname })) // asks the server whether 길BTI is done
-            }}
-          />
+          <Column className="bg-[#f9f9f9]">
+            <NicknameScreen
+              initial=""
+              onDone={(nickname) => {
+                commit((s) => ({ ...s, nickname }))
+                waiting(advance({ ...state, nickname })) // asks the server whether 길BTI is done
+              }}
+            />
+          </Column>
         ) : gate === 'gilbti' || retake ? (
           <GilbtiScreen
             user={user}
@@ -506,6 +509,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
               advance(state, true)
             }}
           />
+        ) : route.name === 'tada' ? (
+          // no landscape design: phone column in the middle on a sideways tablet
+          <Column className="bg-[#f0f0f0]">{screen}</Column>
         ) : (
           screen
         ))}

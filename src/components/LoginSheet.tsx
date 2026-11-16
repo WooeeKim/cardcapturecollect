@@ -10,7 +10,7 @@ const field = 'h-[44px] w-full rounded-[6px] border-[2px] border-dashed border-[
 export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="animate-fade-in absolute inset-0 z-50 flex items-center bg-black/35 px-[24px]" onClick={onClose}>
-      <div role="dialog" className="animate-pop-in w-full rounded-[14px] bg-[#f0f0f0] px-[22px] pt-[26px] pb-[20px] font-hand" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" className="animate-pop-in mx-auto w-full max-w-[354px] rounded-[14px] bg-[#f0f0f0] px-[22px] pt-[26px] pb-[20px] font-hand" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
