@@ -42,7 +42,7 @@ export function GoTag() {
 // Underlined text button (Figma: "Edit", "Done", "Got it!" … hand-drawn underline)
 export function TextButton({ children, onClick, dim = false, light = false, className = '', style }: { children: ReactNode; onClick: () => void; dim?: boolean; light?: boolean; className?: string; style?: React.CSSProperties }) {
   return (
-    <button onClick={onClick} className={`${className.includes('absolute') ? '' : 'relative'} font-hand leading-[normal] ${dim ? 'text-[#646464]' : ''} ${className}`} style={style}>
+    <button type="button" onClick={onClick} className={`${className.includes('absolute') ? '' : 'relative'} font-hand leading-[normal] ${dim ? 'text-[#646464]' : ''} ${className}`} style={style}>
       {children}
       <img src={underlineSvg} alt="" className={`absolute inset-x-[-3px] -bottom-[2px] h-[3px] w-[calc(100%+6px)] max-w-none ${dim ? 'opacity-60' : ''} ${light ? 'invert' : ''}`} />
     </button>
