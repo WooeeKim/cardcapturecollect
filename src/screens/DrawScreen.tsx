@@ -1,4 +1,5 @@
 import { fillInside } from '../lib/fillInside'
+import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
@@ -46,24 +47,26 @@ const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 // Onboarding "draw yourself" tour: the screen dims except one lit-up spot (white ring), and the step moves on
 // when that spot is actually used. `target` = the data-tour element that is lit; `next` = moves on with a Next
 // link instead (shown once there's something to move on from: a drawing, a filled-in memo).
-type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish'
-const STEPS: { id: StepId; target: string; text: string; next?: boolean }[] = [
-  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', next: true },
+type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish' | 'back'
+const STEPS: { id: StepId; target: string; text: string }[] = [
+  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.' },
   { id: 'size-open', target: 'pen', text: 'Pencil, highlighter and eraser, with undo and redo next to them. Tap the picked pencil again to change its thickness.' },
   { id: 'size-pick', target: 'sizes', text: 'Pick a thickness.' },
   { id: 'color-open', target: 'color', text: 'Tap the wheel to change the color.' },
   { id: 'color-pick', target: 'colors', text: 'Choose a color, then close the panel.' },
   { id: 'guide', target: 'guide', text: 'Tap to turn the dotted guide off or on.' },
   // no auto-advance: play with it as long as you like (and a PC can't pinch)
-  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!', next: true },
+  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!' },
   { id: 'fit', target: 'fit', text: 'Tap here to put the paper back to its normal size.' },
   { id: 'memo', target: 'memo', text: 'Now open Memo.' },
-  { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.', next: true },
-  { id: 'finish', target: 'finish', text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).' },
+  { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.' },
+  { id: 'finish', target: 'finish', text: 'Done? Tap ✓ to see your card.' },
+  // on the confirm screen: the tour ends by going back, so the user finishes the card on their own
+  { id: 'back', target: 'go-back', text: "That's your card! Now tap Go Back and finish it on your own. This first drawing of you becomes your profile picture (change it on My Page)." },
 ]
 type Rect = { x: number; y: number; w: number; h: number }
 
-function Tour({ step, root, canNext, onNext, onSkip }: { step: number; root: React.RefObject<HTMLDivElement | null>; canNext: boolean; onNext: () => void; onSkip: () => void }) {
+function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; root: React.RefObject<HTMLDivElement | null>; canNext: boolean; onPrev: () => void; onNext: () => void; onSkip: () => void }) {
   const s = STEPS[step]
   const [hole, setHole] = useState<Rect | null>(null)
   // follow the target every frame (tools lift, panels pop in, the paper zooms, the keyboard moves things)
@@ -119,22 +122,34 @@ function Tour({ step, root, canNext, onNext, onSkip }: { step: number; root: Rea
           />
         )}
         <p className="text-[19px] leading-[1.3]">{tr(s.text)}</p>
-        <div className="mt-[6px] flex items-center justify-between text-[16px] text-[#8a8a8a]">
+        {/* Previous / Next only */}
+        <div className="mt-[6px] grid grid-cols-3 items-center text-[16px] text-[#8a8a8a]">
           <span>
-            {step + 1} / {STEPS.length}
-          </span>
-          <span className="flex items-center gap-[16px]">
-            <button onClick={onSkip} className="pointer-events-auto">
-              {tr('Skip tutorial')}
-            </button>
-            {s.next && canNext && (
-              <button onClick={onNext} className="pointer-events-auto text-[20px] text-[#2e2e2e] underline underline-offset-4">
-                {tr('Next')}
+            {step > 0 && (
+              <button onClick={onPrev} className="pointer-events-auto text-[20px] text-[#2e2e2e] underline underline-offset-4">
+                {tr('Previous')}
               </button>
             )}
           </span>
+          <span className="text-center">
+            {step + 1} / {STEPS.length}
+          </span>
+          <span className="text-right">
+            {/* every step can be moved on by hand; greyed out until the step has what it needs (a line, the memo) */}
+            <button
+              onClick={() => canNext && onNext()}
+              aria-disabled={!canNext || undefined}
+              className={`pointer-events-auto text-[20px] underline underline-offset-4 ${canNext ? 'text-[#2e2e2e]' : 'text-[#c4c4c4]'}`}
+            >
+              {tr(step === STEPS.length - 1 ? 'Done' : 'Next')}
+            </button>
+          </span>
         </div>
       </div>
+      {/* skip: small, out of the way, above the header buttons (the top 40px are off-screen on phones) */}
+      <button onClick={onSkip} className="pointer-events-auto absolute top-[48px] right-[24px] text-[14px] text-white/85 underline underline-offset-2">
+        {tr('Skip tutorial')}
+      </button>
     </div>
   )
 }
@@ -269,9 +284,15 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       return
     }
     // unpainted spots inside the figure become white (they looked white on the paper)
-    const blob = await fillInside(await canvas.current!.toBlob())
-    setThumb(await toThumb(blob))
-    setPreview(await toDataUrl(blob))
+    const { thumb, preview } = await waiting(
+      (async () => {
+        const blob = await fillInside(await canvas.current!.toBlob())
+        return { thumb: await toThumb(blob), preview: await toDataUrl(blob) }
+      })(),
+    )
+    setThumb(thumb)
+    setPreview(preview)
+    done('finish')
   }
 
   function pickTool(t: Tool) {
@@ -285,6 +306,19 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       setTool(t)
       setOpen(null)
     }
+  }
+
+  // Next / Previous in the tour: open or close panels so the screen matches the step (a skipped tap left
+  // the size bubble / color panel in the wrong state). 'fit' needs a zoom, so it's passed over without one.
+  function goStep(t: number, dir: 1 | -1) {
+    if (STEPS[tip]?.id === 'fit') canvas.current?.resetView() // leaving "normal size" puts the paper back too
+    const id = STEPS[t]?.id
+    if (id === 'fit' && !zoomed) return goStep(t + dir, dir)
+    if (id !== 'back' && id !== 'finish') setTab(id === 'memo-fill' ? 'memo' : 'draw')
+    setPicking(false)
+    if (id === 'color-pick') colorAtOpen.current = color
+    setOpen(id === 'size-pick' ? 'size' : id === 'color-pick' ? 'color' : null)
+    setTip(t)
   }
 
   const g = TOOLS[tool]
@@ -352,10 +386,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       <button
         aria-label={tr('Finish drawing')}
         data-tour="finish"
-        onClick={() => {
-          done('finish')
-          check()
-        }}
+        onClick={check}
         className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
@@ -582,7 +613,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                   </span>
                   <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
                 </button>
-                <button onClick={() => setPreview(null)} className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]">
+                <button
+                  data-tour="go-back"
+                  onClick={() => {
+                    setPreview(null)
+                    done('back')
+                  }}
+                  className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]"
+                >
                   <span className="absolute inset-0 rotate-[-177.79deg]">
                     <PillBack />
                   </span>
@@ -594,8 +632,19 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         </div>
       )}
 
-      {tip >= 0 && tip < STEPS.length && !preview && (
-        <Tour step={tip} root={rootRef} canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true} onNext={() => setTip(tip + 1)} onSkip={() => setTip(STEPS.length)} />
+      {tip >= 0 && tip < STEPS.length && (!preview || step === 'back') && (
+        <Tour
+          step={tip}
+          root={rootRef}
+          canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true}
+          onPrev={() => {
+            if (preview) setPreview(null) // back from the confirm screen to the ✓ step
+            goStep(tip - 1, -1)
+          }}
+          // Next on the ✓ step does what ✓ does (opens the confirm screen, or points at what's missing)
+          onNext={() => (step === 'finish' ? check() : goStep(tip + 1, 1))}
+          onSkip={() => setTip(STEPS.length)}
+        />
       )}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>

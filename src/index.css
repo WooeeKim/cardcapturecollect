@@ -113,8 +113,46 @@ button {
   cursor: pointer;
 }
 
+/* finger / mouse press indicator (lib/touchGlow.ts): dark glow with a white rim so it shows on light and dark */
+.touch-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgb(46 46 46 / 0.3) 0%, rgb(46 46 46 / 0.14) 50%, rgb(46 46 46 / 0) 72%);
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.7), 0 0 0 2.5px rgb(46 46 46 / 0.2);
+  animation: touch-glow-in 140ms ease-out;
+}
+.touch-glow-out {
+  animation: touch-glow-out 380ms ease-out forwards;
+}
+@keyframes touch-glow-in {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+@keyframes touch-glow-out {
+  to {
+    scale: 1.8;
+    opacity: 0;
+  }
+}
+
 /* in the base layer so text-* / leading-* utilities on inputs win (unlayered CSS beats every Tailwind layer) */
 @layer base {
+  /* pressed look for every button (utilities like active:scale-95 / transition-* still win) */
+  button {
+    transition: scale 120ms ease-out;
+  }
+  button:active:not(:disabled, [aria-disabled='true']) {
+    scale: 0.94;
+  }
   input,
   textarea {
     font: inherit;
@@ -162,6 +200,14 @@ img {
   to { opacity: 1; }
 }
 .animate-fade-in { animation: fade-in 0.2s ease-out both; }
+
+/* loading cover (components/Loading.tsx): appears after a short beat so quick waits don't flash */
+.loading-cover { animation: fade-in 0.2s ease-out 0.15s both; }
+/* only the white tail turns, around the grey ring's centre (svg viewBox units); the ring stays still */
+.loading-spin { transform-box: view-box; transform-origin: 31.28px 29.49px; animation: loading-spin 1s linear infinite; }
+@keyframes loading-spin {
+  to { rotate: 360deg; }
+}
 
 @keyframes pop-in {
   0% { transform: scale(0.6); opacity: 0; }

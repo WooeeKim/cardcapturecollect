@@ -9,7 +9,7 @@ import { Pill } from './GilbtiScreen'
 // Onboarding (App.tsx): log in / sign up → nickname → 길BTI → draw yourself (DrawScreen tutorial) → pick a town.
 
 // 1. First screen: new people sign up, people who already have an account log in.
-export function WelcomeScreen({ onLogin }: { onLogin: (u: User) => void }) {
+export function WelcomeScreen({ onLogin }: { onLogin: (u: User) => unknown }) {
   return (
     <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <LangButton className="top-[90px] left-[324px] z-10" />
