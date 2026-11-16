@@ -121,8 +121,12 @@ export default function App({ onReady }: { onReady?: () => void }) {
       return enter(null)
     }
     // newer copy wins: a save that never reached the server (tab closed, offline) must not be overwritten
-    let next = load(keyFor(u.id))
+    const local = load(keyFor(u.id))
+    let next = local
     if (remote.remote && remote.remote.updatedAt >= savedAt(keyFor(u.id))) next = remote.remote.state
+    // 길BTI answered on either copy stays answered: the copy that wins may come from a device (or clock) that
+    // never saw the flag, and saving it would otherwise drop the flag for every device
+    if (local.gilbtiDone || remote.remote?.state.gilbtiDone) next = { ...next, gilbtiDone: true }
     const guest = load(GUEST_KEY)
     let merged = false
     let unplaced = 0
