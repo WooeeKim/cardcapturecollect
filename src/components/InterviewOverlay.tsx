@@ -117,8 +117,8 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
             setA((y) => ({ ...y, feeling_other: v, feeling: v.trim() ? 'Other' : y.feeling === 'Other' ? '' : (y.feeling ?? '') }))
           }}
           onFocus={() => a.feeling_other?.trim() && set('feeling', 'Other')}
-          placeholder={tr('Other feelings...')}
-          aria-label={tr('Other feelings...')}
+          placeholder={tr('Anything else to tell us? (thoughts, ideas to improve)')}
+          aria-label={tr('Anything else to tell us? (thoughts, ideas to improve)')}
           className={`absolute top-[563px] left-[48px] h-[44.9px] w-[307px] rounded-[7.2px] border-[1.8px] bg-white px-[12.2px] text-[18px] outline-none placeholder:text-[#9a9a9a] ${a.feeling === 'Other' ? 'border-solid border-[#2e2e2e]' : 'border-dashed border-[#555]'}`}
           {...ro}
         />
