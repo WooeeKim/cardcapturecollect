@@ -10,7 +10,7 @@ import InterviewOverlay from './components/InterviewOverlay'
 import { answered as interviewAnswered, cardsIn, currentSlot, resendInterviews, submit as submitInterview, type Kind, type Slot } from './lib/interview'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
-import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
+import { checkAdmin, currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { setScreen, startTracking } from './lib/events'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
@@ -454,24 +454,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
             const fresh = initial()
             commit(() => fresh)
             setHomeId(fresh.towns[0].id)
-          }}
-          onDeleteAccount={async () => {
-            if (viewAsId) return READ_ONLY
-            const u = userRef.current
-            if (!u) return
-            const res = await waiting(
-              deleteAccount(u).then(async (res) => {
-                try {
-                  localStorage.removeItem(keyFor(u.id))
-                } catch {
-                  /* private mode */
-                }
-                await enter(null)
-                return res
-              }),
-            )
-            setRoute({ name: 'mypage' })
-            return res.note
           }}
         />
       )
