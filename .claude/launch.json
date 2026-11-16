@@ -30,6 +30,23 @@
         "dist"
       ],
       "port": 4180
+    },
+    {
+      "name": "dev-offline",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "VITE_SUPABASE_URL=",
+        "VITE_SUPABASE_ANON_KEY=",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "--mode",
+        "http",
+        "--port",
+        "5175"
+      ],
+      "port": 5175
     }
   ]
 }
