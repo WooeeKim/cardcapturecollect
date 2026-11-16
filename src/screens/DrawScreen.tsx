@@ -47,7 +47,7 @@ const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 // Onboarding "draw yourself" tour: the screen dims except one lit-up spot (white ring), and the step moves on
 // when that spot is actually used. `target` = the data-tour element that is lit; `next` = moves on with a Next
 // link instead (shown once there's something to move on from: a drawing, a filled-in memo).
-type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish'
+type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish' | 'back'
 const STEPS: { id: StepId; target: string; text: string }[] = [
   { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.' },
   { id: 'size-open', target: 'pen', text: 'Pencil, highlighter and eraser, with undo and redo next to them. Tap the picked pencil again to change its thickness.' },
@@ -60,7 +60,9 @@ const STEPS: { id: StepId; target: string; text: string }[] = [
   { id: 'fit', target: 'fit', text: 'Tap here to put the paper back to its normal size.' },
   { id: 'memo', target: 'memo', text: 'Now open Memo.' },
   { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.' },
-  { id: 'finish', target: 'finish', text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).' },
+  { id: 'finish', target: 'finish', text: 'Done? Tap ✓ to see your card.' },
+  // on the confirm screen: the tour ends by going back, so the user finishes the card on their own
+  { id: 'back', target: 'go-back', text: "That's your card! Now tap Go Back and finish it on your own. This first drawing of you becomes your profile picture (change it on My Page)." },
 ]
 type Rect = { x: number; y: number; w: number; h: number }
 
@@ -288,6 +290,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     )
     setThumb(thumb)
     setPreview(preview)
+    done('finish')
   }
 
   function pickTool(t: Tool) {
@@ -364,10 +367,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       <button
         aria-label={tr('Finish drawing')}
         data-tour="finish"
-        onClick={() => {
-          done('finish')
-          check()
-        }}
+        onClick={check}
         className="absolute top-[75px] right-[24px] z-20 size-[50px]">
         <img src={checkIcon} alt="" className="size-full" />
       </button>
@@ -590,7 +590,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                   </span>
                   <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
                 </button>
-                <button onClick={() => setPreview(null)} className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]">
+                <button
+                  data-tour="go-back"
+                  onClick={() => {
+                    setPreview(null)
+                    done('back')
+                  }}
+                  className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]"
+                >
                   <span className="absolute inset-0 rotate-[-177.79deg]">
                     <PillBack />
                   </span>
@@ -602,8 +609,18 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
         </div>
       )}
 
-      {tip >= 0 && tip < STEPS.length && !preview && (
-        <Tour step={tip} root={rootRef} canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true} onPrev={() => setTip(tip - 1)} onNext={() => setTip(tip + 1)} onSkip={() => setTip(STEPS.length)} />
+      {tip >= 0 && tip < STEPS.length && (!preview || step === 'back') && (
+        <Tour
+          step={tip}
+          root={rootRef}
+          canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true}
+          onPrev={() => {
+            if (preview) setPreview(null) // back from the confirm screen to the ✓ step
+            setTip(tip - 1)
+          }}
+          onNext={() => setTip(tip + 1)}
+          onSkip={() => setTip(STEPS.length)}
+        />
       )}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
