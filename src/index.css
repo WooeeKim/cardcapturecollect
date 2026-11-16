@@ -8,13 +8,6 @@
   font-display: swap;
 }
 
-/* Japanese UI text (Google Fonts, OFL). Subset to the characters the app's Japanese text uses (src/lib/i18n.ts):
-   pyftsubset HachiMaruPop-Regular.ttf --text-file=<chars> --flavor=woff. Re-run when the Japanese text changes. */
-@font-face {
-  font-family: "Hachi Maru Pop";
-  src: url("/fonts/HachiMaruPop-subset.woff") format("woff");
-  font-display: swap;
-}
 
 @theme {
   --color-ink: #000000;
@@ -31,10 +24,6 @@
   --cut: 0;
 }
 
-/* language picked with the globe button (lib/i18n.ts) */
-:root[data-lang="ja"] {
-  --font-hand: "Hachi Maru Pop", "Griun Myoeun Heullim", -apple-system, BlinkMacSystemFont, sans-serif;
-}
 
 html,
 body {
