@@ -23,7 +23,7 @@ export const QUESTIONS: Question[] = [
     prompt: 'What do you mostly notice?',
     choices: ['Outfits & style', 'Faces & expressions', "What they're doing", 'Conversations', 'Things they carry', "I don't really look"],
   },
-  { id: 'observe_change', section: 'Observing', kind: 'one', prompt: 'Has noticing someone ever changed something in your day or life?', choices: ['Never', 'Once or twice', 'Sometimes', 'Often'] },
+  { id: 'observe_change', section: 'Observing', kind: 'one', prompt: 'Has watching someone ever changed your day?', choices: ['Never', 'Once or twice', 'Sometimes', 'Often'] },
   { id: 'record', section: 'Recording', kind: 'scale', prompt: 'Do you enjoy recording things — photos, notes, drawings?', low: 'Not at all', high: 'Love it' },
   { id: 'record_why', section: 'Recording', kind: 'text', prompt: 'Why, or why not?', placeholder: 'A line or two is plenty', long: true, optional: true },
   { id: 'record_what', section: 'Recording', kind: 'many', prompt: 'What do you mostly record?', choices: ['Photos', 'Notes & diary', 'Drawings', 'Videos', 'Social media posts', 'Telling friends about it', 'Not much'] },

@@ -510,7 +510,7 @@ export default function MainScreen({
                 <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
                 </button>
-                <button aria-label={tr('Town list')} onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
+                <button aria-label={tr('Town List')} onClick={() => { setMenu(false); onTowns() }} className="absolute top-[66.8px] left-[13.2px] size-[45px]">
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>

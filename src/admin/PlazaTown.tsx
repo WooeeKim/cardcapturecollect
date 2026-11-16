@@ -77,7 +77,7 @@ export function PlazaTown({ items, onOpen }: { items: Item[]; onOpen: (i: Item) 
         const el = els.current.get(w.key)
         if (el) {
           el.style.transform = `translate(${w.x}px, ${w.y}px) scale(${depth(w.y)})`
-          el.style.zIndex = String(Math.round(w.y))
+          el.style.zIndex = String(Math.round(w.y)) // kept inside the town box (`isolate`), so the card popup stays on top
           ;(el.firstElementChild as HTMLElement).style.scale = `${w.dir} 1`
           el.classList.toggle('walking', w.wait <= 0)
         }
@@ -90,7 +90,7 @@ export function PlazaTown({ items, onOpen }: { items: Item[]; onOpen: (i: Item) 
   }, [items, W, H])
 
   return (
-    <div ref={box} className="relative h-[min(640px,70vh)] w-full overflow-hidden rounded-xl select-none" style={{ background: tone.sky }}>
+    <div ref={box} className="relative isolate h-[min(640px,70vh)] w-full overflow-hidden rounded-xl select-none" style={{ background: tone.sky }}>
       <div className="absolute inset-x-0 bottom-0" style={{ top: `${SKY * 100}%`, background: tone.ground }} />
       {W > 0 &&
         items.map((it) => {

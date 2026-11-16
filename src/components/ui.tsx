@@ -279,7 +279,7 @@ export function SketchyBox({ w, h, seed = 1, stroke = '#000', width = 2.6, class
   )
 }
 
-// Language button (Figma gilbti-intro 925:2832): English → 한국어 → 日本語 → English
+// Language button (Figma gilbti-intro 925:2832): English ↔ 한국어
 export function LangButton({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <button aria-label={tr('Change language')} onClick={cycleLang} className={`absolute h-[41px] w-[45px] ${className}`} style={style}>

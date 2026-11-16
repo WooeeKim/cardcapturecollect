@@ -43,7 +43,6 @@ export default function MyPageScreen({
   onInterview,
   onLogin,
   onLogout,
-  onDeleteAccount,
   onReset,
   onTutorial,
   onLoadingTest,
@@ -64,7 +63,6 @@ export default function MyPageScreen({
   onInterview: () => void
   onLogin: (user: User) => unknown
   onLogout: () => void
-  onDeleteAccount: () => Promise<string | undefined>
   onReset: () => void
   onTutorial: () => void
   onLoadingTest: () => void
@@ -94,22 +92,6 @@ export default function MyPageScreen({
     if (next && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().then(syncPush, () => {})
     else syncPush()
   }
-  const askDelete = () =>
-    setPopup({
-      message: tr("Delete your account, your towns and everyone in them?\nThis can't be undone."),
-      actions: [
-        {
-          label: tr('Delete'),
-          onClick: async () => {
-            setPopup(null)
-            const note = await onDeleteAccount()
-            if (note) gotIt(note)
-          },
-        },
-        { label: tr('Cancel'), onClick: () => setPopup(null) },
-      ],
-    })
-
   // list rows: Figma pitch 59.8, first at 359
   const ROW0 = 359
   const PITCH = 59.8
@@ -141,7 +123,8 @@ export default function MyPageScreen({
     canReset && { label: tr('Loading screen (test)'), onClick: onLoadingTest },
     { label: tr('Neighbors'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Developers'), tone: 'text-[#7e7e7e]', soon: true },
-    { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
+    // account deletion is blocked on purpose for the test period — the row stays, greyed out, with no action
+    { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', disabled: true },
   ] as (Row | false)[]).filter((r): r is Row => !!r)
 
   // sideways tablet (Figma 09 iPad · mypage): the profile box on the left, the settings on the right
