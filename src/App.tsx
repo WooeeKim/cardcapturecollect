@@ -11,6 +11,7 @@ import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
 import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
+import { setScreen, startTracking } from './lib/events'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
@@ -286,6 +287,15 @@ export default function App({ onReady }: { onReady?: () => void }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, state.insideFilled3, commit])
+
+  // usage log (admin → Stats): app session from the first render, then the screen every event happens on
+  useEffect(() => startTracking(), [])
+  const screenName = !ready ? 'splash' : gate === 'login' ? 'login' : gate === 'nickname' ? 'nickname' : gate === 'gilbti' || retake ? 'gilbti' : route.name
+  const screenTown = route.name === 'main' || route.name === 'collection' ? route.townId : undefined
+  const tutorialDraw = route.name === 'draw' && !!route.tutorial
+  useEffect(() => {
+    setScreen(screenName, { town: screenName === 'main' || screenName === 'collection' ? screenTown : undefined, tutorial: screenName === 'draw' ? tutorialDraw : undefined, retake: screenName === 'gilbti' ? retake : undefined })
+  }, [screenName, screenTown, tutorialDraw, retake])
 
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {
