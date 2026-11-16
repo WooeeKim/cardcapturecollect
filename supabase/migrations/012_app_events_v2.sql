@@ -1,6 +1,6 @@
 -- App event log v2 (docs/logging-plan.md, step 1): every event knows its app session, its order in that
 -- session and the screen it happened on, so admin → Stats can rebuild time in the app / per screen.
--- Run once in Supabase → SQL Editor, after 009_app_events.sql.
+-- Run once in Supabase → SQL Editor, after 009_app_events.sql (011_interview.sql is unrelated).
 -- Until this runs the app still logs: the three values ride inside data as _as / _seq / _scr.
 --
 -- New events (src/lib/events.ts):

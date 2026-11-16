@@ -90,7 +90,7 @@ export function Stats({
         )}
       </div>
 
-      {eventsError && <p className="text-sm text-red-700">{eventsError} — run supabase/migrations/009_app_events.sql and 011_app_events_v2.sql</p>}
+      {eventsError && <p className="text-sm text-red-700">{eventsError} — run supabase/migrations/009_app_events.sql and 012_app_events_v2.sql</p>}
       {allEvents && <UsagePanels events={events} base={base} one={one} keep={keep} onPick={setOne} rows={allRows} sessions={sessions ?? []} />}
 
       <CardStats rows={rows} items={items} range={range} setRange={setRange} one={!!one} />

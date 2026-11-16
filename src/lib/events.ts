@@ -2,7 +2,7 @@ import { supabase } from './auth'
 import { deviceId } from './gilbti'
 import { viewAsId } from './viewAs'
 
-// App event log → Supabase table app_events (009_app_events.sql + 011_app_events_v2.sql), read in <site>/admin → Stats.
+// App event log → Supabase table app_events (009_app_events.sql + 012_app_events_v2.sql), read in <site>/admin → Stats.
 // Replaces screen recordings (docs/logging-plan.md): every row carries the app session, its order in that
 // session and the screen it happened on. Events wait in a queue on this device and go up in batches, so
 // nothing is lost offline or when the app is closed mid-send (the rest goes on the next start).
@@ -35,7 +35,7 @@ let screen = 'start'
 let hiddenAt = 0
 let lastInput = Date.now()
 let sending = false
-// before 011_app_events_v2.sql the table has no app_session / seq / screen columns: they ride inside data
+// before 012_app_events_v2.sql the table has no app_session / seq / screen columns: they ride inside data
 let legacy = false
 
 function readQueue(): Row[] {
@@ -87,7 +87,7 @@ export async function flush() {
     let { error } = await supabase!.from('app_events').insert(rows)
     if (error && !legacy && /app_session|seq|screen|column/i.test(error.message)) {
       legacy = true
-      console.warn('app_events: run supabase/migrations/011_app_events_v2.sql (sending without the new columns for now)')
+      console.warn('app_events: run supabase/migrations/012_app_events_v2.sql (sending without the new columns for now)')
       sending = false
       return flush()
     }

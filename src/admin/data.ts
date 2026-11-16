@@ -33,14 +33,14 @@ export type Ev = {
   event: string
   at: string
   data: Record<string, unknown> | null
-  // 011_app_events_v2.sql (before it ran, the app put them in data._as / _seq / _scr; loadEvents moves them here)
+  // 012_app_events_v2.sql (before it ran, the app put them in data._as / _seq / _scr; loadEvents moves them here)
   app_session: string | null
   seq: number | null
   screen: string | null
 }
 
 // every event, oldest first (Supabase returns at most 1000 rows per request, so page through).
-// Without 011 the new columns don't exist yet: then everything is read and they come from data.
+// Without 012 the new columns don't exist yet: then everything is read and they come from data.
 export async function loadEvents(sb: SupabaseClient): Promise<{ data: Ev[]; error: string }> {
   const out: Ev[] = []
   let cols = 'session_id, device_id, user_id, email, event, at, data, app_session, seq, screen'
