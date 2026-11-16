@@ -68,6 +68,7 @@ const DICT: Record<string, [string, string]> = {
   Back: ['뒤로', '戻る'],
   Close: ['닫기', '閉じる'],
   Next: ['다음', '次へ'],
+  Previous: ['이전', '前へ'],
   Skip: ['건너뛰기', 'スキップ'],
   Start: ['시작', 'スタート'],
   Later: ['나중에', 'あとで'],
