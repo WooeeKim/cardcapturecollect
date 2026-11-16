@@ -19,7 +19,6 @@ const MAX = 300
 
 type Step = 'start' | 'didnt' | 'q1' | 'q2' | 'q3' | 'end'
 const FLIP_MS = 520
-const SCALE = 0.9 // the app's phone frame (and rounded screen corners) cover the outermost ~13px
 
 function Pill({ label, top, onClick, disabled = false }: { label: string; top: number; onClick: () => void; disabled?: boolean }) {
   return (
@@ -58,7 +57,7 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
   const pad = padOf(step)
   const bottom = pad ? SHEETS[pad - 1].top + 426 : 0
 
-  // Next / Done: the written sheet flips up over the top edge and disappears; the next question is already
+  // Next / Done: the written sheet slides up and fades away; the next question is already
   // on the sheet underneath. After the last one, the answers are sent.
   const [leaving, setLeaving] = useState<Step | null>(null)
   function turn(next: Step) {
@@ -133,8 +132,9 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
 
   return (
     <div role="dialog" aria-modal className="animate-fade-in absolute inset-0 z-[60] overflow-hidden bg-black/35 font-hand backdrop-blur-[1px]">
-      {/* Figma frame px at 90% so the pad clears the screen edges, kept centred when the phone is shorter than 874 */}
-      <div className="absolute inset-x-0 top-0 h-[874px] origin-center" style={{ transform: `translateY(calc(var(--cut) * -0.5px)) scale(${SCALE})` }}>
+      {/* Figma frame px, kept centred when the phone is shorter than 874. --interview-scale (index.css): full size on
+          phones; 90% in the desktop preview, whose fake phone frame covers the outer 13px */}
+      <div className="absolute inset-x-0 top-0 h-[874px] origin-center" style={{ transform: 'translateY(calc(var(--cut) * -0.5px)) scale(var(--interview-scale))' }}>
         {step === 'start' ? (
           <div className="animate-pop-in">
             <img src={bubble} alt="" className="absolute top-[353px] left-[73px] h-[122px] w-[257px] max-w-none" />
@@ -156,9 +156,9 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
               {step === 'q2' && <Pill label={tr('Next')} top={bottom - 22} disabled={!filled('who_why')} onClick={() => turn('q3')} />}
               {step === 'q3' && <Pill label={tr('Done')} top={bottom - 22} disabled={!filled('feeling') || busy} onClick={() => turn('end')} />}
             </div>
-            {/* the written sheet, flipping up and away */}
+            {/* the written sheet, sliding up and away */}
             {leaving && (
-              <div key={leaving} aria-hidden className="animate-sheet-flip pointer-events-none absolute inset-0" style={{ transformOrigin: `50% ${SHEETS[padOf(leaving) - 1].top}px` }}>
+              <div key={leaving} aria-hidden className="animate-sheet-away pointer-events-none absolute inset-0">
                 {sheetImg(padOf(leaving) - 1)}
                 {page(leaving, false)}
               </div>

@@ -169,13 +169,15 @@ img {
   100% { transform: none; }
 }
 .animate-pop-in { animation: pop-in 0.35s var(--ease-spring) both; }
-/* 8 p.m. interview: a finished memo sheet lifts toward you, up over the top edge, and fades out */
-@keyframes sheet-flip {
-  0% { transform: perspective(1100px) rotateX(0deg) translateY(0); opacity: 1; }
-  60% { opacity: 1; }
-  100% { transform: perspective(1100px) rotateX(-78deg) translateY(-38%); opacity: 0; }
+/* 8 p.m. interview: a finished memo sheet slides straight up and fades out (components/InterviewOverlay.tsx) */
+@keyframes sheet-away {
+  0% { transform: translateY(0); opacity: 1; }
+  55% { opacity: 0.95; }
+  100% { transform: translateY(-170px); opacity: 0; }
 }
-.animate-sheet-flip { animation: sheet-flip 0.52s cubic-bezier(0.45, 0, 0.7, 0.4) both; }
+.animate-sheet-away { animation: sheet-away 0.5s cubic-bezier(0.33, 0, 0.2, 1) both; }
+:root { --interview-scale: 0.9; }
+.phone { --interview-scale: 1; }
 
 /* Tada: card lands with a wobble */
 @keyframes tada {
