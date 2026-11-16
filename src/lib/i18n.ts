@@ -187,6 +187,7 @@ const DICT: Record<string, string> = {
   'Canvas: cream paper': '캔버스: 미색 종이',
   'Canvas: fine paper': '캔버스: 고운 흰 종이',
   'Canvas: watercolor paper': '캔버스: 수채화지',
+  'Canvas: watercolor paper (code)': '캔버스: 수채화지 (코드)',
   'Canvas: grey paper': '캔버스: 회색 종이',
   'Canvas: lined notebook': '캔버스: 줄 노트',
   'Replay tutorial (test)': '튜토리얼 다시하기 (테스트)',
