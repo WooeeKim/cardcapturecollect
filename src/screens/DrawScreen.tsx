@@ -308,6 +308,18 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     }
   }
 
+  // Next / Previous in the tour: open or close panels so the screen matches the step (a skipped tap left
+  // the size bubble / color panel in the wrong state). 'fit' needs a zoom, so it's passed over without one.
+  function goStep(t: number, dir: 1 | -1) {
+    const id = STEPS[t]?.id
+    if (id === 'fit' && !zoomed) return goStep(t + dir, dir)
+    if (id !== 'back' && id !== 'finish') setTab(id === 'memo-fill' ? 'memo' : 'draw')
+    setPicking(false)
+    if (id === 'color-pick') colorAtOpen.current = color
+    setOpen(id === 'size-pick' ? 'size' : id === 'color-pick' ? 'color' : null)
+    setTip(t)
+  }
+
   const g = TOOLS[tool]
   const step = STEPS[tip]?.id
   // the fit button only exists while zoomed: no zoom (Next was used) → nothing to reset
@@ -626,9 +638,9 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
           canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true}
           onPrev={() => {
             if (preview) setPreview(null) // back from the confirm screen to the ✓ step
-            setTip(tip - 1)
+            goStep(tip - 1, -1)
           }}
-          onNext={() => setTip(tip + 1)}
+          onNext={() => goStep(tip + 1, 1)}
           onSkip={() => setTip(STEPS.length)}
         />
       )}
