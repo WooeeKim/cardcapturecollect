@@ -32,6 +32,7 @@ export type State = {
   intro?: string // short self-introduction on My Page
   profile?: string // card id used as the profile picture (the "draw yourself" card from onboarding; changeable on My Page)
   insideFilled3?: boolean // one-time: old drawings got their unpainted insides filled white (App.tsx)
+  gilbtiDone?: boolean // this account answered 길BTI once: never asked again, on any device (saved with the account)
 }
 
 // Ground / sky per town: same two-band look, each town a slightly different tint.
@@ -122,7 +123,8 @@ export function hasContent(state: State) {
 // `unplaced` = cards that found no room anywhere (kept in `cards`, just not in a town).
 export function mergeGuest(account: State, guest: State): { state: State; unplaced: number } {
   if (!hasContent(guest)) return { state: account, unplaced: 0 }
-  if (!hasContent(account)) return { state: guest, unplaced: 0 }
+  // an account with nothing drawn yet still keeps its name and its 길BTI answer
+  if (!hasContent(account)) return { state: { ...guest, nickname: account.nickname || guest.nickname, gilbtiDone: account.gilbtiDone || guest.gilbtiDone }, unplaced: 0 }
 
   // ---- cards (+ serials) ----
   const top = new Map<string, number>() // day → highest serial number
@@ -185,7 +187,7 @@ export function mergeGuest(account: State, guest: State): { state: State; unplac
   const day = account.seq.day >= guest.seq.day ? account.seq.day : guest.seq.day
   const seq = { day, n: Math.max(top.get(day) ?? 0, account.seq.day === day ? account.seq.n : 0, guest.seq.day === day ? guest.seq.n : 0) }
 
-  let state: State = { towns, cards, pending, seq, nickname: account.nickname || guest.nickname, intro: account.intro || guest.intro, profile: account.profile || guest.profile }
+  let state: State = { towns, cards, pending, seq, nickname: account.nickname || guest.nickname, intro: account.intro || guest.intro, profile: account.profile || guest.profile, gilbtiDone: account.gilbtiDone || guest.gilbtiDone }
   let unplaced = 0
   for (const id of homeless) {
     const room = state.towns.find((t) => t.residents.length < MAX_RESIDENTS)
