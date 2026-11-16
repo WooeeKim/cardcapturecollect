@@ -64,7 +64,7 @@ const STEPS: { id: StepId; target: string; text: string; next?: boolean }[] = [
 ]
 type Rect = { x: number; y: number; w: number; h: number }
 
-function Tour({ step, root, canNext, onNext, onSkip }: { step: number; root: React.RefObject<HTMLDivElement | null>; canNext: boolean; onNext: () => void; onSkip: () => void }) {
+function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; root: React.RefObject<HTMLDivElement | null>; canNext: boolean; onPrev: () => void; onNext: () => void; onSkip: () => void }) {
   const s = STEPS[step]
   const [hole, setHole] = useState<Rect | null>(null)
   // follow the target every frame (tools lift, panels pop in, the paper zooms, the keyboard moves things)
@@ -120,14 +120,19 @@ function Tour({ step, root, canNext, onNext, onSkip }: { step: number; root: Rea
           />
         )}
         <p className="text-[19px] leading-[1.3]">{tr(s.text)}</p>
-        <div className="mt-[6px] flex items-center justify-between text-[16px] text-[#8a8a8a]">
+        {/* Previous / Next only; Next shows on steps that don't move on by themselves */}
+        <div className="mt-[6px] grid grid-cols-3 items-center text-[16px] text-[#8a8a8a]">
           <span>
+            {step > 0 && (
+              <button onClick={onPrev} className="pointer-events-auto text-[20px] text-[#2e2e2e] underline underline-offset-4">
+                {tr('Previous')}
+              </button>
+            )}
+          </span>
+          <span className="text-center">
             {step + 1} / {STEPS.length}
           </span>
-          <span className="flex items-center gap-[16px]">
-            <button onClick={onSkip} className="pointer-events-auto">
-              {tr('Skip tutorial')}
-            </button>
+          <span className="text-right">
             {s.next && canNext && (
               <button onClick={onNext} className="pointer-events-auto text-[20px] text-[#2e2e2e] underline underline-offset-4">
                 {tr('Next')}
@@ -136,6 +141,10 @@ function Tour({ step, root, canNext, onNext, onSkip }: { step: number; root: Rea
           </span>
         </div>
       </div>
+      {/* skip: small, out of the way, above the header buttons (the top 40px are off-screen on phones) */}
+      <button onClick={onSkip} className="pointer-events-auto absolute top-[48px] right-[24px] text-[14px] text-white/85 underline underline-offset-2">
+        {tr('Skip tutorial')}
+      </button>
     </div>
   )
 }
@@ -601,7 +610,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       )}
 
       {tip >= 0 && tip < STEPS.length && !preview && (
-        <Tour step={tip} root={rootRef} canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true} onNext={() => setTip(tip + 1)} onSkip={() => setTip(STEPS.length)} />
+        <Tour step={tip} root={rootRef} canNext={step === 'draw' ? !empty : step === 'memo-fill' ? !missing.length : true} onPrev={() => setTip(tip - 1)} onNext={() => setTip(tip + 1)} onSkip={() => setTip(STEPS.length)} />
       )}
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
