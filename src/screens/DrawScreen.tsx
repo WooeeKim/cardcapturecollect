@@ -49,15 +49,15 @@ const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 // link instead (shown once there's something to move on from: a drawing, a filled-in memo).
 type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish' | 'back'
 const STEPS: { id: StepId; target: string; text: string }[] = [
-  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.' },
+  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the grey guide. A few lines will do.' },
   { id: 'size-open', target: 'pen', text: 'Pencil, highlighter and eraser, with undo and redo next to them. Tap the picked pencil again to change its thickness.' },
   { id: 'size-pick', target: 'sizes', text: 'Pick a thickness.' },
   { id: 'color-open', target: 'color', text: 'Tap the wheel to change the color.' },
   { id: 'color-pick', target: 'colors', text: 'Choose a color, then close the panel.' },
   { id: 'guide', target: 'guide', text: 'Tap to turn the dotted guide off or on.' },
   // no auto-advance: play with it as long as you like (and a PC can't pinch)
-  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!' },
-  { id: 'fit', target: 'fit', text: 'Tap here to put the paper back to its normal size.' },
+  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the card. Try it!' },
+  { id: 'fit', target: 'fit', text: 'Tap here to put the card back to its normal size.' },
   { id: 'memo', target: 'memo', text: 'Now open Memo.' },
   { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.' },
   { id: 'finish', target: 'finish', text: 'Done? Tap ✓ to see your card.' },
