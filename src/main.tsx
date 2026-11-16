@@ -10,6 +10,7 @@ import { installTouchGlow } from './lib/touchGlow'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
+// - Tablet (iPad, unfolded Fold): like PC, but scaled up to fill the screen.
 // - Phone: fills the screen width; the height follows the screen (--cut = how much shorter than 874).
 //   The top TOP px (fake status bar area) are pushed off-screen. Held sideways, the app is rotated
 //   back so it always stays portrait.
@@ -21,8 +22,12 @@ function fit() {
   const root = document.getElementById('root')!
   const html = document.documentElement
   // phones with a stylus can report a "fine" main pointer; a small touch screen is still a phone (full width)
-  const phone =
-    matchMedia('(pointer: coarse)').matches || (matchMedia('(any-pointer: coarse)').matches && Math.min(screen.width, screen.height) <= 600)
+  const small = Math.min(screen.width, screen.height) <= 600
+  const touch = matchMedia('(pointer: coarse)').matches || (matchMedia('(any-pointer: coarse)').matches && small)
+  // iPad / unfolded Fold: filling the width there leaves a frame far shorter than 874 (bottom buttons ride up
+  // onto the content), so tablets show the whole frame scaled to fit, like PC but allowed to grow.
+  const tablet = touch && !small
+  const phone = touch && !tablet
   // layout-viewport width: unlike innerWidth (iOS), it doesn't change if the page ever gets zoomed
   const innerWidth = html.clientWidth || window.innerWidth
   const raw = screen.orientation?.angle ?? Number((window as { orientation?: number }).orientation ?? 0)
@@ -31,8 +36,9 @@ function fit() {
   let m = new DOMMatrix()
   let height = 874
   if (!phone) {
-    const k = Math.max(0.3, Math.min(1, (innerWidth - 24) / 402, (innerHeight - 24) / 874))
+    const k = Math.max(0.3, Math.min(tablet ? Infinity : 1, (innerWidth - 24) / 402, (innerHeight - 24) / 874))
     m = m.translate((innerWidth - 402 * k) / 2, (innerHeight - 874 * k) / 2).scale(k)
+    if (tablet && kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
   } else {
     const w = sideways ? innerHeight : innerWidth
     const h = sideways ? innerWidth : innerHeight
@@ -43,6 +49,7 @@ function fit() {
     if (!sideways && kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
   }
   html.classList.toggle('phone', phone)
+  html.classList.toggle('tablet', tablet)
   html.style.setProperty('--cut', String(874 - height))
   root.style.height = `${height}px`
   root.style.transform = m.toString()
@@ -96,7 +103,7 @@ function pinPage() {
   const lift = () => {
     const el = document.activeElement
     let next = 0
-    if (vv && typing() && el && !el.closest('[data-own-keyboard]') && document.documentElement.classList.contains('phone')) {
+    if (vv && typing() && el && !el.closest('[data-own-keyboard]') && /phone|tablet/.test(document.documentElement.className)) {
       const r = el.getBoundingClientRect()
       const visTop = vv.offsetTop + 8
       const visBottom = vv.offsetTop + vv.height - 12
