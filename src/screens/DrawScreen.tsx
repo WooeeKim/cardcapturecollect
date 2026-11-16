@@ -1,4 +1,5 @@
 import { fillInside } from '../lib/fillInside'
+import { PaperGrain } from '../components/PaperGrain'
 import paperCream from '../assets/paper/cream.avif'
 import paperLined from '../assets/paper/lined.avif'
 import paperGrey from '../assets/paper/grey.avif'
@@ -53,6 +54,7 @@ const PAPERS = [
   { id: 'cream', label: 'Canvas: cream paper', src: paperCream },
   { id: 'fine', label: 'Canvas: fine paper', src: paperFine },
   { id: 'watercolor', label: 'Canvas: watercolor paper', src: paperWatercolor },
+  { id: 'watercolor-code', label: 'Canvas: watercolor paper (code)', src: '' }, // drawn by code, stays sharp when zoomed
   { id: 'grey', label: 'Canvas: grey paper', src: paperGrey },
   { id: 'lined', label: 'Canvas: lined notebook', src: paperLined },
 ]
@@ -365,6 +367,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
           }}
           paperClassName="rounded-[10px] bg-white bg-cover bg-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
           paperStyle={paperSrc ? { backgroundImage: `url(${paperSrc})` } : undefined}
+          paper={paper === 'watercolor-code' ? <PaperGrain /> : undefined}
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
