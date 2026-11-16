@@ -38,11 +38,30 @@ let sending = false
 // before 012_app_events_v2.sql the table has no app_session / seq / screen columns: they ride inside data
 let legacy = false
 
+// The queue lives in memory and is copied to localStorage a moment later (or right away when the app hides),
+// not on every event: re-reading and re-writing the whole queue (up to 2000 rows) on each stroke was a
+// noticeable stall on the drawing screen.
+let mem: Row[] | null = null
+let persistTimer = 0
+const PERSIST_MS = 2000
+
 function readQueue(): Row[] {
+  if (mem) return mem
   try {
-    return JSON.parse(localStorage.getItem(QUEUE) ?? '[]')
+    mem = JSON.parse(localStorage.getItem(QUEUE) ?? '[]')
   } catch {
-    return []
+    mem = []
+  }
+  return mem!
+}
+function persist() {
+  clearTimeout(persistTimer)
+  persistTimer = 0
+  if (!mem) return
+  try {
+    localStorage.setItem(QUEUE, JSON.stringify(mem))
+  } catch {
+    /* storage full / private mode: events stay in memory until sent */
   }
 }
 function writeQueue(q: Row[]) {
@@ -52,18 +71,17 @@ function writeQueue(q: Row[]) {
     const drop = new Set(beats.slice(0, q.length - MAX_QUEUE))
     q = q.filter((r) => !drop.has(r)).slice(-MAX_QUEUE)
   }
-  try {
-    localStorage.setItem(QUEUE, JSON.stringify(q))
-  } catch {
-    /* storage full / private mode: events stay in memory for this flush only */
-  }
+  mem = q
+  if (!persistTimer) persistTimer = window.setTimeout(persist, PERSIST_MS)
   return q
 }
 
 export function track(event: string, data?: Record<string, unknown>, session = '-') {
   if (!on()) return
   const row: Row = { session_id: session, device_id: deviceId(), event, at: new Date().toISOString(), data: data ?? null, app_session: appSession, seq: seq++, screen }
-  writeQueue([...readQueue(), row])
+  const q = readQueue()
+  q.push(row)
+  writeQueue(q)
 }
 // older name, still used by the card screen
 export const logEvent = track
@@ -138,6 +156,7 @@ export function startTracking() {
     if (document.visibilityState === 'hidden') {
       hiddenAt = Date.now()
       track('app_hide')
+      persist()
       flush()
     } else {
       if (!hiddenAt) return // a 'visible' with no 'hidden' before it (some browsers at start): nothing to report
@@ -153,6 +172,7 @@ export function startTracking() {
   })
   addEventListener('pagehide', () => {
     track('app_close')
+    persist()
     flush()
   })
   addEventListener('error', (e) => track('js_error', { message: String(e.message).slice(0, 300), source: `${e.filename}:${e.lineno}` }))

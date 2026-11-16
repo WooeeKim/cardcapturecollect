@@ -70,20 +70,28 @@ function strokeAll(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
   const { width: w, height: h } = ctx.canvas
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, w, h)
-  for (const s of strokes) {
-    ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
-    ctx.strokeStyle = s.color
-    // pen lines at half the step size (thinnest = 1), fill 3×, eraser as is
-    ctx.lineWidth = s.size * (s.tool === 'highlighter' ? 3 : s.tool === 'pen' ? 0.5 : 1) * (w / 300)
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.beginPath()
-    s.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x * w, p.y * h) : ctx.lineTo(p.x * w, p.y * h)))
-    if (s.points.length === 1) ctx.lineTo(s.points[0].x * w + 0.01, s.points[0].y * h)
-    ctx.stroke()
-  }
+  for (const s of strokes) drawStroke(ctx, s)
+}
+
+function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
+  const { width: w, height: h } = ctx.canvas
+  ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
+  ctx.strokeStyle = s.color
+  // pen lines at half the step size (thinnest = 1), fill 3×, eraser as is
+  ctx.lineWidth = s.size * (s.tool === 'highlighter' ? 3 : s.tool === 'pen' ? 0.5 : 1) * (w / 300)
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  s.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x * w, p.y * h) : ctx.lineTo(p.x * w, p.y * h)))
+  if (s.points.length === 1) ctx.lineTo(s.points[0].x * w + 0.01, s.points[0].y * h)
+  ctx.stroke()
   ctx.globalCompositeOperation = 'source-over'
 }
+
+// Backing store cap. Zoom × devicePixelRatio used to reach ~27M px (4300×6200 at 4× zoom on a 3× phone),
+// and every finger move repainted every stroke at that size: lines showed up seconds late once zoomed.
+const MAX_PIXELS = 4_000_000
+const blank = () => document.createElement('canvas')
 
 // Card-sized drawing paper. Points are stored as 0–1 fractions so the backing resolution can change.
 export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, onLog, paperClassName = '', children, ref }: Props) {
@@ -99,22 +107,64 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   const pinch = useRef<{ dist: number; angle: number; mid: Point; view: View } | null>(null)
   const res = useRef(1) // backing-store multiplier so zoomed lines stay sharp
   const zoomed = useRef(false)
+  // finished strokes, kept painted: fills (+ erasers) and pen lines (+ erasers). A finger move only paints these
+  // two images plus the stroke in progress, instead of every stroke again.
+  const fillBase = useRef<HTMLCanvasElement>(null)
+  const penBase = useRef<HTMLCanvasElement>(null)
+  const frame = useRef(0)
   // latest props for the window listeners
   const live = useRef({ tool, color, size, onChange, onZoom, onLog })
   live.current = { tool, color, size, onChange, onZoom, onLog }
 
-  function redraw() {
+  // repaint the finished-stroke layers from scratch (undo / redo / clear / new size)
+  function rebuild() {
     const canvas = canvasRef.current
     if (!canvas) return
-    paint(canvas.getContext('2d')!, current.current ? [...strokes.current, current.current] : strokes.current)
+    for (const ref of [fillBase, penBase]) {
+      ref.current ??= blank()
+      if (ref.current.width !== canvas.width || ref.current.height !== canvas.height) {
+        ref.current.width = canvas.width
+        ref.current.height = canvas.height
+      }
+    }
+    strokeAll(fillBase.current!.getContext('2d')!, strokes.current.filter((s) => s.tool !== 'pen'))
+    strokeAll(penBase.current!.getContext('2d')!, strokes.current.filter((s) => s.tool !== 'highlighter'))
+  }
+
+  // a finished stroke joins the layers on top of what's there (same order as painting everything again)
+  function commitStroke(s: Stroke) {
+    if (s.tool !== 'pen') drawStroke(fillBase.current!.getContext('2d')!, s)
+    if (s.tool !== 'highlighter') drawStroke(penBase.current!.getContext('2d')!, s)
+  }
+
+  // fills under pen lines; the stroke in progress goes into its place (an eraser cuts both, so it cuts the result)
+  function compose() {
+    frame.current = 0
+    const canvas = canvasRef.current
+    if (!canvas || !fillBase.current || !penBase.current) return
+    const ctx = canvas.getContext('2d')!
+    const cur = current.current
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(fillBase.current, 0, 0)
+    if (cur?.tool === 'highlighter') drawStroke(ctx, cur)
+    ctx.drawImage(penBase.current, 0, 0)
+    if (cur && cur.tool !== 'highlighter') drawStroke(ctx, cur)
+  }
+
+  // at most one paint per screen frame, however many pointer moves arrive
+  function redraw() {
+    if (!frame.current) frame.current = requestAnimationFrame(compose)
   }
 
   function sizeCanvas() {
     const c = canvasRef.current!
-    const k = window.devicePixelRatio * res.current
+    const area = c.clientWidth * c.clientHeight
+    const k = Math.min(window.devicePixelRatio * res.current, area ? Math.sqrt(MAX_PIXELS / area) : 1)
     c.width = Math.round(c.clientWidth * k)
     c.height = Math.round(c.clientHeight * k)
-    redraw()
+    rebuild()
+    compose()
   }
 
   function apply(animate = false) {
@@ -256,8 +306,10 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       const { tool: t, color: col, size: sz } = current.current
       live.current.onLog?.('stroke', { tool: t, color: col, size: sz, points: pts.length, ms: Math.round(e.timeStamp - startedAt), len: Math.round(len), n: strokes.current.length + 1 })
       strokes.current.push(current.current)
+      commitStroke(current.current)
       redoStack.current = []
       current.current = null
+      redraw()
       live.current.onChange?.()
     }
     window.addEventListener('pointerdown', onDown, true)
@@ -299,6 +351,8 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       observer.disconnect()
       host.removeEventListener('wheel', onWheel)
       clearTimeout(wheelTimer)
+      cancelAnimationFrame(frame.current)
+      frame.current = 0
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -307,6 +361,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
     if (strokes.current.length) live.current.onLog?.('undo', { via, n: strokes.current.length - 1 })
     const s = strokes.current.pop()
     if (s) redoStack.current.push(s)
+    rebuild()
     redraw()
     live.current.onChange?.()
   }
@@ -314,7 +369,10 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   function redo(via: 'button' | 'gesture' = 'button') {
     if (redoStack.current.length) live.current.onLog?.('redo', { via, n: strokes.current.length + 1 })
     const s = redoStack.current.pop()
-    if (s) strokes.current.push(s)
+    if (s) {
+      strokes.current.push(s)
+      commitStroke(s)
+    }
     redraw()
     live.current.onChange?.()
   }
@@ -327,6 +385,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       redoStack.current = []
       view.current = IDENTITY
       apply()
+      rebuild()
       redraw()
     },
     isEmpty: () => strokes.current.length === 0,
