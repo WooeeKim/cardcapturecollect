@@ -1,4 +1,5 @@
 import { fillInside } from '../lib/fillInside'
+import paperTexture from '../assets/paper/texture.avif'
 import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
@@ -154,8 +155,11 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
   )
 }
 
-export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
+export default function DrawScreen({ onExit, onFinish, tutorial = false, admin = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean; admin?: boolean }) {
   const [tip, setTip] = useState(tutorial ? 0 : -1)
+  // admin-only test: paper behind the drawing (white = what everyone sees; texture = trying a paper look).
+  // Only the screen behind the canvas changes; the saved drawing is the same either way.
+  const [paper, setPaper] = useState<'white' | 'texture'>('white')
   const rootRef = useRef<HTMLDivElement>(null)
   // tour step `id` was just done for real → next step
   const done = (id: StepId) => setTip((t) => (STEPS[t]?.id === id ? t + 1 : t))
@@ -351,13 +355,25 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
             setEmpty(!!c?.isEmpty())
             setHistory({ undo: !!c?.canUndo(), redo: !!c?.canRedo() })
           }}
-          paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+          paperClassName="rounded-[10px] bg-white bg-cover bg-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+          paperStyle={paper === 'texture' ? { backgroundImage: `url(${paperTexture})` } : undefined}
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
       </div>
 
       {/* header */}
+      {admin && tab === 'draw' && !preview && (
+        <select
+          value={paper}
+          onChange={(e) => setPaper(e.target.value as 'white' | 'texture')}
+          aria-label={tr('Canvas (test)')}
+          className="absolute top-[48px] left-[24px] z-30 rounded-[6px] border border-[#bbb] bg-white px-[6px] py-[2px] font-[system-ui] text-[13px] text-[#555]"
+        >
+          <option value="white">{tr('Canvas: white')}</option>
+          <option value="texture">{tr('Canvas: paper')}</option>
+        </select>
+      )}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
       <button aria-label={tr('Back')} onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
