@@ -6,41 +6,24 @@ import { useLang, type Lang } from '../lib/i18n'
 // Any wait in the app: `await waiting(promise)` — the cover shows while at least one is running.
 
 const LINES: Record<Lang, string[]> = {
-  ko: [
-    '당신의 인내심을 테스트하는 중…',
-    '물감 배달 기다리는 중...',
-    '스트레칭 한 번 어때요?',
-    '나가지 말아요...',
-    '주변을 관찰해봐요!',
-    '조금만 참아줄래요..?',
-    '감기 조심하세요 *^-^*',
-    '연필 깎는 중...',
-    '지우개똥 치우는 중...',
-    '종이를 카드 크기로 재단하는 중...',
-  ],
+  ko: ['주변을 관찰해봐요!', '감기 조심하세요 *^-^*', '연필 깎는 중...', '지우개똥 치우는 중...', '종이를 카드 크기로 재단하는 중...', '물감 배달 기다리는 중...', '스트레칭 한 번 어때요?'],
   en: [
-    'Testing your patience…',
-    'Waiting for the paint delivery...',
-    'How about a little stretch?',
-    "Don't go anywhere...",
     'Take a look around you!',
-    'Hang in there a bit..?',
     "Don't catch a cold *^-^*",
     'Sharpening pencils...',
     'Sweeping up eraser crumbs...',
     'Cutting paper to card size...',
+    'Waiting for the paint delivery...',
+    'How about a little stretch?',
   ],
   ja: [
-    'あなたの忍耐力をテスト中…',
-    '絵の具の配達を待ってるところ...',
-    'ちょっとストレッチしませんか？',
-    '行かないで...',
     'まわりを観察してみて！',
-    'もうちょっとだけ待っててくれる..？',
     '風邪に気をつけてね *^-^*',
     '鉛筆けずり中...',
     '消しカスおそうじ中...',
     '紙をカードの大きさに切ってるところ...',
+    '絵の具の配達を待ってるところ...',
+    'ちょっとストレッチしませんか？',
   ],
 }
 
