@@ -15,6 +15,7 @@ export type DrawingCanvasHandle = {
   redo: () => void
   clear: () => void
   isEmpty: () => boolean
+  strokeCount: () => number
   canUndo: () => boolean
   canRedo: () => boolean
   toBlob: () => Promise<Blob>
@@ -31,6 +32,8 @@ type Props = {
   picking?: boolean
   onPick?: (color: string) => void
   onZoom?: (zoomed: boolean) => void
+  // usage log (admin → Stats): stroke / undo / redo / zoom, with what the stroke was like (never its points)
+  onLog?: (event: string, data?: Record<string, unknown>) => void
   paperClassName?: string
   children?: ReactNode // drawn on the paper (moves with it)
   ref?: Ref<DrawingCanvasHandle>
@@ -83,7 +86,7 @@ function strokeAll(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
 }
 
 // Card-sized drawing paper. Points are stored as 0–1 fractions so the backing resolution can change.
-export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, paperClassName = '', children, ref }: Props) {
+export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, onLog, paperClassName = '', children, ref }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const paperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -97,8 +100,8 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   const res = useRef(1) // backing-store multiplier so zoomed lines stay sharp
   const zoomed = useRef(false)
   // latest props for the window listeners
-  const live = useRef({ tool, color, size, onChange, onZoom })
-  live.current = { tool, color, size, onChange, onZoom }
+  const live = useRef({ tool, color, size, onChange, onZoom, onLog })
+  live.current = { tool, color, size, onChange, onZoom, onLog }
 
   function redraw() {
     const canvas = canvasRef.current
@@ -240,11 +243,18 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       if (pointers.current.size > 0) return
       const { maxTouches, startedAt, moved } = gesture.current
       if (maxTouches > 1) {
-        if (!moved && e.timeStamp - startedAt < TAP_MS) (maxTouches === 2 ? undo : redo)()
+        if (!moved && e.timeStamp - startedAt < TAP_MS) (maxTouches === 2 ? undo : redo)('gesture')
+        else if (moved) live.current.onLog?.('zoom', { scale: +view.current.s.toFixed(2) })
         snap()
         return
       }
       if (!current.current) return
+      const c = canvasRef.current!
+      const pts = current.current.points
+      let len = 0
+      for (let i = 1; i < pts.length; i++) len += Math.hypot((pts[i].x - pts[i - 1].x) * c.clientWidth, (pts[i].y - pts[i - 1].y) * c.clientHeight)
+      const { tool: t, color: col, size: sz } = current.current
+      live.current.onLog?.('stroke', { tool: t, color: col, size: sz, points: pts.length, ms: Math.round(e.timeStamp - startedAt), len: Math.round(len), n: strokes.current.length + 1 })
       strokes.current.push(current.current)
       redoStack.current = []
       current.current = null
@@ -293,14 +303,16 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function undo() {
+  function undo(via: 'button' | 'gesture' = 'button') {
+    if (strokes.current.length) live.current.onLog?.('undo', { via, n: strokes.current.length - 1 })
     const s = strokes.current.pop()
     if (s) redoStack.current.push(s)
     redraw()
     live.current.onChange?.()
   }
 
-  function redo() {
+  function redo(via: 'button' | 'gesture' = 'button') {
+    if (redoStack.current.length) live.current.onLog?.('redo', { via, n: strokes.current.length + 1 })
     const s = redoStack.current.pop()
     if (s) strokes.current.push(s)
     redraw()
@@ -308,8 +320,8 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   }
 
   useImperativeHandle(ref, () => ({
-    undo,
-    redo,
+    undo: () => undo(),
+    redo: () => redo(),
     clear() {
       strokes.current = []
       redoStack.current = []
@@ -318,6 +330,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       redraw()
     },
     isEmpty: () => strokes.current.length === 0,
+    strokeCount: () => strokes.current.length,
     canUndo: () => strokes.current.length > 0,
     canRedo: () => redoStack.current.length > 0,
     resetView: () => {

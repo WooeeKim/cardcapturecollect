@@ -221,7 +221,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     })
   }, [])
 
-  // event log for time-on-screen (admin → Stats): one row each time the screen changes state
+  // event log (admin → Stats): one row each time the screen changes state, plus every stroke and tool choice
   const session = useRef(crypto.randomUUID()).current
   const log = (event: string, data?: Record<string, unknown>) => logEvent(event, data, session)
   const state = preview ? 'confirm' : tab
@@ -232,8 +232,10 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     return () => document.removeEventListener('visibilitychange', sync)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state])
+  const strokes = () => canvas.current?.strokeCount() ?? 0
+  const colorAtOpen = useRef('') // color when the panel opened: one color_pick per visit, not per drag
   const exit = () => {
-    log('exit')
+    log('exit', { stage: state, strokes: strokes() })
     onExit()
   }
 
@@ -275,9 +277,11 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
   function pickTool(t: Tool) {
     setPicking(false)
     if (tool === t) {
+      if (open !== 'size') log('size_open', { tool: t })
       setOpen(open === 'size' ? null : 'size')
       if (open !== 'size') done('size-open')
     } else {
+      log('tool_pick', { tool: t, from: tool })
       setTool(t)
       setOpen(null)
     }
@@ -302,10 +306,12 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
           guide={guide && tab === 'draw'}
           picking={picking}
           onPick={(c) => {
+            log('color_pick', { tool: colorTool, color: c, eyedropper: true })
             setColor(c)
             setPicking(false)
           }}
           onZoom={setZoomed}
+          onLog={log}
           onChange={() => {
             const c = canvas.current
             setEmpty(!!c?.isEmpty())
@@ -471,6 +477,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
             aria-expanded={open === 'color'}
             onClick={() => {
               setPicking(false)
+              colorAtOpen.current = color
               setOpen(open === 'color' ? null : 'color')
               if (open !== 'color') done('color-open')
             }}
@@ -492,6 +499,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                     aria-label={tr('Size {n}', { n: s })}
                     aria-pressed={size === s}
                     onClick={() => {
+                      log('size_pick', { tool, size: s, from: size })
                       setSize(s)
                       setOpen(null)
                       done('size-pick')
@@ -515,6 +523,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
               aria-label={tr('Fit drawing')}
               data-tour="fit"
               onClick={() => {
+                log('fit')
                 canvas.current?.resetView()
                 done('fit')
               }}
@@ -533,6 +542,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
           color={color}
           onChange={setColor}
           onClose={() => {
+            if (color !== colorAtOpen.current) log('color_pick', { tool: colorTool, color, from: colorAtOpen.current })
             setOpen(null)
             done('color-pick')
           }}
@@ -562,7 +572,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                 <button
                   onClick={() => {
                     rememberPlace(place.trim())
-                    log('finish', { mood })
+                    log('finish', { mood, strokes: strokes() })
                     onFinish(draft(preview))
                   }}
                   className="absolute top-[768.6px] left-[63.8px] h-[54.8px] w-[113px]"
