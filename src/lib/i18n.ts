@@ -183,6 +183,8 @@ const DICT: Record<string, [string, string]> = {
   FAQ: ['자주 묻는 질문', 'よくある質問'],
   Feedback: ['피드백', 'フィードバック'],
   'Reset (test)': ['초기화 (테스트)', 'リセット (テスト)'],
+  'Replay tutorial (test)': ['튜토리얼 다시하기 (테스트)', 'チュートリアルをもう一度 (テスト)'],
+  'Loading screen (test)': ['로딩 화면 보기 (테스트)', 'ローディング画面 (テスト)'],
   Reset: ['초기화', 'リセット'],
   Neighbors: ['이웃', 'ご近所さん'],
   Developers: ['만든 사람들', '開発者'],

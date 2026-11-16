@@ -201,6 +201,13 @@ img {
 }
 .animate-fade-in { animation: fade-in 0.2s ease-out both; }
 
+/* loading cover (components/Loading.tsx): appears after a short beat so quick waits don't flash; ring turns clockwise */
+.loading-cover { animation: fade-in 0.2s ease-out 0.15s both; }
+.loading-spin { animation: loading-spin 1s linear infinite; }
+@keyframes loading-spin {
+  to { rotate: 360deg; }
+}
+
 @keyframes pop-in {
   0% { transform: scale(0.6); opacity: 0; }
   60% { transform: scale(1.04); opacity: 1; }
