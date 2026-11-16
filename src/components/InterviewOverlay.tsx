@@ -17,7 +17,9 @@ const SHEETS = [
 ]
 const MAX = 300
 
-type Step = 'start' | 'didnt' | 'q1' | 'q2' | 'q3'
+type Step = 'start' | 'didnt' | 'q1' | 'q2' | 'q3' | 'end'
+const FLIP_MS = 520
+const SCALE = 0.9 // the app's phone frame (and rounded screen corners) cover the outermost ~13px
 
 function Pill({ label, top, onClick, disabled = false }: { label: string; top: number; onClick: () => void; disabled?: boolean }) {
   return (
@@ -51,29 +53,88 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
     await onDone(out)
   }
 
-  // number of sheets left on the pad, and where the top one ends (the pill hangs over that edge)
-  const pad = step === 'q3' ? 1 : step === 'q2' ? 2 : 3
-  const bottom = SHEETS[pad - 1].top + 426
+  // sheets left on the pad for each step ('end' = the last one has flipped away)
+  const padOf = (x: Step) => (x === 'end' ? 0 : x === 'q3' ? 1 : x === 'q2' ? 2 : 3)
+  const pad = padOf(step)
+  const bottom = pad ? SHEETS[pad - 1].top + 426 : 0
 
-  const text = (k: string, prompt: string, top: number) => (
-    <>
-      <p className="absolute top-[261px] left-[47px] w-[298px] text-[24px] leading-[1.2]">{prompt}</p>
-      <textarea
-        key={k}
-        value={a[k] ?? ''}
-        onChange={(e) => set(k, e.target.value)}
-        placeholder={tr('A line or two is plenty')}
-        aria-label={prompt}
-        className={field}
-        style={{ top, height: 120 }}
-      />
-    </>
+  // Next / Done: the written sheet flips up over the top edge and disappears; the next question is already
+  // on the sheet underneath. After the last one, the answers are sent.
+  const [leaving, setLeaving] = useState<Step | null>(null)
+  function turn(next: Step) {
+    if (leaving) return
+    setLeaving(step)
+    setStep(next)
+    setTimeout(() => {
+      setLeaving(null)
+      if (next === 'end') finish()
+    }, FLIP_MS)
+  }
+
+  // one sheet's question + answer fields; `live` = false for the copy that is flipping away
+  const page = (x: Step, live: boolean) => {
+    const ro = live ? {} : { readOnly: true, tabIndex: -1 }
+    const text = (k: string, prompt: string, top: number) => (
+      <>
+        <p className="absolute top-[261px] left-[47px] w-[298px] text-[24px] leading-[1.2]">{prompt}</p>
+        <textarea
+          value={a[k] ?? ''}
+          onChange={(e) => set(k, e.target.value)}
+          placeholder={tr('A line or two is plenty')}
+          aria-label={prompt}
+          className={field}
+          style={{ top, height: 120 }}
+          {...ro}
+        />
+      </>
+    )
+    if (x === 'didnt') return text('why_not', tr('Why didn’t you draw today?'), 310)
+    if (x === 'q1') return text('situation', tr('In what situation did you collect?'), 334)
+    if (x === 'q2') return text('who_why', tr('Who did you collect, and why?'), 310)
+    if (x !== 'q3') return null
+    return (
+      <>
+        <p className="absolute top-[261px] left-[47px] w-[308px] text-[24px] leading-[1.2] whitespace-pre-line">{tr('How did you feel\nwhile collecting them?')}</p>
+        {FEELINGS.map((f, i) => {
+          const on = a.feeling === f
+          return (
+            <button
+              key={f}
+              onClick={() => set('feeling', f)}
+              aria-pressed={on}
+              tabIndex={live ? undefined : -1}
+              className={`absolute left-[47px] h-[46.8px] w-[307.8px] rounded-[9px] border-[1.8px] border-[#2e2e2e] px-[12.6px] text-left text-[18.9px] ${on ? 'bg-[#2e2e2e] text-white' : 'bg-white text-black'}`}
+              style={{ top: 340 + i * 55.8 }}
+            >
+              {tr(f)}
+            </button>
+          )
+        })}
+        <input
+          value={a.feeling_other ?? ''}
+          onChange={(e) => {
+            const v = e.target.value.slice(0, MAX)
+            // typing here picks "Other"; clearing it un-picks it
+            setA((y) => ({ ...y, feeling_other: v, feeling: v.trim() ? 'Other' : y.feeling === 'Other' ? '' : (y.feeling ?? '') }))
+          }}
+          onFocus={() => a.feeling_other?.trim() && set('feeling', 'Other')}
+          placeholder={tr('Other feelings...')}
+          aria-label={tr('Other feelings...')}
+          className={`absolute top-[563px] left-[48px] h-[44.9px] w-[307px] rounded-[7.2px] border-[1.8px] bg-white px-[12.2px] text-[18px] outline-none placeholder:text-[#9a9a9a] ${a.feeling === 'Other' ? 'border-solid border-[#2e2e2e]' : 'border-dashed border-[#555]'}`}
+          {...ro}
+        />
+      </>
+    )
+  }
+
+  const sheetImg = (i: number) => (
+    <img key={i} src={sheet} alt="" className="absolute h-[428px] w-[370px] max-w-none" style={{ left: SHEETS[i].left - 1, top: SHEETS[i].top - 1 }} />
   )
 
   return (
-    <div role="dialog" aria-modal className="animate-fade-in absolute inset-0 z-[60] bg-black/35 font-hand backdrop-blur-[1px]">
-      {/* Figma frame px, kept centred when the phone is shorter than 874 */}
-      <div className="absolute inset-x-0 top-0 h-[874px]" style={{ transform: 'translateY(calc(var(--cut) * -0.5px))' }}>
+    <div role="dialog" aria-modal className="animate-fade-in absolute inset-0 z-[60] overflow-hidden bg-black/35 font-hand backdrop-blur-[1px]">
+      {/* Figma frame px at 90% so the pad clears the screen edges, kept centred when the phone is shorter than 874 */}
+      <div className="absolute inset-x-0 top-0 h-[874px] origin-center" style={{ transform: `translateY(calc(var(--cut) * -0.5px)) scale(${SCALE})` }}>
         {step === 'start' ? (
           <div className="animate-pop-in">
             <img src={bubble} alt="" className="absolute top-[353px] left-[73px] h-[122px] w-[257px] max-w-none" />
@@ -85,51 +146,24 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
             <Pill label={tr('Start')} top={452} onClick={() => setStep(kind === 'drew' ? 'q1' : 'didnt')} />
           </div>
         ) : (
-          <div key={step} className="animate-pop-in">
-            {SHEETS.slice(0, pad).map((s, i) => (
-              <img key={i} src={sheet} alt="" className="absolute h-[428px] w-[370px] max-w-none" style={{ left: s.left - 1, top: s.top - 1 }} />
-            ))}
-
-            {step === 'didnt' && text('why_not', tr('Why didn’t you draw today?'), 310)}
-            {step === 'q1' && text('situation', tr('In what situation did you collect?'), 334)}
-            {step === 'q2' && text('who_why', tr('Who did you collect, and why?'), 310)}
-            {step === 'q3' && (
-              <>
-                <p className="absolute top-[261px] left-[47px] w-[308px] text-[24px] leading-[1.2] whitespace-pre-line">{tr('How did you feel\nwhile collecting them?')}</p>
-                {FEELINGS.map((f, i) => {
-                  const on = a.feeling === f
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => set('feeling', f)}
-                      aria-pressed={on}
-                      className={`absolute left-[47px] h-[46.8px] w-[307.8px] rounded-[9px] border-[1.8px] border-[#2e2e2e] px-[12.6px] text-left text-[18.9px] ${on ? 'bg-[#2e2e2e] text-white' : 'bg-white text-black'}`}
-                      style={{ top: 340 + i * 55.8 }}
-                    >
-                      {tr(f)}
-                    </button>
-                  )
-                })}
-                <input
-                  value={a.feeling_other ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value.slice(0, MAX)
-                    // typing here picks "Other"; clearing it un-picks it
-                    setA((x) => ({ ...x, feeling_other: v, feeling: v.trim() ? 'Other' : x.feeling === 'Other' ? '' : (x.feeling ?? '') }))
-                  }}
-                  onFocus={() => a.feeling_other?.trim() && set('feeling', 'Other')}
-                  placeholder={tr('Other feelings...')}
-                  aria-label={tr('Other feelings...')}
-                  className={`absolute top-[563px] left-[48px] h-[44.9px] w-[307px] rounded-[7.2px] border-[1.8px] bg-white px-[12.2px] text-[18px] outline-none placeholder:text-[#9a9a9a] ${a.feeling === 'Other' ? 'border-solid border-[#2e2e2e]' : 'border-dashed border-[#555]'}`}
-                />
-              </>
+          <>
+            {/* the pad: remaining sheets, the current question on top */}
+            <div className="animate-pop-in">
+              {SHEETS.slice(0, pad).map((_, i) => sheetImg(i))}
+              {page(step, true)}
+              {step === 'didnt' && <Pill label={tr('Done')} top={bottom - 22} disabled={!filled('why_not') || busy} onClick={() => turn('end')} />}
+              {step === 'q1' && <Pill label={tr('Next')} top={bottom - 22} disabled={!filled('situation')} onClick={() => turn('q2')} />}
+              {step === 'q2' && <Pill label={tr('Next')} top={bottom - 22} disabled={!filled('who_why')} onClick={() => turn('q3')} />}
+              {step === 'q3' && <Pill label={tr('Done')} top={bottom - 22} disabled={!filled('feeling') || busy} onClick={() => turn('end')} />}
+            </div>
+            {/* the written sheet, flipping up and away */}
+            {leaving && (
+              <div key={leaving} aria-hidden className="animate-sheet-flip pointer-events-none absolute inset-0" style={{ transformOrigin: `50% ${SHEETS[padOf(leaving) - 1].top}px` }}>
+                {sheetImg(padOf(leaving) - 1)}
+                {page(leaving, false)}
+              </div>
             )}
-
-            {step === 'didnt' && <Pill label={tr('Done')} top={bottom - 22} disabled={!filled('why_not') || busy} onClick={finish} />}
-            {step === 'q1' && <Pill label={tr('Next')} top={bottom - 22} disabled={!filled('situation')} onClick={() => setStep('q2')} />}
-            {step === 'q2' && <Pill label={tr('Next')} top={bottom - 22} disabled={!filled('who_why')} onClick={() => setStep('q3')} />}
-            {step === 'q3' && <Pill label={tr('Done')} top={bottom - 22} disabled={!filled('feeling') || busy} onClick={finish} />}
-          </div>
+          </>
         )}
       </div>
     </div>

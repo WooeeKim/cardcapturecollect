@@ -169,6 +169,13 @@ img {
   100% { transform: none; }
 }
 .animate-pop-in { animation: pop-in 0.35s var(--ease-spring) both; }
+/* 8 p.m. interview: a finished memo sheet lifts toward you, up over the top edge, and fades out */
+@keyframes sheet-flip {
+  0% { transform: perspective(1100px) rotateX(0deg) translateY(0); opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: perspective(1100px) rotateX(-78deg) translateY(-38%); opacity: 0; }
+}
+.animate-sheet-flip { animation: sheet-flip 0.52s cubic-bezier(0.45, 0, 0.7, 0.4) both; }
 
 /* Tada: card lands with a wobble */
 @keyframes tada {
