@@ -140,7 +140,9 @@ export function startTracking() {
       track('app_hide')
       flush()
     } else {
-      const away = hiddenAt ? Date.now() - hiddenAt : 0
+      if (!hiddenAt) return // a 'visible' with no 'hidden' before it (some browsers at start): nothing to report
+      const away = Date.now() - hiddenAt
+      hiddenAt = 0
       if (away > NEW_SESSION_MS) {
         appSession = crypto.randomUUID()
         seq = 0
