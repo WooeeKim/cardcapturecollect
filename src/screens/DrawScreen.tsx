@@ -312,7 +312,6 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     if (id === 'fit' && !zoomed) return goStep(t + dir, dir)
     if (id !== 'back' && id !== 'finish') setTab(id === 'memo-fill' ? 'memo' : 'draw')
     setPicking(false)
-    if (id === 'color-pick') colorAtOpen.current = color
     setOpen(id === 'size-pick' ? 'size' : id === 'color-pick' ? 'color' : null)
     setTip(t)
   }
