@@ -32,7 +32,7 @@ type Props = {
   onPick?: (color: string) => void
   onZoom?: (zoomed: boolean) => void
   paperClassName?: string
-  paper?: ReactNode // drawn under the guide and the strokes (e.g. a paper texture)
+  paper?: ReactNode // drawn under the guide and the strokes (the paper's look: fill + outline)
   children?: ReactNode // drawn on the paper (moves with it)
   ref?: Ref<DrawingCanvasHandle>
 }

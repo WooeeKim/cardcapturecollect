@@ -349,7 +349,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
         <DrawScreen
           onExit={() => goMain(existing(homeId))}
           tutorial={route.tutorial}
-          admin={isAdmin && !viewAsId}
           onFinish={(draft) => {
             // save first: if storage is full, stay here so the drawing isn't lost
             let next = makePending(state, draft)

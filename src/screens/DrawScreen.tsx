@@ -1,5 +1,4 @@
 import { fillInside } from '../lib/fillInside'
-import { PaperGrain } from '../components/PaperGrain'
 import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
@@ -44,15 +43,23 @@ const TOOLS = {
 
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 
-// admin-only canvas backgrounds (DrawScreen dropdown): plain white, or code-drawn paper at a few grain strengths
-// (all about as bright as plain white; PaperGrain)
-const CANVASES = [
-  { id: 'white', label: 'Canvas: white', grain: 0 },
-  { id: 'paper-xlight', label: 'Canvas: paper · very faint', grain: 0.5 },
-  { id: 'paper-light', label: 'Canvas: paper · faint', grain: 1.1 },
-  { id: 'paper', label: 'Canvas: paper', grain: 2.2 },
-  { id: 'paper-strong', label: 'Canvas: paper · strong', grain: 3.5 },
-]
+// The drawing paper (Figma drawing 1011:4962, Vector 421): very light grey #f3f3f3 inside a hand-drawn outline.
+// Stretched to the paper box; the outline keeps its 2px width whatever the size or zoom.
+function PaperFrame() {
+  return (
+    <svg aria-hidden viewBox="0 0 363 520" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 block size-full">
+      <path
+        vectorEffect="non-scaling-stroke"
+        fill="#f3f3f3"
+        stroke="#404040"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M1.49745 65.9342C1.13372 34.1645 1.13372 33.8587 1.13372 33.5528C1.13372 29.8617 0.633545 24 2.63354 18C4.68903 11.8336 7.63354 6.5 14.6335 5C21.2543 3.58127 32.6837 2.04636 86.3425 1.25615C105.994 0.966762 128.772 0.691844 171.763 1.8113C214.753 2.93076 273.704 3 305.134 3C330.134 3 336.847 0.842722 347.634 3C355.134 4.5 358.134 10 359.134 20.5C360.708 37.0294 362.247 64.2968 361.134 131.5C360.29 182.439 361.254 280.174 360.363 334.968C359.257 402.979 359.036 424.178 358.31 445.064C357.486 468.758 362.686 503.783 357.634 511C354.134 516 348.634 517 342.134 517C333.795 517 308.634 516 302.134 517C297.329 517.739 278.867 519.148 235.134 517C208.204 515.677 179.766 516 153.134 516C126.386 516 110.27 518.19 89.6335 516C68.9974 513.81 44.8972 516.912 32.1335 516C18.1335 515 4.9324 517.721 2.63387 513.661C0.335955 509.602 1.13367 496.5 1.13387 490.5C1.13405 485.233 1.54946 477.987 1.13387 432C0.741915 388.628 3.73735 307.739 3.163 234.334C2.59613 161.885 1.88012 99.3538 1.51186 67.1925L1.49745 65.9342Z"
+      />
+    </svg>
+  )
+}
 
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
@@ -166,12 +173,8 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
   )
 }
 
-export default function DrawScreen({ onExit, onFinish, tutorial = false, admin = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean; admin?: boolean }) {
+export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
   const [tip, setTip] = useState(tutorial ? 0 : -1)
-  // admin-only test: canvas background — white (what everyone sees) or paper (texture drawn by code, PaperGrain).
-  // Only the screen behind the canvas changes; the saved drawing is the same either way.
-  const [paper, setPaper] = useState('white')
-  const grain = CANVASES.find((c) => c.id === paper)?.grain ?? 0
   const rootRef = useRef<HTMLDivElement>(null)
   // tour step `id` was just done for real → next step
   const done = (id: StepId) => setTip((t) => (STEPS[t]?.id === id ? t + 1 : t))
@@ -360,28 +363,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
             setEmpty(!!c?.isEmpty())
             setHistory({ undo: !!c?.canUndo(), redo: !!c?.canRedo() })
           }}
-          paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
-          paper={grain ? <PaperGrain grain={grain} /> : undefined}
+          paperClassName="rounded-[14px]"
+          paper={<PaperFrame />}
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
       </div>
 
       {/* header */}
-      {admin && tab === 'draw' && !preview && (
-        <select
-          value={paper}
-          onChange={(e) => setPaper(e.target.value)}
-          aria-label={tr('Canvas (test)')}
-          className="absolute top-[48px] left-[24px] z-30 rounded-[6px] border border-[#bbb] bg-white px-[6px] py-[2px] font-[system-ui] text-[13px] text-[#555]"
-        >
-          {CANVASES.map((c) => (
-            <option key={c.id} value={c.id}>
-              {tr(c.label)}
-            </option>
-          ))}
-        </select>
-      )}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
       <button aria-label={tr('Back')} onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
