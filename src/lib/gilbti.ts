@@ -140,18 +140,17 @@ export async function resendUnsent(user: User | null) {
   if (who !== undefined && (await send(r, who))) write(RESULT, JSON.stringify({ ...r, sent: true }))
 }
 
-// Has this account answered? The server decides, so it's the same on every device and for every account
-// sharing one. Only when the server can't answer (none configured, offline, 008_gilbti_own_read.sql not run)
-// does this device's copy for the same account decide.
+// Has this account answered? Yes if the server has a row for it (same answer on every device and for every
+// account sharing one) OR this device kept this account's answers.
+// The device copy must count even when the server read "succeeds": without the own-row select policy
+// (008_gilbti_own_read.sql) RLS returns an empty list, not an error — so the server alone said "not answered"
+// on every start and the interview came back each time the app was reopened.
 export async function answeredByAccount(user: User): Promise<boolean> {
-  if (supabase) {
-    const { data, error } = await supabase.from('gilbti_responses').select('id').eq('user_id', user.id).limit(1)
-    // answers saved on this device but not yet on the server (send failed: offline, RLS…) still count —
-    // resendUnsent retries them — otherwise finishing the interview would just open it again (stuck on "Next")
-    if (!error) return !!data?.length || savedResult(user)?.sent === false
-    console.warn('gilbti_responses read failed (run supabase/migrations/008_gilbti_own_read.sql?)', error.message)
-  }
-  return !!savedResult(user)
+  if (savedResult(user)) return true
+  if (!supabase) return false
+  const { data, error } = await supabase.from('gilbti_responses').select('id').eq('user_id', user.id).limit(1)
+  if (error) console.warn('gilbti_responses read failed (run supabase/migrations/008_gilbti_own_read.sql?)', error.message)
+  return !!data?.length
 }
 
 // After login: this device's guest answers now belong to the account.
