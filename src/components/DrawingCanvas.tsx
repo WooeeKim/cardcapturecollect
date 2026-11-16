@@ -35,7 +35,6 @@ type Props = {
   // usage log (admin → Stats): stroke / undo / redo / zoom, with what the stroke was like (never its points)
   onLog?: (event: string, data?: Record<string, unknown>) => void
   paperClassName?: string
-  paperStyle?: React.CSSProperties // e.g. a background image behind the strokes
   paper?: ReactNode // drawn under the guide and the strokes (e.g. a paper texture)
   children?: ReactNode // drawn on the paper (moves with it)
   ref?: Ref<DrawingCanvasHandle>
@@ -96,7 +95,7 @@ const MAX_PIXELS = 4_000_000
 const blank = () => document.createElement('canvas')
 
 // Card-sized drawing paper. Points are stored as 0–1 fractions so the backing resolution can change.
-export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, onLog, paperClassName = '', paperStyle, paper, children, ref }: Props) {
+export default function DrawingCanvas({ tool, color, size, guide = true, onChange, picking = false, onPick, onZoom, onLog, paperClassName = '', paper, children, ref }: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const paperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -412,7 +411,7 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
 
   return (
     <div ref={hostRef} className="relative size-full">
-      <div ref={paperRef} className={`absolute inset-0 origin-center overflow-hidden ${paperClassName}`} style={paperStyle}>
+      <div ref={paperRef} className={`absolute inset-0 origin-center overflow-hidden ${paperClassName}`}>
         {paper}
         <div className={`pointer-events-none absolute inset-[9.2%_0] ${guide ? '' : 'hidden'}`}>
           <FigureGuide />
