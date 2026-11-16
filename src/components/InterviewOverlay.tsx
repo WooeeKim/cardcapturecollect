@@ -95,7 +95,7 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
             {step === 'q2' && text('who_why', tr('Who did you collect, and why?'), 310)}
             {step === 'q3' && (
               <>
-                <p className="absolute top-[261px] left-[47px] w-[308px] text-[24px] leading-[1.2]">{tr('How did you feel while collecting them?')}</p>
+                <p className="absolute top-[261px] left-[47px] w-[308px] text-[24px] leading-[1.2] whitespace-pre-line">{tr('How did you feel\nwhile collecting them?')}</p>
                 {FEELINGS.map((f, i) => {
                   const on = a.feeling === f
                   return (

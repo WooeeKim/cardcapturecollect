@@ -49,6 +49,13 @@ const setFlag = (k: string, v: string) => {
   }
 }
 
+// <site>/?interview=drew | didnt — shows the 8 p.m. interview right now, whatever the time, to check the screens.
+// Nothing is saved or sent; Done just closes it.
+const PREVIEW_INTERVIEW = (() => {
+  const v = new URLSearchParams(location.search).get('interview')
+  return v === 'drew' ? 'drew' : v === 'didnt' ? 'didnt_draw' : null
+})()
+
 const READ_ONLY = 'Admin view: read-only. Nothing here is saved or sent.'
 
 const startRoute = (s: State): Route => (s.pending ? { name: 'tada' } : { name: 'main', townId: s.towns[0].id, enter: 'center' })
@@ -84,6 +91,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [homeId, setHomeId] = useState(state.towns[0].id)
   // daily 8 p.m. interview waiting to be answered (lib/interview.ts)
   const [interview, setInterview] = useState<{ slot: Slot; kind: Kind; cards: number } | null>(null)
+  const [previewing, setPreviewing] = useState(!!PREVIEW_INTERVIEW)
   const stateRef = useRef(state)
   useEffect(() => {
     stateRef.current = state
@@ -211,7 +219,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   // Not during onboarding; while drawing it waits (see `interviewShown`).
   const checkedDay = useRef('')
   useEffect(() => {
-    if (!ready || viewAsId || gate || retake || interview) return
+    if (!ready || viewAsId || gate || retake || interview || PREVIEW_INTERVIEW) return
     let live = true
     const check = async (force: boolean) => {
       const slot = currentSlot()
@@ -496,7 +504,8 @@ export default function App({ onReady }: { onReady?: () => void }) {
           }}
         />
       )}
-      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || interviewShown || (route.name === 'draw' && !!route.tutorial)} />
+      {ready && previewing && PREVIEW_INTERVIEW && <InterviewOverlay kind={PREVIEW_INTERVIEW} onDone={() => setPreviewing(false)} />}
+      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || interviewShown || previewing || (route.name === 'draw' && !!route.tutorial)} />
       <PhoneChrome />
       {viewAsId && ready && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[40px] z-[101] flex justify-center">
