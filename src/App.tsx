@@ -154,11 +154,13 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [])
 
   // next missing onboarding step for this account; all done and no card yet → draw yourself
-  const advance = useCallback(async (s: State) => {
+  // `answered`: 길BTI was just finished on this screen — don't re-ask storage/server (a failed save or read
+  // would send the user straight back to the same result screen; the answers are resent on next start)
+  const advance = useCallback(async (s: State, answered = false) => {
     const u = userRef.current
     if (!u) return setGate('login')
     if (!s.nickname) return setGate('nickname')
-    if (!(await answeredByAccount(u))) return setGate('gilbti')
+    if (!answered && !(await answeredByAccount(u))) return setGate('gilbti')
     setGate(null)
     if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
   }, [])
@@ -487,7 +489,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
             onClose={retake ? () => setRetake(false) : undefined}
             onDone={() => {
               if (retake) return setRetake(false)
-              advance(state)
+              advance(state, true)
             }}
           />
         ) : (
