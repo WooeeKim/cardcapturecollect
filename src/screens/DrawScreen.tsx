@@ -45,6 +45,7 @@ const TOOLS = {
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 
 // admin-only canvas backgrounds (DrawScreen dropdown): plain white, or code-drawn paper at a few grain strengths
+// (all about as bright as plain white; PaperGrain)
 const CANVASES = [
   { id: 'white', label: 'Canvas: white', grain: 0 },
   { id: 'paper-xlight', label: 'Canvas: paper · very faint', grain: 0.5 },

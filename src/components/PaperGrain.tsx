@@ -1,13 +1,15 @@
 // Watercolor-paper look drawn by code (no image): fractal noise as a height map, lit from the upper left,
-// squeezed into a narrow light-grey band. It is an SVG filter, so it is computed at the size it shows —
+// squeezed into a narrow band just under white. It is an SVG filter, so it is computed at the size it shows —
 // zooming the paper keeps it sharp, unlike a photo. Shown as "paper" in the admin canvas dropdown (DrawScreen).
 //
-// `grain` = how visible the texture is: the brightness spread (std. dev., 0–255 levels) around an average of
-// #f3f3f3. 2.2 matches a watercolor-paper photo; lower = fainter. The lit noise measures mean ≈205, sd ≈20.7
-// before the squeeze, so slope = grain / 20.7 and the intercept keeps the average at 243.
+// `grain` = how visible the texture is: the brightness spread (std. dev., 0–255 levels). 2.2 matches a
+// watercolor-paper photo; lower = fainter. The paper stays about as bright as plain white: the average sits
+// 2.5 spreads below 255, so only the brightest bumps touch pure white (grain 1.1 → avg 252, 3.5 → avg 246).
+// The lit noise measures mean ≈205, sd ≈20.7 before the squeeze, so slope = grain / 20.7.
 export function PaperGrain({ grain = 2.2 }: { grain?: number }) {
   const slope = grain / 20.7
-  const intercept = (243 - slope * 205) / 255
+  const average = 255 - 2.5 * grain
+  const intercept = (average - slope * 205) / 255
   const id = `paper-grain-${grain}`
   return (
     <svg aria-hidden className="pointer-events-none absolute inset-0 block size-full">
