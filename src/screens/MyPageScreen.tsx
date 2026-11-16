@@ -43,10 +43,12 @@ export default function MyPageScreen({
   onLogout,
   onDeleteAccount,
   onReset,
+  onTutorial,
+  onLoadingTest,
   canReset,
 }: {
   user: User | null
-  canReset: boolean // app_admins only
+  canReset: boolean // app_admins only (also shows Replay tutorial / Loading screen test)
   profile: Card | null // profile picture card (store.profileCard)
   cards: Card[] // newest first, to pick the profile picture from
   onPickProfile: (cardId: string) => void
@@ -58,10 +60,12 @@ export default function MyPageScreen({
   onProfile: (nickname: string, intro: string) => void
   onBack: () => void
   onInterview: () => void
-  onLogin: (user: User) => void
+  onLogin: (user: User) => unknown
   onLogout: () => void
   onDeleteAccount: () => Promise<string | undefined>
   onReset: () => void
+  onTutorial: () => void
+  onLoadingTest: () => void
 }) {
   const [sheet, setSheet] = useState<'login' | 'password' | 'feedback' | 'picture' | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
@@ -130,6 +134,9 @@ export default function MyPageScreen({
           ],
         }),
     },
+    // admin testing helpers, same rule as Reset
+    canReset && { label: tr('Replay tutorial (test)'), onClick: onTutorial },
+    canReset && { label: tr('Loading screen (test)'), onClick: onLoadingTest },
     { label: tr('Neighbors'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Developers'), tone: 'text-[#7e7e7e]', soon: true },
     { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', onClick: user ? askDelete : undefined, disabled: !user },
@@ -266,7 +273,7 @@ export default function MyPageScreen({
           onClose={() => setSheet(null)}
           onDone={(u) => {
             setSheet(null)
-            onLogin(u)
+            return onLogin(u)
           }}
         />
       )}

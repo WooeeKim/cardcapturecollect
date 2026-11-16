@@ -1,4 +1,5 @@
 import { fillInside } from '../lib/fillInside'
+import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
 import DrawingCanvas, { type DrawingCanvasHandle, type Tool } from '../components/DrawingCanvas'
@@ -269,9 +270,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       return
     }
     // unpainted spots inside the figure become white (they looked white on the paper)
-    const blob = await fillInside(await canvas.current!.toBlob())
-    setThumb(await toThumb(blob))
-    setPreview(await toDataUrl(blob))
+    const { thumb, preview } = await waiting(
+      (async () => {
+        const blob = await fillInside(await canvas.current!.toBlob())
+        return { thumb: await toThumb(blob), preview: await toDataUrl(blob) }
+      })(),
+    )
+    setThumb(thumb)
+    setPreview(preview)
   }
 
   function pickTool(t: Tool) {

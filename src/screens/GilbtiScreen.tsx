@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { waiting } from '../components/Loading'
 import { Bottom, LangButton, TextButton } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import type { User } from '../lib/auth'
@@ -71,7 +72,7 @@ export default function GilbtiScreen({
   async function next() {
     if (step < n - 1) return setStep(step + 1)
     setBusy(true)
-    const r = await submit({ ...answers, name: nickname }, user)
+    const r = await waiting(submit({ ...answers, name: nickname }, user))
     setBusy(false)
     setResult(r)
     setStep(n)

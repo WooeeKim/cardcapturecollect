@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { LoadingLayer, waiting } from './components/Loading'
 import { LoginSheet } from './components/LoginSheet'
 import NotifyPrompt from './components/NotifyPrompt'
 import { syncPush } from './lib/push'
@@ -436,10 +437,11 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
             if (viewAsId) return setError(READ_ONLY)
-            await logOut()
-            await enter(null)
+            await waiting(logOut().then(() => enter(null)))
             setRoute({ name: 'mypage' })
           }}
+          onTutorial={() => setRoute({ name: 'draw', tutorial: true })}
+          onLoadingTest={() => waiting(new Promise((r) => setTimeout(r, 12000)))} // long enough to see one line change
           onReset={() => {
             const fresh = initial()
             commit(() => fresh)
@@ -449,13 +451,17 @@ export default function App({ onReady }: { onReady?: () => void }) {
             if (viewAsId) return READ_ONLY
             const u = userRef.current
             if (!u) return
-            const res = await deleteAccount(u)
-            try {
-              localStorage.removeItem(keyFor(u.id))
-            } catch {
-              /* private mode */
-            }
-            await enter(null)
+            const res = await waiting(
+              deleteAccount(u).then(async (res) => {
+                try {
+                  localStorage.removeItem(keyFor(u.id))
+                } catch {
+                  /* private mode */
+                }
+                await enter(null)
+                return res
+              }),
+            )
             setRoute({ name: 'mypage' })
             return res.note
           }}
@@ -479,7 +485,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
             initial=""
             onDone={(nickname) => {
               commit((s) => ({ ...s, nickname }))
-              advance({ ...state, nickname })
+              waiting(advance({ ...state, nickname })) // asks the server whether 길BTI is done
             }}
           />
         ) : gate === 'gilbti' || retake ? (
@@ -501,7 +507,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onClose={() => setLoginPrompt(false)}
           onDone={(u) => {
             setLoginPrompt(false)
-            enter(u)
+            return enter(u)
           }}
         />
       )}
@@ -518,6 +524,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       )}
       {ready && previewing && PREVIEW_INTERVIEW && <InterviewOverlay kind={PREVIEW_INTERVIEW} onDone={() => setPreviewing(false)} />}
       <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || interviewShown || previewing || (route.name === 'draw' && !!route.tutorial)} />
+      <LoadingLayer />
       <PhoneChrome />
       {viewAsId && ready && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[40px] z-[101] flex justify-center">

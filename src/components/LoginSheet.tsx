@@ -3,6 +3,7 @@ import { logEvent } from '../lib/events'
 import { MIN_PASSWORD, changePassword, logIn, signUp, type User } from '../lib/auth'
 import { TextButton } from './ui'
 import { tr } from '../lib/i18n'
+import { waiting } from './Loading'
 
 const field = 'h-[44px] w-full rounded-[6px] border-[2px] border-dashed border-[#555] bg-white px-[10px] text-[19px] outline-none placeholder:text-[#999]'
 
@@ -17,7 +18,7 @@ export function Sheet({ children, onClose }: { children: React.ReactNode; onClos
 }
 
 // Email + password (Supabase rules): the fields + Log in / Sign up. Used by the sheet and the onboarding first screen.
-export function LoginForm({ onDone }: { onDone: (user: User) => void }) {
+export function LoginForm({ onDone }: { onDone: (user: User) => unknown }) {
   const [id, setId] = useState('')
   const [pw, setPw] = useState('')
   const [error, setError] = useState('')
@@ -27,10 +28,15 @@ export function LoginForm({ onDone }: { onDone: (user: User) => void }) {
     if (busy) return
     setBusy(true)
     setError('')
-    const res = kind === 'login' ? await logIn(id, pw) : await signUp(id, pw)
-    setBusy(false)
-    if (res.ok) onDone(res.user)
-    else setError(res.error)
+    // one cover for the log-in and the account load after it (onDone may return a promise)
+    await waiting(
+      (async () => {
+        const res = kind === 'login' ? await logIn(id, pw) : await signUp(id, pw)
+        setBusy(false)
+        if (res.ok) await onDone(res.user)
+        else setError(res.error)
+      })(),
+    )
   }
 
   return (
@@ -68,7 +74,7 @@ export function LoginForm({ onDone }: { onDone: (user: User) => void }) {
 }
 
 // `prompt` = shown right after the first card moves in (closable with "Later").
-export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boolean; onDone: (user: User) => void; onClose: () => void }) {
+export function LoginSheet({ prompt = false, onDone, onClose }: { prompt?: boolean; onDone: (user: User) => unknown; onClose: () => void }) {
   return (
     <Sheet onClose={onClose}>
       <p className="text-center text-[24px] leading-[1.2]">{tr(prompt ? 'Keep your town' : 'Log in')}</p>
@@ -92,7 +98,7 @@ export function PasswordSheet({ user, onClose }: { user: User; onClose: () => vo
 
   async function save() {
     if (pw !== again) return setMsg({ text: tr('The two passwords are different.'), ok: false })
-    const res = await changePassword(user, pw)
+    const res = await waiting(changePassword(user, pw))
     setMsg(res.ok ? { text: tr('Password changed.'), ok: true } : { text: res.error ?? tr('Could not change password.'), ok: false })
     if (res.ok) {
       setPw('')
