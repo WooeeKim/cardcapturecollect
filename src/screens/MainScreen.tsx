@@ -74,7 +74,7 @@ export default function MainScreen({
   onOpenCard: (cardId: string) => void
   onMyPage: () => void
   onDraw: () => void
-  onSwitch: (townId: string, enter: 'left' | 'right') => void
+  onSwitch: (townId: string) => void // swiped to the next / previous town: it opens at its center
   onMigrate: (cardId: string) => void
 }) {
   const box = useRef<HTMLDivElement>(null)
@@ -372,8 +372,8 @@ export default function MainScreen({
     const p = pullRef.current
     const commit = zoneRef.current === 'commit'
     setZone(null)
-    if (commit && p > 0 && prev) return onSwitch(prev.id, 'right')
-    if (commit && p < 0 && next) return onSwitch(next.id, 'left')
+    if (commit && p > 0 && prev) return onSwitch(prev.id)
+    if (commit && p < 0 && next) return onSwitch(next.id)
     if (p !== 0) {
       setPullBoth(0)
       apply()
