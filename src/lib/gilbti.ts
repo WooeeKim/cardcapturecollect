@@ -146,7 +146,9 @@ export async function resendUnsent(user: User | null) {
 export async function answeredByAccount(user: User): Promise<boolean> {
   if (supabase) {
     const { data, error } = await supabase.from('gilbti_responses').select('id').eq('user_id', user.id).limit(1)
-    if (!error) return !!data?.length
+    // answers saved on this device but not yet on the server (send failed: offline, RLS…) still count —
+    // resendUnsent retries them — otherwise finishing the interview would just open it again (stuck on "Next")
+    if (!error) return !!data?.length || savedResult(user)?.sent === false
     console.warn('gilbti_responses read failed (run supabase/migrations/008_gilbti_own_read.sql?)', error.message)
   }
   return !!savedResult(user)
