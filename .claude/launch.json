@@ -16,7 +16,15 @@
     {
       "name": "dev-http",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--mode", "http", "--port", "5174"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--mode",
+        "http",
+        "--port",
+        "5174"
+      ],
       "port": 5174
     },
     {
@@ -47,6 +55,25 @@
         "5175"
       ],
       "port": 5175
+    },
+    {
+      "name": "tablet-worktree",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "VITE_SUPABASE_URL=",
+        "VITE_SUPABASE_ANON_KEY=",
+        "npm",
+        "--prefix",
+        "../subwayseal-tablet",
+        "run",
+        "dev",
+        "--",
+        "--mode",
+        "http",
+        "--port",
+        "5176"
+      ],
+      "port": 5176
     }
   ]
 }

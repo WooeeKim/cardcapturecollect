@@ -18,7 +18,16 @@ const wanted = () => {
 // base64url → bytes (applicationServerKey)
 const bytes = (b64: string) => Uint8Array.from(atob(b64.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0))
 
-export async function syncPush() {
+// Runs one sync at a time. Toggling off→on quickly used to start two syncs at once: the "off" sync was still
+// awaiting drop_push when the "on" sync picked up the same subscription and saved it, then "off" unsubscribed it —
+// leaving a dead (or deleted) subscription, so no notifications arrived. Each queued sync reads the toggle fresh.
+let queue: Promise<void> = Promise.resolve()
+export function syncPush() {
+  queue = queue.then(sync, sync)
+  return queue
+}
+
+async function sync() {
   if (!KEY) console.warn('Push off: VITE_VAPID_PUBLIC_KEY is not set at build time (Vercel env), so no phone can subscribe')
   if (!supabase || !KEY || typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) return
   try {
