@@ -44,6 +44,15 @@ const TOOLS = {
 
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 
+// admin-only canvas backgrounds (DrawScreen dropdown): plain white, or code-drawn paper at a few grain strengths
+const CANVASES = [
+  { id: 'white', label: 'Canvas: white', grain: 0 },
+  { id: 'paper-xlight', label: 'Canvas: paper · very faint', grain: 0.5 },
+  { id: 'paper-light', label: 'Canvas: paper · faint', grain: 1.1 },
+  { id: 'paper', label: 'Canvas: paper', grain: 2.2 },
+  { id: 'paper-strong', label: 'Canvas: paper · strong', grain: 3.5 },
+]
+
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
 // Onboarding "draw yourself" tour: the screen dims except one lit-up spot (white ring), and the step moves on
@@ -160,7 +169,8 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
   const [tip, setTip] = useState(tutorial ? 0 : -1)
   // admin-only test: canvas background — white (what everyone sees) or paper (texture drawn by code, PaperGrain).
   // Only the screen behind the canvas changes; the saved drawing is the same either way.
-  const [paper, setPaper] = useState<'white' | 'paper'>('white')
+  const [paper, setPaper] = useState('white')
+  const grain = CANVASES.find((c) => c.id === paper)?.grain ?? 0
   const rootRef = useRef<HTMLDivElement>(null)
   // tour step `id` was just done for real → next step
   const done = (id: StepId) => setTip((t) => (STEPS[t]?.id === id ? t + 1 : t))
@@ -357,7 +367,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
             setHistory({ undo: !!c?.canUndo(), redo: !!c?.canRedo() })
           }}
           paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
-          paper={paper === 'paper' ? <PaperGrain /> : undefined}
+          paper={grain ? <PaperGrain grain={grain} /> : undefined}
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
@@ -367,12 +377,15 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
       {admin && tab === 'draw' && !preview && (
         <select
           value={paper}
-          onChange={(e) => setPaper(e.target.value as 'white' | 'paper')}
+          onChange={(e) => setPaper(e.target.value)}
           aria-label={tr('Canvas (test)')}
           className="absolute top-[48px] left-[24px] z-30 rounded-[6px] border border-[#bbb] bg-white px-[6px] py-[2px] font-[system-ui] text-[13px] text-[#555]"
         >
-          <option value="white">{tr('Canvas: white')}</option>
-          <option value="paper">{tr('Canvas: paper')}</option>
+          {CANVASES.map((c) => (
+            <option key={c.id} value={c.id}>
+              {tr(c.label)}
+            </option>
+          ))}
         </select>
       )}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
