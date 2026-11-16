@@ -6,6 +6,7 @@ import App from './App'
 import { Splash } from './components/Splash'
 import { setFrameMatrix } from './lib/frame'
 import { preloadAssets } from './lib/preload'
+import { installTouchGlow } from './lib/touchGlow'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
@@ -130,4 +131,5 @@ function Boot() {
     </>
   )
 }
+if (!admin) installTouchGlow()
 createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <Boot />}</StrictMode>)
