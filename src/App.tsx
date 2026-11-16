@@ -155,13 +155,17 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [])
 
   // next missing onboarding step for this account; all done and no card yet → draw yourself
-  // `answered`: 길BTI was just finished on this screen — don't re-ask storage/server (a failed save or read
-  // would send the user straight back to the same result screen; the answers are resent on next start)
+  // 길BTI is asked once per account: the answer is a flag in the account's saved state (user_states), so every
+  // device the account logs in on sees it. `answered` = just finished on this screen. Accounts from before the
+  // flag fall back to the answers table, and a yes there sets the flag for next time.
   const advance = useCallback(async (s: State, answered = false) => {
     const u = userRef.current
     if (!u) return setGate('login')
     if (!s.nickname) return setGate('nickname')
-    if (!answered && !(await answeredByAccount(u))) return setGate('gilbti')
+    if (!s.gilbtiDone) {
+      if (!answered && !(await answeredByAccount(u))) return setGate('gilbti')
+      commit((x) => ({ ...x, gilbtiDone: true }))
+    }
     setGate(null)
     if (!Object.keys(s.cards).length && !s.pending) setRoute({ name: 'draw', tutorial: true })
   }, [])
