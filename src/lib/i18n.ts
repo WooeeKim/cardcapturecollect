@@ -330,4 +330,16 @@ const DICT: Record<string, [string, string]> = {
   Change: ['변경', '変更'],
   'Profile picture': ['프로필 사진', 'プロフィール写真'],
   'Pick one of your people.': ['내 마을 사람 중 한 명을 골라요.', '自分の町の人からひとり選ぼう。'],
+  // daily 8 p.m. interview (components/InterviewOverlay.tsx)
+  'It’s 8p.m.': ['저녁 8시,', '夜8時、'],
+  'Interview Time!': ['인터뷰 시간이에요!', 'インタビューの時間!'],
+  'Why didn’t you draw today?': ['오늘은 왜 아무도 안 그렸나요?', '今日はどうして誰も描かなかった?'],
+  'In what situation did you collect?': ['어떤 상황에서 수집했나요?', 'どんな場面で集めた?'],
+  'Who did you collect, and why?': ['누구를, 왜 수집했나요?', '誰を、なぜ集めた?'],
+  'How did you feel while collecting them?': ['수집하는 동안 기분이 어땠나요?', '集めているとき、どんな気分だった?'],
+  Interested: ['흥미로웠어요', '興味があった'],
+  Excited: ['신났어요', 'ワクワクした'],
+  Bored: ['지루했어요', '退屈だった'],
+  Indifferent: ['그저 그랬어요', 'なんとも思わなかった'],
+  'Other feelings...': ['다른 기분...', 'ほかの気持ち...'],
 }

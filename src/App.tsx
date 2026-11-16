@@ -5,6 +5,8 @@ import { syncPush } from './lib/push'
 import { PhoneChrome, Popup } from './components/ui'
 import { fillInsideImage } from './lib/fillInside'
 import { answeredByAccount, claim, resendUnsent } from './lib/gilbti'
+import InterviewOverlay from './components/InterviewOverlay'
+import { answered as interviewAnswered, cardsIn, currentSlot, resendInterviews, submit as submitInterview, type Kind, type Slot } from './lib/interview'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
 import { checkAdmin, currentUser, deleteAccount, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
@@ -80,6 +82,12 @@ export default function App({ onReady }: { onReady?: () => void }) {
   const [retake, setRetake] = useState(false)
   // town the main screen was last showing
   const [homeId, setHomeId] = useState(state.towns[0].id)
+  // daily 8 p.m. interview waiting to be answered (lib/interview.ts)
+  const [interview, setInterview] = useState<{ slot: Slot; kind: Kind; cards: number } | null>(null)
+  const stateRef = useRef(state)
+  useEffect(() => {
+    stateRef.current = state
+  }, [state])
 
   // switch the whole app to an account (or back to guest).
   // Guest data on this device always joins the account being entered (sign-up or log-in); the guest copy is
@@ -190,6 +198,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     currentUser().then(async (u) => {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
       resendUnsent(u)
+      resendInterviews(u, s.nickname ?? '')
       await advance(s)
       // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
       await decodeAll(Object.values(s.cards).map((c) => c.image))
@@ -197,6 +206,33 @@ export default function App({ onReady }: { onReady?: () => void }) {
       onReady?.()
     })
   }, [enter, advance])
+
+  // 8 p.m. interview: checked at start, every 30s (the server only when the day changes) and when the app comes back.
+  // Not during onboarding; while drawing it waits (see `interviewShown`).
+  const checkedDay = useRef('')
+  useEffect(() => {
+    if (!ready || viewAsId || gate || retake || interview) return
+    let live = true
+    const check = async (force: boolean) => {
+      const slot = currentSlot()
+      if (!slot || (!force && checkedDay.current === slot.day)) return
+      checkedDay.current = slot.day
+      if (await interviewAnswered(userRef.current, slot.day)) return
+      if (!live) return
+      const cards = cardsIn(stateRef.current, slot)
+      setInterview({ slot, kind: cards > 0 ? 'drew' : 'didnt_draw', cards })
+    }
+    check(true)
+    const timer = setInterval(() => check(false), 30_000)
+    const back = () => document.visibilityState === 'visible' && check(true)
+    document.addEventListener('visibilitychange', back)
+    return () => {
+      live = false
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', back)
+    }
+  }, [ready, gate, retake, interview, user?.id])
+  const interviewShown = !!interview && !gate && !retake && route.name !== 'draw' && route.name !== 'tada' && route.name !== 'send'
 
   // every change is saved (this device + the account); if storage is full the change is undone and the user is told
   const commit = useCallback((fn: (s: State) => State) => {
@@ -449,7 +485,18 @@ export default function App({ onReady }: { onReady?: () => void }) {
           }}
         />
       )}
-      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || (route.name === 'draw' && !!route.tutorial)} />
+      {ready && interviewShown && (
+        <InterviewOverlay
+          key={interview!.slot.day}
+          kind={interview!.kind}
+          onDone={async (answers) => {
+            const { slot, kind, cards } = interview!
+            await submitInterview(userRef.current, state.nickname ?? '', slot, kind, cards, answers)
+            setInterview(null)
+          }}
+        />
+      )}
+      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || interviewShown || (route.name === 'draw' && !!route.tutorial)} />
       <PhoneChrome />
       {viewAsId && ready && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[40px] z-[101] flex justify-center">
