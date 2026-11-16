@@ -1,5 +1,9 @@
 import { fillInside } from '../lib/fillInside'
-import paperTexture from '../assets/paper/texture.avif'
+import paperCream from '../assets/paper/cream.avif'
+import paperLined from '../assets/paper/lined.avif'
+import paperGrey from '../assets/paper/grey.avif'
+import paperWatercolor from '../assets/paper/watercolor.avif'
+import paperFine from '../assets/paper/fine.avif'
 import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
@@ -43,6 +47,16 @@ const TOOLS = {
 } as const
 
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
+// admin-only canvas backgrounds to try (DrawScreen dropdown); '' = the plain white everyone gets
+const PAPERS = [
+  { id: 'white', label: 'Canvas: white', src: '' },
+  { id: 'cream', label: 'Canvas: cream paper', src: paperCream },
+  { id: 'fine', label: 'Canvas: fine paper', src: paperFine },
+  { id: 'watercolor', label: 'Canvas: watercolor paper', src: paperWatercolor },
+  { id: 'grey', label: 'Canvas: grey paper', src: paperGrey },
+  { id: 'lined', label: 'Canvas: lined notebook', src: paperLined },
+]
+
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
 // Onboarding "draw yourself" tour: the screen dims except one lit-up spot (white ring), and the step moves on
@@ -159,7 +173,8 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
   const [tip, setTip] = useState(tutorial ? 0 : -1)
   // admin-only test: paper behind the drawing (white = what everyone sees; texture = trying a paper look).
   // Only the screen behind the canvas changes; the saved drawing is the same either way.
-  const [paper, setPaper] = useState<'white' | 'texture'>('white')
+  const [paper, setPaper] = useState('white')
+  const paperSrc = PAPERS.find((p) => p.id === paper)?.src
   const rootRef = useRef<HTMLDivElement>(null)
   // tour step `id` was just done for real → next step
   const done = (id: StepId) => setTip((t) => (STEPS[t]?.id === id ? t + 1 : t))
@@ -356,7 +371,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
             setHistory({ undo: !!c?.canUndo(), redo: !!c?.canRedo() })
           }}
           paperClassName="rounded-[10px] bg-white bg-cover bg-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
-          paperStyle={paper === 'texture' ? { backgroundImage: `url(${paperTexture})` } : undefined}
+          paperStyle={paperSrc ? { backgroundImage: `url(${paperSrc})` } : undefined}
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
@@ -366,12 +381,15 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
       {admin && tab === 'draw' && !preview && (
         <select
           value={paper}
-          onChange={(e) => setPaper(e.target.value as 'white' | 'texture')}
+          onChange={(e) => setPaper(e.target.value)}
           aria-label={tr('Canvas (test)')}
           className="absolute top-[48px] left-[24px] z-30 rounded-[6px] border border-[#bbb] bg-white px-[6px] py-[2px] font-[system-ui] text-[13px] text-[#555]"
         >
-          <option value="white">{tr('Canvas: white')}</option>
-          <option value="texture">{tr('Canvas: paper')}</option>
+          {PAPERS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {tr(p.label)}
+            </option>
+          ))}
         </select>
       )}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
