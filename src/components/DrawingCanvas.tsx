@@ -35,7 +35,7 @@ type Props = {
   // usage log (admin → Stats): stroke / undo / redo / zoom, with what the stroke was like (never its points)
   onLog?: (event: string, data?: Record<string, unknown>) => void
   paperClassName?: string
-  paper?: ReactNode // drawn under the guide and the strokes (e.g. a paper texture)
+  paper?: ReactNode // drawn under the guide and the strokes (the paper's look: fill + outline)
   children?: ReactNode // drawn on the paper (moves with it)
   ref?: Ref<DrawingCanvasHandle>
 }
