@@ -134,7 +134,7 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
     <div role="dialog" aria-modal className="animate-fade-in absolute inset-0 z-[60] overflow-hidden bg-black/35 font-hand backdrop-blur-[1px]">
       {/* Figma frame px, kept centred when the phone is shorter than 874. --interview-scale (index.css): full size on
           phones; 90% in the desktop preview, whose fake phone frame covers the outer 13px */}
-      <div className="absolute inset-x-0 top-0 h-[874px] origin-center" style={{ transform: 'translateY(calc(var(--cut) * -0.5px)) scale(var(--interview-scale))' }}>
+      <div className="absolute top-0 left-[calc(50%-201px)] h-[874px] w-[402px] origin-center" style={{ transform: 'translateY(calc(var(--cut) * -0.5px)) scale(var(--interview-scale))' }}>
         {step === 'start' ? (
           <div className="animate-pop-in">
             <img src={bubble} alt="" className="absolute top-[353px] left-[73px] h-[122px] w-[257px] max-w-none" />

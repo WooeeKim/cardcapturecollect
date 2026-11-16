@@ -4,12 +4,34 @@ import { APP_NAME } from '../components/Splash'
 import { Bottom, LangButton } from '../components/ui'
 import type { User } from '../lib/auth'
 import { tr } from '../lib/i18n'
+import { useLayout } from '../lib/layout'
 import { Pill } from './GilbtiScreen'
 
 // Onboarding (App.tsx): log in / sign up → nickname → 길BTI → draw yourself (DrawScreen tutorial) → pick a town.
 
 // 1. First screen: new people sign up, people who already have an account log in.
 export function WelcomeScreen({ onLogin }: { onLogin: (u: User) => unknown }) {
+  const { wide, w } = useLayout()
+  if (wide) {
+    // sideways tablet: what it is on the left, the login form on the right (Figma 09 iPad · welcome)
+    const x = (w - 960) / 2
+    return (
+      <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+        <LangButton className="top-[36px] z-10" style={{ left: w - 90 }} />
+        <div className="absolute top-[250px] w-[420px]" style={{ left: x }}>
+          <p className="text-[20px] text-[#7a7a7a]">{tr('Welcome to')}</p>
+          <h1 className="mt-[6px] text-[48px] leading-[1.05]">{APP_NAME}</h1>
+          <p className="mt-[22px] text-[23px] leading-[1.35] text-[#3d3d3d]">{tr('Draw the people you notice on the subway, and invite them to your town.')}</p>
+        </div>
+        <div className="absolute top-[262px] w-[400px]" style={{ left: x + 560 }}>
+          <p className="text-[18px] leading-[1.35] text-[#6b6b6b]">{tr('New here? Sign up. Already have an account? Log in.')}</p>
+          <div className="mt-[12px]">
+            <LoginForm onDone={onLogin} />
+          </div>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <LangButton className="top-[90px] left-[324px] z-10" />

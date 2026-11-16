@@ -74,6 +74,19 @@ body {
   display: none;
 }
 
+/* tablet held sideways: the landscape frame fills the screen (main.tsx), no fake phone */
+.wide body {
+  background: #fff;
+}
+.wide #root {
+  border-radius: 0;
+  box-shadow: none;
+}
+.wide .fake-chrome {
+  display: none;
+}
+.wide { --interview-scale: 0.9; } /* the 874-tall interview frame inside the 834-tall screen */
+
 /* admin "view as" (lib/viewAs.ts): the phone sits on the admin page's white */
 .view-as body {
   background: #fff;

@@ -12,6 +12,8 @@ import { moodOf } from '../lib/moods'
 import type { Card } from '../lib/store'
 import { cycleLang, tr } from '../lib/i18n'
 import globe from '../assets/proto/v2/globe.svg'
+import { useLayout } from '../lib/layout'
+import { WideShift } from './wide'
 
 // ---------- line icons (thin strokes like the Figma frames) ----------
 
@@ -50,14 +52,22 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
 }
 
 // Figma header (townList): back chevron · title · optional right control
+// Sideways tablet: the same row 45px higher, spread to the screen edges.
 export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
+  const { w } = useLayout()
   return (
     <>
-      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[72px] left-[17px] z-20 p-[10px]">
-        <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
-      </button>
-      <h1 className="pointer-events-none absolute inset-x-0 top-[77px] z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black]">{title}</h1>
-      {right}
+      <WideShift from={[17, 72]} to={[33, 27]}>
+        <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[72px] left-[17px] z-20 p-[10px]">
+          <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
+        </button>
+      </WideShift>
+      <WideShift from={[0, 72]} to={[0, 27]} style={{ width: w }}>
+        <h1 className="pointer-events-none absolute inset-x-0 top-[77px] z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black]">{title}</h1>
+      </WideShift>
+      <WideShift from={[344, 72]} to={[w - 74, 27]}>
+        {right}
+      </WideShift>
     </>
   )
 }
@@ -270,9 +280,9 @@ export function SketchyBox({ w, h, seed = 1, stroke = '#000', width = 2.6, class
 }
 
 // Language button (Figma gilbti-intro 925:2832): English ↔ 한국어
-export function LangButton({ className = '' }: { className?: string }) {
+export function LangButton({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <button aria-label={tr('Change language')} onClick={cycleLang} className={`absolute h-[41px] w-[45px] ${className}`}>
+    <button aria-label={tr('Change language')} onClick={cycleLang} className={`absolute h-[41px] w-[45px] ${className}`} style={style}>
       <img src={globe} alt="" className="size-full" />
     </button>
   )

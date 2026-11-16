@@ -9,6 +9,8 @@ import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, S
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
+import { useLayout } from '../lib/layout'
+import { WideShift } from '../components/wide'
 
 // New Figma GUI (prototyping › 콜렉션 725:*): town strip → selected town's deck (3×2 pages, slot 1 = Head)
 // → other towns' cards. Long-press to drag: into the deck (moves in), onto a card (the two swap), or
@@ -33,6 +35,8 @@ export default function CollectionScreen({
   onTown: (id: string) => void
   onBack: () => void
 }) {
+  // sideways tablet (Figma 09 iPad · collection): the town's box on the left, everyone else on the right
+  const { wide } = useLayout()
   const [newest, setNewest] = useState(true)
   const [page, setPage] = useState(0)
   const [openId, setOpenId] = useState<string | null>(openCard ?? null)
@@ -176,17 +180,19 @@ export default function CollectionScreen({
 
   return (
     <div ref={root} className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+      <WideShift from={[24, 85]} to={[40, 40]}>
       <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]">{tr('Collection')}</p>
-      <TextButton onClick={() => setNewest(!newest)} className="absolute top-[93px] right-[24px] z-20 text-[17px]">
+      </WideShift>
+      <p className="absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]" style={{ top: wide ? 44 : 89 }}>{tr('Collection')}</p>
+      <TextButton onClick={() => setNewest(!newest)} className="absolute z-20 text-[17px]" style={wide ? { top: 48, right: 40 } : { top: 93, right: 24 }}>
         {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
 
       {/* towns on one grey band; the picked one gets the dark ring */}
       {/* no bounce past the ends, so the band's cut-off end never shows */}
-      <div className="absolute inset-x-0 top-[134px] h-[100px] overflow-x-auto overflow-y-hidden overscroll-x-none [scrollbar-width:none]">
+      <div className="absolute inset-x-0 h-[100px] overflow-x-auto overflow-y-hidden overscroll-x-none [scrollbar-width:none]" style={{ top: wide ? 92 : 134 }}>
         <div className="relative h-full" style={{ width: stripW }}>
           {/* the hand-drawn grey band (Town List's, without the outline), laid sideways; its end cap runs past the
               strip's right edge and is cut off there */}
@@ -212,6 +218,7 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
+      <WideShift from={[0, 243]} to={[40, 200]}>
       <div data-deck className="absolute inset-x-0 top-[243px] h-[257px]">
         {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
         <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] left-[10px] h-[256px] w-[382px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} />
@@ -251,13 +258,14 @@ export default function CollectionScreen({
           ))}
         </div>
       </div>
+      </WideShift>
 
       {/* everyone else (only this part scrolls) */}
-      <div className="absolute inset-x-0 top-[500px] bottom-0 overflow-y-auto [scrollbar-width:none]">
+      <div className={`absolute bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[200px] right-[40px] left-[482px]' : 'inset-x-0 top-[500px]'}`}>
         {rest.length === 0 ? (
           <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">{tr('People in other towns show up here.')}</p>
         ) : (
-          <div className="grid grid-cols-[repeat(3,90px)] gap-x-[35px] gap-y-[25px] pt-[25px] pb-[70px] pl-[31px]">
+          <div className={`grid gap-x-[35px] gap-y-[25px] pb-[70px] ${wide ? 'grid-cols-[repeat(auto-fill,90px)] pt-[20px]' : 'grid-cols-[repeat(3,90px)] pt-[25px] pl-[31px]'}`}>
             {rest.map((c) => (
               <div key={c.id} className="size-[90px]">
                 {tile(c, 'rest', c.nickname || tr('Someone'))}
@@ -295,9 +303,12 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const start = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const [held, setHeld] = useState(false)
+  const { w } = useLayout()
 
   return (
     <div className="animate-fade-in absolute inset-0 z-30 bg-black/35 text-white backdrop-blur-[1.5px]">
+      {/* sideways tablet: the phone layout in the middle */}
+      <WideShift from={[0, 0]} to={[(w - 402) / 2, -20]}>
       <p className="absolute top-[170.5px] left-[21px] text-[25px] leading-[1.1]">{townName}</p>
       <button aria-label={tr('Close')} onClick={onClose} className="absolute top-[166px] left-[349px] flex h-[37px] w-[35px] items-center justify-center">
         <img src={closeRing} alt="" className="absolute inset-0 size-full" />
@@ -347,6 +358,7 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
           <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
         </button>
       </Bottom>
+      </WideShift>
     </div>
   )
 }

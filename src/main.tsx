@@ -5,12 +5,14 @@ import AdminPage from './AdminPage'
 import App from './App'
 import { Splash } from './components/Splash'
 import { setFrameMatrix } from './lib/frame'
+import { PHONE_W, WIDE_H, setLayout } from './lib/layout'
 import { preloadAssets } from './lib/preload'
 import { installTouchGlow } from './lib/touchGlow'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
-// - Tablet (iPad, unfolded Fold): like PC, but scaled up to fill the screen.
+// - Tablet held upright (or near-square, like an unfolded Fold): like PC, but scaled up to fill the screen.
+// - Tablet held sideways: a landscape frame WIDE_H tall and as wide as the screen (lib/layout.ts).
 // - Phone: fills the screen width; the height follows the screen (--cut = how much shorter than 874).
 //   The top TOP px (fake status bar area) are pushed off-screen. Held sideways, the app is rotated
 //   back so it always stays portrait.
@@ -35,7 +37,16 @@ function fit() {
   const sideways = phone && (angle === 90 || angle === 270)
   let m = new DOMMatrix()
   let height = 874
-  if (!phone) {
+  let width = PHONE_W
+  // sideways tablet with room for the landscape layouts (4:3 iPads yes, a near-square unfolded Fold no)
+  const wide = tablet && innerWidth >= innerHeight * 1.2
+  if (wide) {
+    const k = innerHeight / WIDE_H
+    height = WIDE_H
+    width = innerWidth / k
+    m = m.scale(k)
+    if (kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
+  } else if (!phone) {
     const k = Math.max(0.3, Math.min(tablet ? Infinity : 1, (innerWidth - 24) / 402, (innerHeight - 24) / 874))
     m = m.translate((innerWidth - 402 * k) / 2, (innerHeight - 874 * k) / 2).scale(k)
     if (tablet && kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
@@ -50,8 +61,12 @@ function fit() {
   }
   html.classList.toggle('phone', phone)
   html.classList.toggle('tablet', tablet)
-  html.style.setProperty('--cut', String(874 - height))
+  html.classList.toggle('wide', wide)
+  // sideways tablet: screens place things for the full height themselves; the phone column (Column) sets its own
+  html.style.setProperty('--cut', String(wide ? 0 : 874 - height))
+  root.style.width = `${width}px`
   root.style.height = `${height}px`
+  setLayout(wide, width)
   root.style.transform = m.toString()
   setFrameMatrix(m)
 }

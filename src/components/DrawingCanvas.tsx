@@ -161,7 +161,12 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
   function sizeCanvas() {
     const c = canvasRef.current!
     const area = c.clientWidth * c.clientHeight
-    const k = Math.min(window.devicePixelRatio * res.current, area ? Math.sqrt(MAX_PIXELS / area) : 1)
+    // how much bigger the paper shows than its layout size (the frame's scale, the tablet's bigger paper);
+    // the host isn't zoomed by the card's own pinch, and the area ratio holds when the frame is turned sideways
+    const host = hostRef.current!
+    const r = host.getBoundingClientRect()
+    const outer = host.offsetWidth && host.offsetHeight ? Math.sqrt((r.width * r.height) / (host.offsetWidth * host.offsetHeight)) : 1
+    const k = Math.min(window.devicePixelRatio * res.current * Math.max(1, outer), area ? Math.sqrt(MAX_PIXELS / area) : 1)
     c.width = Math.round(c.clientWidth * k)
     c.height = Math.round(c.clientHeight * k)
     rebuild()

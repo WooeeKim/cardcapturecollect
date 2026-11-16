@@ -20,6 +20,8 @@ import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
 import { townName, tr } from '../lib/i18n'
+import { useLayout } from '../lib/layout'
+import { WideShift } from '../components/wide'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
@@ -409,6 +411,8 @@ export default function MainScreen({
     return () => el.removeEventListener('wheel', onWheel)
   }, [size.w, size.h])
 
+  // sideways tablet: the header row 45px higher, menu far left, My Page far right
+  const { wide, w } = useLayout()
   // shown as soon as the camera reaches that end of the town, before any pull
   const hint = open || follow ? undefined : side > 0 ? prev : side < 0 ? next : undefined
   const empty = cards.length === 0
@@ -493,12 +497,14 @@ export default function MainScreen({
         <>
           {/* Figma main 803:951 (closed: ▽) / 803:922 (open: △ with the icon box under it).
               The triangle stays in one spot (center 50, 91) so it flips in place. */}
+          <WideShift from={[25, 69]} to={[40, 24]}>
           <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
             <img src={menu ? triUp : triDown} alt="" className="h-[20.5px] w-[28.7px] max-w-none" />
           </button>
+          </WideShift>
+          {menu && <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />}
           {menu && (
-            <>
-              <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
+            <WideShift from={[25, 69]} to={[40, 24]}>
               <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
                 <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
@@ -508,18 +514,20 @@ export default function MainScreen({
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>
-            </>
+            </WideShift>
           )}
           {/* town name → Town List (only the name itself is tappable; the rest of the bar still pans the town) */}
-          <div className="pointer-events-none absolute inset-x-[90px] top-[69px] flex justify-center">
+          <div className="pointer-events-none absolute inset-x-[90px] flex justify-center" style={{ top: wide ? 24 : 69 }}>
             <button onClick={() => { setMenu(false); onTowns() }} className="pointer-events-auto max-w-full truncate px-[6px] py-[8px] font-hand text-[24px] leading-[28px]">
               {townName(town.name)}
             </button>
           </div>
           {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
+          <WideShift from={[332.9, 62.9]} to={[w - 81, 17.9]}>
           <button aria-label={tr('My page')} onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
+          </WideShift>
         </>
       )}
 
@@ -547,7 +555,7 @@ export default function MainScreen({
         </button>
       )}
 
-      {open && <Detail card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} />}
+      {open && <WideShift from={[201, 874]} to={[w / 2, 834]}><Detail card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} /></WideShift>}
     </div>
   )
 }

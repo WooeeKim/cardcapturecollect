@@ -15,6 +15,8 @@ import { type User } from '../lib/auth'
 import { tr } from '../lib/i18n'
 import { syncPush } from '../lib/push'
 import type { Card } from '../lib/store'
+import { useLayout } from '../lib/layout'
+import { WideShift } from '../components/wide'
 
 // My Page (Figma mypage-login 830:814 / mypage-logout 838:2079 / edit 838:2365).
 const NOTIFY = 'subwayseal.notify'
@@ -125,16 +127,22 @@ export default function MyPageScreen({
     { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', disabled: true },
   ] as (Row | false)[]).filter((r): r is Row => !!r)
 
+  // sideways tablet (Figma 09 iPad · mypage): the profile box on the left, the settings on the right
+  const { wide, w } = useLayout()
+  const PX = (w - 785) / 2
+  const RX = PX + 450 // where the settings rows start
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+      <WideShift from={[24, 85]} to={[40, 40]}>
       <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-10 size-[40px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className="absolute top-[89px] left-1/2 -translate-x-1/2 text-[24px] leading-[normal]">{tr('My Page')}</p>
-      <LangButton className="top-[84px] left-[333px] z-10" />
+      </WideShift>
+      <p className="absolute left-1/2 -translate-x-1/2 text-[24px] leading-[normal]" style={{ top: wide ? 44 : 89 }}>{tr('My Page')}</p>
+      <LangButton className="z-10" style={wide ? { top: 39, left: w - 85 } : { top: 84, left: 333 }} />
 
       {/* settings list (scrolls on short phones) */}
-      <div className="absolute inset-x-0 overflow-y-auto [scrollbar-width:none]" style={{ top: 340, bottom: 99 }}>
+      <div className="absolute overflow-y-auto [scrollbar-width:none]" style={wide ? { left: RX - 37, width: 402, top: 110, bottom: 130 } : { left: 0, right: 0, top: 340, bottom: 99 }}>
         <div className="relative" style={{ height: ROW0 - 340 + rows.length * PITCH + 10 }}>
           {rows.map((r, i) => {
             const top = ROW0 - 340 + i * PITCH
@@ -160,17 +168,19 @@ export default function MyPageScreen({
 
       {/* bottom: log out / log in */}
       <Bottom>
+        <WideShift from={[201, 785]} to={[RX + 164, 730]}>
         <button onClick={() => (user ? setPopup({ message: tr('Log out?'), actions: [{ label: tr('Log out'), onClick: () => { setPopup(null); onLogout() } }, { label: tr('Cancel'), onClick: () => setPopup(null) }] }) : setSheet('login'))} className="absolute top-[785px] left-1/2 -translate-x-1/2 px-[10px] pb-[8px] text-[24px] leading-[normal] whitespace-nowrap text-[#8e8e8e]">
           {tr(user ? 'Log out' : 'Log in/Sign up')}
           <img src={underline} alt="" className="absolute bottom-[2px] left-1/2 h-[3px] w-[calc(100%-12px)] max-w-none -translate-x-1/2" />
         </button>
+        </WideShift>
       </Bottom>
 
       {/* dim behind the box while editing */}
       {editing && <div className="animate-fade-in absolute inset-0 z-20 bg-black/35" />}
 
       {/* profile box */}
-      <div className={`absolute top-[149px] left-[16px] w-[370px] transition-[height] duration-300 ${editing ? 'z-30 h-[318px]' : 'h-[171px]'}`}>
+      <div className={`absolute w-[370px] transition-[height] duration-300 ${editing ? 'z-30 h-[318px]' : 'h-[171px]'}`} style={wide ? { top: 110, left: PX } : { top: 149, left: 16 }}>
         <img src={boxSvg} alt="" className="absolute inset-0 size-full" />
         <button
           disabled={!editing || !cards.length}
