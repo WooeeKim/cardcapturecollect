@@ -274,7 +274,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onOpenCard={(cardId) => setRoute({ name: 'collection', townId: town.id, card: cardId })}
           onMyPage={() => setRoute({ name: 'mypage' })}
           onDraw={() => setRoute({ name: 'draw' })}
-          onSwitch={(id, enter) => goMain(id, enter)}
+          onSwitch={(id) => goMain(id)}
           onMigrate={(cardId) => setRoute({ name: 'migrate', cardId, back: route, to: 'main' })}
         />
       )
