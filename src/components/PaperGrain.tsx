@@ -1,7 +1,7 @@
 // Watercolor-paper look drawn by code (no image): fractal noise as a height map, lit from the upper left,
 // squeezed into a narrow light-grey band. It is an SVG filter, so it is computed at the size it shows —
-// zooming the paper keeps it sharp, unlike a photo. Tuned to match the watercolor photo
-// (assets/paper/watercolor.avif): mean #f3f3f3, very low contrast.
+// zooming the paper keeps it sharp, unlike a photo. Tuned to match a watercolor-paper photo: mean #f3f3f3,
+// very low contrast. Shown as "paper" in the admin canvas dropdown (DrawScreen).
 export function PaperGrain() {
   return (
     <svg aria-hidden className="pointer-events-none absolute inset-0 block size-full">

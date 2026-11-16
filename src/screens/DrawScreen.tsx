@@ -1,10 +1,5 @@
 import { fillInside } from '../lib/fillInside'
 import { PaperGrain } from '../components/PaperGrain'
-import paperCream from '../assets/paper/cream.avif'
-import paperLined from '../assets/paper/lined.avif'
-import paperGrey from '../assets/paper/grey.avif'
-import paperWatercolor from '../assets/paper/watercolor.avif'
-import paperFine from '../assets/paper/fine.avif'
 import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
@@ -48,16 +43,6 @@ const TOOLS = {
 } as const
 
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
-// admin-only canvas backgrounds to try (DrawScreen dropdown); '' = the plain white everyone gets
-const PAPERS = [
-  { id: 'white', label: 'Canvas: white', src: '' },
-  { id: 'cream', label: 'Canvas: cream paper', src: paperCream },
-  { id: 'fine', label: 'Canvas: fine paper', src: paperFine },
-  { id: 'watercolor', label: 'Canvas: watercolor paper', src: paperWatercolor },
-  { id: 'watercolor-code', label: 'Canvas: watercolor paper (code)', src: '' }, // drawn by code, stays sharp when zoomed
-  { id: 'grey', label: 'Canvas: grey paper', src: paperGrey },
-  { id: 'lined', label: 'Canvas: lined notebook', src: paperLined },
-]
 
 const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 
@@ -173,10 +158,9 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
 
 export default function DrawScreen({ onExit, onFinish, tutorial = false, admin = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean; admin?: boolean }) {
   const [tip, setTip] = useState(tutorial ? 0 : -1)
-  // admin-only test: paper behind the drawing (white = what everyone sees; texture = trying a paper look).
+  // admin-only test: canvas background — white (what everyone sees) or paper (texture drawn by code, PaperGrain).
   // Only the screen behind the canvas changes; the saved drawing is the same either way.
-  const [paper, setPaper] = useState('white')
-  const paperSrc = PAPERS.find((p) => p.id === paper)?.src
+  const [paper, setPaper] = useState<'white' | 'paper'>('white')
   const rootRef = useRef<HTMLDivElement>(null)
   // tour step `id` was just done for real → next step
   const done = (id: StepId) => setTip((t) => (STEPS[t]?.id === id ? t + 1 : t))
@@ -365,9 +349,8 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
             setEmpty(!!c?.isEmpty())
             setHistory({ undo: !!c?.canUndo(), redo: !!c?.canRedo() })
           }}
-          paperClassName="rounded-[10px] bg-white bg-cover bg-center shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
-          paperStyle={paperSrc ? { backgroundImage: `url(${paperSrc})` } : undefined}
-          paper={paper === 'watercolor-code' ? <PaperGrain /> : undefined}
+          paperClassName="rounded-[10px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+          paper={paper === 'paper' ? <PaperGrain /> : undefined}
         >
           {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
@@ -377,15 +360,12 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, admin =
       {admin && tab === 'draw' && !preview && (
         <select
           value={paper}
-          onChange={(e) => setPaper(e.target.value)}
+          onChange={(e) => setPaper(e.target.value as 'white' | 'paper')}
           aria-label={tr('Canvas (test)')}
           className="absolute top-[48px] left-[24px] z-30 rounded-[6px] border border-[#bbb] bg-white px-[6px] py-[2px] font-[system-ui] text-[13px] text-[#555]"
         >
-          {PAPERS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {tr(p.label)}
-            </option>
-          ))}
+          <option value="white">{tr('Canvas: white')}</option>
+          <option value="paper">{tr('Canvas: paper')}</option>
         </select>
       )}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[135px] bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0" />
