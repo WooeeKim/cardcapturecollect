@@ -48,18 +48,18 @@ const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
 // when that spot is actually used. `target` = the data-tour element that is lit; `next` = moves on with a Next
 // link instead (shown once there's something to move on from: a drawing, a filled-in memo).
 type StepId = 'draw' | 'size-open' | 'size-pick' | 'color-open' | 'color-pick' | 'guide' | 'zoom' | 'fit' | 'memo' | 'memo-fill' | 'finish'
-const STEPS: { id: StepId; target: string; text: string; next?: boolean }[] = [
-  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.', next: true },
+const STEPS: { id: StepId; target: string; text: string }[] = [
+  { id: 'draw', target: 'paper', text: 'Start by drawing yourself today! Follow the dotted guide. A few lines will do.' },
   { id: 'size-open', target: 'pen', text: 'Pencil, highlighter and eraser, with undo and redo next to them. Tap the picked pencil again to change its thickness.' },
   { id: 'size-pick', target: 'sizes', text: 'Pick a thickness.' },
   { id: 'color-open', target: 'color', text: 'Tap the wheel to change the color.' },
   { id: 'color-pick', target: 'colors', text: 'Choose a color, then close the panel.' },
   { id: 'guide', target: 'guide', text: 'Tap to turn the dotted guide off or on.' },
   // no auto-advance: play with it as long as you like (and a PC can't pinch)
-  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!', next: true },
+  { id: 'zoom', target: 'paper', text: 'Two fingers zoom, tilt and move the paper. Try it!' },
   { id: 'fit', target: 'fit', text: 'Tap here to put the paper back to its normal size.' },
   { id: 'memo', target: 'memo', text: 'Now open Memo.' },
-  { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.', next: true },
+  { id: 'memo-fill', target: 'memo-fill', text: 'Add their mood, where you are, a name and a line about them.' },
   { id: 'finish', target: 'finish', text: 'Done? Tap ✓, then pick a town to live in. This first drawing of you becomes your profile picture (change it on My Page).' },
 ]
 type Rect = { x: number; y: number; w: number; h: number }
@@ -120,7 +120,7 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
           />
         )}
         <p className="text-[19px] leading-[1.3]">{tr(s.text)}</p>
-        {/* Previous / Next only; Next shows on steps that don't move on by themselves */}
+        {/* Previous / Next only */}
         <div className="mt-[6px] grid grid-cols-3 items-center text-[16px] text-[#8a8a8a]">
           <span>
             {step > 0 && (
@@ -133,11 +133,14 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
             {step + 1} / {STEPS.length}
           </span>
           <span className="text-right">
-            {s.next && canNext && (
-              <button onClick={onNext} className="pointer-events-auto text-[20px] text-[#2e2e2e] underline underline-offset-4">
-                {tr('Next')}
-              </button>
-            )}
+            {/* every step can be moved on by hand; greyed out until the step has what it needs (a line, the memo) */}
+            <button
+              onClick={() => canNext && onNext()}
+              aria-disabled={!canNext || undefined}
+              className={`pointer-events-auto text-[20px] underline underline-offset-4 ${canNext ? 'text-[#2e2e2e]' : 'text-[#c4c4c4]'}`}
+            >
+              {tr(step === STEPS.length - 1 ? 'Done' : 'Next')}
+            </button>
           </span>
         </div>
       </div>

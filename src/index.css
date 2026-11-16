@@ -201,9 +201,10 @@ img {
 }
 .animate-fade-in { animation: fade-in 0.2s ease-out both; }
 
-/* loading cover (components/Loading.tsx): appears after a short beat so quick waits don't flash; ring turns clockwise */
+/* loading cover (components/Loading.tsx): appears after a short beat so quick waits don't flash */
 .loading-cover { animation: fade-in 0.2s ease-out 0.15s both; }
-.loading-spin { animation: loading-spin 1s linear infinite; }
+/* only the white tail turns, around the grey ring's centre (svg viewBox units); the ring stays still */
+.loading-spin { transform-box: view-box; transform-origin: 31.28px 29.49px; animation: loading-spin 1s linear infinite; }
 @keyframes loading-spin {
   to { rotate: 360deg; }
 }
