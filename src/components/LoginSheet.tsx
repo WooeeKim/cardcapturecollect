@@ -1,19 +1,22 @@
 import { useState } from 'react'
 import { logEvent } from '../lib/events'
 import { MIN_PASSWORD, changePassword, logIn, signUp, type User } from '../lib/auth'
-import { TextButton } from './ui'
+import { OverFrame, TextButton } from './ui'
 import { tr } from '../lib/i18n'
 import { waiting } from './Loading'
 
 const field = 'h-[44px] w-full rounded-[6px] border-[2px] border-dashed border-[#555] bg-white px-[10px] text-[19px] outline-none placeholder:text-[#999]'
 
+// iPad sideways: same card, phone width, in the middle of the landscape frame
 export function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="animate-fade-in absolute inset-0 z-50 flex items-center bg-black/35 px-[24px]" onClick={onClose}>
-      <div role="dialog" className="animate-pop-in mx-auto w-full max-w-[354px] rounded-[14px] bg-[#f0f0f0] px-[22px] pt-[26px] pb-[20px] font-hand" onClick={(e) => e.stopPropagation()}>
-        {children}
+    <OverFrame>
+      <div className="animate-fade-in absolute inset-0 z-50 flex items-center justify-center bg-black/35 px-[24px]" onClick={onClose}>
+        <div role="dialog" className="animate-pop-in w-full max-w-[354px] rounded-[14px] bg-[#f0f0f0] px-[22px] pt-[26px] pb-[20px] font-hand" onClick={(e) => e.stopPropagation()}>
+          {children}
+        </div>
       </div>
-    </div>
+    </OverFrame>
   )
 }
 

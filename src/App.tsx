@@ -3,7 +3,7 @@ import { LoadingLayer, waiting } from './components/Loading'
 import { LoginSheet } from './components/LoginSheet'
 import NotifyPrompt from './components/NotifyPrompt'
 import { syncPush } from './lib/push'
-import { PhoneChrome, Popup } from './components/ui'
+import { PhoneChrome, Popup, WideCol } from './components/ui'
 import { fillInsideImage } from './lib/fillInside'
 import { answeredByAccount, claim, resendUnsent } from './lib/gilbti'
 import InterviewOverlay from './components/InterviewOverlay'
@@ -17,7 +17,6 @@ import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, 
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import GilbtiScreen from './screens/GilbtiScreen'
-import { Column } from './components/wide'
 import MainScreen from './screens/MainScreen'
 import MyPageScreen from './screens/MyPageScreen'
 import TownListScreen from './screens/TownListScreen'
@@ -425,7 +424,12 @@ export default function App({ onReady }: { onReady?: () => void }) {
       )
       break
     case 'tada':
-      screen = state.pending && <TadaScreen card={state.pending} onChoose={() => setRoute({ name: 'send' })} />
+      // iPad sideways: no landscape frame for this one; the phone screen in the middle column
+      screen = state.pending && (
+        <WideCol bg="#f0f0f0">
+          <TadaScreen card={state.pending} onChoose={() => setRoute({ name: 'send' })} />
+        </WideCol>
+      )
       break
     case 'mypage':
       screen = (
@@ -472,15 +476,13 @@ export default function App({ onReady }: { onReady?: () => void }) {
             }}
           />
         ) : gate === 'nickname' ? (
-          <Column className="bg-[#f9f9f9]">
-            <NicknameScreen
-              initial=""
-              onDone={(nickname) => {
-                commit((s) => ({ ...s, nickname }))
-                waiting(advance({ ...state, nickname })) // asks the server whether 길BTI is done
-              }}
-            />
-          </Column>
+          <NicknameScreen
+            initial=""
+            onDone={(nickname) => {
+              commit((s) => ({ ...s, nickname }))
+              waiting(advance({ ...state, nickname })) // asks the server whether 길BTI is done
+            }}
+          />
         ) : gate === 'gilbti' || retake ? (
           <GilbtiScreen
             user={user}
@@ -491,9 +493,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
               advance(state, true)
             }}
           />
-        ) : route.name === 'tada' ? (
-          // no landscape design: phone column in the middle on a sideways tablet
-          <Column className="bg-[#f0f0f0]">{screen}</Column>
         ) : (
           screen
         ))}

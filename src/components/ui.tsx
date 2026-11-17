@@ -8,12 +8,12 @@ import underlineSvg from '../assets/proto/underline.svg'
 import wifiIcon from '../assets/proto/wifi.svg'
 import batteryIcon from '../assets/proto/battery.svg'
 import { type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { COL_X, useWide } from '../lib/wide'
 import { moodOf } from '../lib/moods'
 import type { Card } from '../lib/store'
 import { cycleLang, tr } from '../lib/i18n'
 import globe from '../assets/proto/v2/globe.svg'
-import { useLayout } from '../lib/layout'
-import { WideShift } from './wide'
 
 // ---------- line icons (thin strokes like the Figma frames) ----------
 
@@ -52,29 +52,24 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
 }
 
 // Figma header (townList): back chevron · title · optional right control
-// Sideways tablet: the same row 45px higher, spread to the screen edges.
+// iPad sideways: back in the top-left corner (Figma iPad 40, 30), title centred at the top
 export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
-  const { w } = useLayout()
+  const wide = useWide()
   return (
     <>
-      <WideShift from={[17, 72]} to={[33, 27]}>
-        <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[72px] left-[17px] z-20 p-[10px]">
-          <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
-        </button>
-      </WideShift>
-      <WideShift from={[0, 72]} to={[0, 27]} style={{ width: w }}>
-        <h1 className="pointer-events-none absolute inset-x-0 top-[77px] z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black]">{title}</h1>
-      </WideShift>
-      <WideShift from={[344, 72]} to={[w - 74, 27]}>
-        {right}
-      </WideShift>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 p-[10px] ${wide ? 'top-[28px] left-[38px]' : 'top-[72px] left-[17px]'}`}>
+        <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
+      </button>
+      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black] ${wide ? 'top-[36px]' : 'top-[77px]'}`}>{title}</h1>
+      {right}
     </>
   )
 }
 
 export function PlusButton({ onClick, label }: { onClick: () => void; label: string }) {
+  const wide = useWide()
   return (
-    <button aria-label={label} onClick={onClick} className="absolute top-[72px] left-[344px] z-20 p-[10px]">
+    <button aria-label={label} onClick={onClick} className={`absolute z-20 p-[10px] ${wide ? 'top-[28px] left-[1110px]' : 'top-[72px] left-[344px]'}`}>
       <img src={plusIcon} alt="" className="h-[23.8px] w-[26.8px]" />
     </button>
   )
@@ -92,6 +87,7 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
     { ...actions[1], x: 203, w: 133.6, h: 58.3, grey: false, rot: -177.79, shape: 'back' as const },
   ]
   return (
+    <OverFrame>
     <div className="animate-fade-in absolute inset-0 z-50 flex items-center justify-center bg-black/35 font-hand">
       <div role="dialog" className="animate-pop-in relative w-[368px] pb-[30px]">
         <div className="relative flex min-h-[122px] items-center justify-center px-[34px] pt-[18px] pb-[34px]">
@@ -110,6 +106,30 @@ export function Popup({ message, actions }: { message: ReactNode; actions: Popup
             </button>
           ))}
         </div>
+      </div>
+    </div>
+    </OverFrame>
+  )
+}
+
+// iPad sideways: dialogs cover the whole landscape frame, even when opened from a screen that sits in the
+// phone-width column (WideCol), so they're moved up to #root.
+export function OverFrame({ children }: { children: ReactNode }) {
+  const wide = useWide()
+  const root = typeof document !== 'undefined' ? document.getElementById('root') : null
+  return wide && root ? createPortal(children, root) : <>{children}</>
+}
+
+// iPad sideways, for screens with no landscape design: the phone screen in a column in the middle of the
+// 1194×834 frame. Shifted up 14px with --cut 56, so phone Figma y 84 lands at 70 and a bottom pill (760) at 690,
+// like the iPad 길BTI question frame. `bg` fills the rest of the frame.
+export function WideCol({ children, bg = '#f9f9f9' }: { children: ReactNode; bg?: string }) {
+  const wide = useWide()
+  if (!wide) return <>{children}</>
+  return (
+    <div className="absolute inset-0" style={{ background: bg }}>
+      <div className="absolute top-[-14px] h-[818px] w-[402px]" style={{ left: COL_X, '--cut': 56 } as React.CSSProperties}>
+        {children}
       </div>
     </div>
   )
@@ -280,9 +300,9 @@ export function SketchyBox({ w, h, seed = 1, stroke = '#000', width = 2.6, class
 }
 
 // Language button (Figma gilbti-intro 925:2832): English ↔ 한국어
-export function LangButton({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
+export function LangButton({ className = '' }: { className?: string }) {
   return (
-    <button aria-label={tr('Change language')} onClick={cycleLang} className={`absolute h-[41px] w-[45px] ${className}`} style={style}>
+    <button aria-label={tr('Change language')} onClick={cycleLang} className={`absolute h-[41px] w-[45px] ${className}`}>
       <img src={globe} alt="" className="size-full" />
     </button>
   )

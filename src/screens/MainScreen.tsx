@@ -20,12 +20,15 @@ import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
 import { townName, tr } from '../lib/i18n'
-import { useLayout } from '../lib/layout'
-import { WideShift } from '../components/wide'
+import { useWide } from '../lib/wide'
 
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
 const WORLD = 2.5 // world width = screen width × WORLD
+// iPad sideways (Figma iPad · main 1024:2679): the ground starts at y 300 and is only a little wider than the
+// screen (Rectangle 124: 1340 wide), so almost the whole town shows at once
+const SKY_WIDE = 300 / 834
+const WORLD_WIDE = 1.15
 const MAX_S = 3
 const DETAIL_S = 2.1
 const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
@@ -79,6 +82,7 @@ export default function MainScreen({
   onSwitch: (townId: string) => void // swiped to the next / previous town: it opens at its center
   onMigrate: (cardId: string) => void
 }) {
+  const wide = useWide()
   const box = useRef<HTMLDivElement>(null)
   const world = useRef<HTMLDivElement>(null)
   const els = useRef(new Map<string, HTMLDivElement>())
@@ -117,9 +121,9 @@ export default function MainScreen({
     return () => o.disconnect()
   }, [])
 
-  const W = size.w * WORLD
+  const W = size.w * (wide ? WORLD_WIDE : WORLD)
   const H = size.h
-  const groundTop = H * SKY
+  const groundTop = H * (wide ? SKY_WIDE : SKY)
   // world x where the ground starts at height y (straight-line fit of the drawn, slightly wobbly side edge)
   const edge = (y: number) => GROUND_TOP_INSET * W * (1 - (y - groundTop) / Math.max(1, H - groundTop))
 
@@ -132,7 +136,7 @@ export default function MainScreen({
       const k = TUFT_KIND[kind]
       return { kind, x: (fx + k.w / 2) * sx, y: groundTop + (fy + k.h) * sy, w: k.w * sx, h: k.h * sx }
     })
-  }, [size.w, size.h])
+  }, [size.w, size.h, wide])
 
   // ---- camera ----
   function clamp(v: View): View {
@@ -159,7 +163,7 @@ export default function MainScreen({
   // town guide sits just above the ground line on screen, even when zoomed (stays below the header)
   function placeHint() {
     const { s, y } = view.current
-    if (hintEl.current) hintEl.current.style.top = `${Math.max(130, y + groundTop * s - 64)}px`
+    if (hintEl.current) hintEl.current.style.top = `${Math.max(wide ? 90 : 130, y + groundTop * s - 64)}px`
   }
   // ground = the Figma drawing stretched over the world's ground area, positioned in screen px each frame
   // (stroke stays 2px and crisp at any zoom); pulling past an end shows its slanted edge (main-transit).
@@ -411,8 +415,6 @@ export default function MainScreen({
     return () => el.removeEventListener('wheel', onWheel)
   }, [size.w, size.h])
 
-  // sideways tablet: the header row 45px higher, menu far left, My Page far right
-  const { wide, w } = useLayout()
   // shown as soon as the camera reaches that end of the town, before any pull
   const hint = open || follow ? undefined : side > 0 ? prev : side < 0 ? next : undefined
   const empty = cards.length === 0
@@ -497,15 +499,13 @@ export default function MainScreen({
         <>
           {/* Figma main 803:951 (closed: ▽) / 803:922 (open: △ with the icon box under it).
               The triangle stays in one spot (center 50, 91) so it flips in place. */}
-          <WideShift from={[25, 69]} to={[40, 24]}>
-          <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className="absolute top-[69px] left-[25px] z-30 flex h-[44px] w-[50px] items-center justify-center">
+          <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className={`absolute z-30 flex h-[44px] w-[50px] items-center justify-center ${wide ? 'top-[33px] left-[40px]' : 'top-[69px] left-[25px]'}`}>
             <img src={menu ? triUp : triDown} alt="" className="h-[20.5px] w-[28.7px] max-w-none" />
           </button>
-          </WideShift>
-          {menu && <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />}
           {menu && (
-            <WideShift from={[25, 69]} to={[40, 24]}>
-              <div className="animate-pop-in absolute top-[112.2px] left-[19.8px] z-20 h-[130.8px] w-[66px] origin-top">
+            <>
+              <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
+              <div className={`animate-pop-in absolute z-20 h-[130.8px] w-[66px] origin-top ${wide ? 'top-[76.2px] left-[34.8px]' : 'top-[112.2px] left-[19.8px]'}`}>
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
                 <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
@@ -514,20 +514,18 @@ export default function MainScreen({
                   <img src={menuTowns} alt="" className="size-full" />
                 </button>
               </div>
-            </WideShift>
+            </>
           )}
           {/* town name → Town List (only the name itself is tappable; the rest of the bar still pans the town) */}
-          <div className="pointer-events-none absolute inset-x-[90px] flex justify-center" style={{ top: wide ? 24 : 69 }}>
+          <div className={`pointer-events-none absolute flex justify-center ${wide ? 'inset-x-[200px] top-[30px]' : 'inset-x-[90px] top-[69px]'}`}>
             <button onClick={() => { setMenu(false); onTowns() }} className="pointer-events-auto max-w-full truncate px-[6px] py-[8px] font-hand text-[24px] leading-[28px]">
               {townName(town.name)}
             </button>
           </div>
           {/* same gap from the right edge as the triangle from the left (36.6px), same center line */}
-          <WideShift from={[332.9, 62.9]} to={[w - 81, 17.9]}>
-          <button aria-label={tr('My page')} onClick={onMyPage} className="absolute top-[62.9px] left-[332.9px] p-[8px]">
+          <button aria-label={tr('My page')} onClick={onMyPage} className={`absolute p-[8px] ${wide ? 'top-[27px] left-[1108px]' : 'top-[62.9px] left-[332.9px]'}`}>
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
-          </WideShift>
         </>
       )}
 
@@ -555,19 +553,20 @@ export default function MainScreen({
         </button>
       )}
 
-      {open && <WideShift from={[201, 874]} to={[w / 2, 834]}><Detail card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} /></WideShift>}
+      {open && <Detail wide={wide} card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} />}
     </div>
   )
 }
 
 // card info under the zoomed character (Figma main-carddeatail 787:759: hand-drawn panel + Follow / Migration pills)
-function Detail({ card, onClose, onFollow, onMigrate, onOpen }: { card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void; onOpen: () => void }) {
+// iPad sideways: the same panel, centred at the bottom
+function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: boolean; card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void; onOpen: () => void }) {
   const [drag, setDrag] = useState(0)
   const start = useRef<number | null>(null)
   return (
     <Bottom>
       <div
-        className="animate-sheet-up absolute top-[565px] left-[11px] z-10 h-[285px] w-[380px] cursor-pointer font-hand"
+        className={`animate-sheet-up absolute top-[565px] z-10 h-[285px] w-[380px] cursor-pointer font-hand ${wide ? 'left-[407px]' : 'left-[11px]'}`}
         style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
         // tapping the card area (not a button, not the pull strip) opens this card in Collection
         onClick={(e) => {

@@ -4,6 +4,7 @@ import pill from '../assets/proto/interview/pill.svg'
 import sheet from '../assets/proto/interview/sheet.svg'
 import { FEELINGS, type Answers, type Kind } from '../lib/interview'
 import { tr } from '../lib/i18n'
+import { COL_X, useWide } from '../lib/wide'
 
 // Figma UX › 08 매일 20시 인터뷰: "8pm interview - start" → "if didn't draw" (no card today)
 // or "1, 2, 3" (made a card). A pad of memo sheets over the dimmed app: 3 sheets left → 2 → 1.
@@ -37,6 +38,7 @@ function Pill({ label, top, onClick, disabled = false }: { label: string; top: n
 const field = 'absolute left-[47px] w-[298px] resize-none rounded-[8px] border-2 border-dashed border-[#555] bg-white px-[11px] py-[7px] text-[20px] leading-[1.25] outline-none placeholder:text-[#9a9a9a]'
 
 export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone: (answers: Answers) => Promise<void> | void }) {
+  const wide = useWide()
   const [step, setStep] = useState<Step>('start')
   const [a, setA] = useState<Answers>({})
   const [busy, setBusy] = useState(false)
@@ -134,7 +136,8 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
     <div role="dialog" aria-modal className="animate-fade-in absolute inset-0 z-[60] overflow-hidden bg-black/35 font-hand backdrop-blur-[1px]">
       {/* Figma frame px, kept centred when the phone is shorter than 874. --interview-scale (index.css): full size on
           phones; 90% in the desktop preview, whose fake phone frame covers the outer 13px */}
-      <div className="absolute top-0 left-[calc(50%-201px)] h-[874px] w-[402px] origin-center" style={{ transform: 'translateY(calc(var(--cut) * -0.5px)) scale(var(--interview-scale))' }}>
+      {/* iPad sideways: the same pad in a phone-width column in the middle */}
+      <div className={`absolute top-0 h-[874px] origin-center ${wide ? 'w-[402px]' : 'inset-x-0'}`} style={{ left: wide ? COL_X : undefined, transform: 'translateY(calc(var(--cut) * -0.5px)) scale(var(--interview-scale))' }}>
         {step === 'start' ? (
           <div className="animate-pop-in">
             <img src={bubble} alt="" className="absolute top-[353px] left-[73px] h-[122px] w-[257px] max-w-none" />

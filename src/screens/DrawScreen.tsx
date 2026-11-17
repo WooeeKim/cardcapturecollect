@@ -30,8 +30,7 @@ import { framePoint, toLocal } from '../lib/frame'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
 import type { Card } from '../lib/store'
 import { tr } from '../lib/i18n'
-import { useLayout } from '../lib/layout'
-import { WideShift } from '../components/wide'
+import { useWide } from '../lib/wide'
 
 // New Figma GUI (prototyping › 그리기): Drawing | Memo tabs, hand-drawn toolbar, Colors panel with
 // eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "Choose a village" (719:11320).
@@ -42,6 +41,12 @@ const TOOLS = {
   highlighter: { left: 79, top: 796, w: 37.15, h: 126.6, up: 39, bubble: 61 },
   eraser: { left: 134, top: 805, w: 40, h: 98, up: 30, bubble: 116 },
 } as const
+// iPad sideways (Figma iPad · drawing 1024:2576 / drawing-memo 1024:2614), frame px (1194×834; toolbar `top`s are
+// still phone px inside <Bottom>, which moves them up 40). The paper is 488×700; on Memo it slides left to x 90
+// and the memo fields sit to its right, with nothing dimmed.
+const WIDE_TOOLS = { pen: { left: 60, bubble: 49 }, highlighter: { left: 120, bubble: 102 }, eraser: { left: 185, bubble: 167 } } as const
+const WIDE_PAPER = { left: 353, top: 104, w: 488, h: 700, memoShift: 90 - 353 }
+const WIDE_BAR = { undo: 920, redo: 960, guide: 1004, color: 1090, fit: 1080 }
 
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 
@@ -111,19 +116,18 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
   }, [s.target, root])
 
   const H = root.current?.clientHeight ?? 874
-  const RW = root.current?.clientWidth ?? 402
-  // bubble goes below the lit spot if there's room, else above (the top 40px are off-screen on phones);
-  // on the wide tablet screen, beside it when neither fits (the tall paper)
-  const roomBelow = hole ? H - (hole.y + hole.h) : 0
-  const roomAbove = hole ? hole.y - 48 : 0
-  const roomRight = hole ? RW - (hole.x + hole.w) - 44 : 0
-  const side = !!hole && roomBelow < 150 && roomAbove < 150 && roomRight >= 280
-  const bw = side ? Math.min(362, roomRight) : 362 // bubble width (narrower beside the paper if it must)
-  const below = hole && !side && (roomBelow >= 150 || roomBelow > roomAbove)
-  // bubble: phone width (362) at most, under / over the lit spot (on the wide tablet screen it doesn't span it all)
-  const center = hole ? hole.x + hole.w / 2 : RW / 2
-  const left = side ? hole!.x + hole!.w + 24 : Math.min(Math.max(20, center - 181), RW - 20 - 362)
-  const arrow = hole ? Math.min(left + 342, Math.max(left + 20, center)) : left + 181
+  const W = root.current?.clientWidth ?? 402
+  // bubble goes below the lit spot if there's room, else above (the top 40px are off-screen on phones)
+  const below = hole && (H - (hole.y + hole.h) >= 150 || H - (hole.y + hole.h) > hole.y - 48)
+  // phone: across the screen (20px margins); wider screens: 400px wide, under / over the lit spot
+  const BW = Math.min(W - 40, 400)
+  const cx = hole ? hole.x + hole.w / 2 : W / 2
+  // landscape: when the lit spot leaves no room above or below (the iPad paper is nearly screen-tall), the bubble
+  // goes beside it instead, with no arrow
+  const side = !!hole && W > 402 && H - (hole.y + hole.h) < 150 && hole.y < 150
+  const sideLeft = hole ? (hole.x + hole.w + 24 + BW <= W - 20 ? hole.x + hole.w + 24 : Math.max(20, hole.x - 24 - BW)) : 20
+  const bubbleLeft = side ? sideLeft : Math.min(W - BW - 20, Math.max(20, cx - BW / 2))
+  const arrow = Math.min(BW - 20, Math.max(20, cx - bubbleLeft))
   const block = 'absolute pointer-events-auto' // touches outside the lit spot do nothing
   return (
     <div className="animate-fade-in pointer-events-none absolute inset-0 z-[45]">
@@ -144,13 +148,12 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
       <div
         key={step}
         className="animate-pop-in absolute rounded-[14px] border-[2.5px] border-[#2e2e2e] bg-white px-[16px] pt-[12px] pb-[10px]"
-        style={{ left, width: bw, ...(!hole ? { top: 160 } : side ? { top: Math.max(60, hole.y + 40) } : below ? { top: hole.y + hole.h + 14 } : { bottom: Math.max(0, H - hole.y + 14) }) }}
+        style={{ left: bubbleLeft, width: BW, ...(!hole ? { top: 160 } : side ? { top: hole.y + hole.h / 2 - 60 } : below ? { top: hole.y + hole.h + 14 } : { bottom: Math.max(0, H - hole.y + 14) }) }}
       >
-        {hole && side && <span className="absolute top-[24px] left-[-9.5px] size-[16px] rotate-45 border-b-[2.5px] border-l-[2.5px] border-[#2e2e2e] bg-white" />}
         {hole && !side && (
           <span
             className={`absolute size-[16px] rotate-45 border-[#2e2e2e] bg-white ${below ? 'top-[-9.5px] border-t-[2.5px] border-l-[2.5px]' : 'bottom-[-9.5px] border-r-[2.5px] border-b-[2.5px]'}`}
-            style={{ left: arrow - left - 8 }}
+            style={{ left: arrow - 8 }}
           />
         )}
         <p className="text-[19px] leading-[1.3]">{tr(s.text)}</p>
@@ -179,23 +182,15 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
         </div>
       </div>
       {/* skip: small, out of the way, above the header buttons (the top 40px are off-screen on phones) */}
-      {/* (wide tablet: the header sits at the very top, so skip goes under ✓ instead) */}
-      <button onClick={onSkip} className="pointer-events-auto absolute text-[14px] text-white/85 underline underline-offset-2" style={RW > 402 ? { top: 86, right: 36 } : { top: 48, right: 24 }}>
+      <button onClick={onSkip} className={`pointer-events-auto absolute right-[24px] text-[14px] text-white/85 underline underline-offset-2 ${W > 402 ? 'top-[8px]' : 'top-[48px]'}`}>
         {tr('Skip tutorial')}
       </button>
     </div>
   )
 }
 
-// Sideways tablet (Figma 09 iPad · drawing / drawing-memo): the paper 1.34× bigger, centered while drawing and on
-// the left while writing the memo, which sits beside it; the tools in the bottom-left corner.
-const WIDE_K = 690 / 515
-const WIDE_PAPER_W = 360 * WIDE_K
-const WIDE_MEMO_GAP = 70
-const WIDE_MEMO_W = 380
-
 export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
-  const { wide, w } = useLayout()
+  const wide = useWide()
   const [tip, setTip] = useState(tutorial ? 0 : -1)
   const rootRef = useRef<HTMLDivElement>(null)
   // tour step `id` was just done for real → next step
@@ -362,37 +357,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     setTip(t)
   }
 
-  const g = TOOLS[tool]
-  // thickness: 5 steps in a bubble above the picked tool (moves with the pens on the wide screen)
-  const sizeBubble = open === 'size' && (
-
-            <div data-tour="sizes" className="animate-pop-in absolute top-[713px] h-[43.6px] w-[148px]" style={{ left: g.bubble }}>
-              <SizeBubbleV2 />
-              {SIZES.map((s, i) => {
-                const side = [7, 9, 12, 15, 18][i]
-                return (
-                  <button
-                    key={s}
-                    aria-label={tr('Size {n}', { n: s })}
-                    aria-pressed={size === s}
-                    onClick={() => {
-                      log('size_pick', { tool, size: s, from: size })
-                      setSize(s)
-                      setOpen(null)
-                      done('size-pick')
-                    }}
-                    className="absolute top-[9px] flex h-[24px] w-[26px] -translate-x-1/2 items-center justify-center"
-                    style={{ left: [22, 42, 64, 90, 118][i] }}
-                  >
-                    <span
-                      className={`${tool === 'highlighter' ? 'rotate-[-12deg] rounded-[2px]' : 'rounded-full'} ${size === s ? 'outline-[1.5px] outline-offset-[3px] outline-black' : ''}`}
-                      style={{ width: side, height: tool === 'highlighter' ? side * 0.8 : side, background: tool === 'eraser' ? '#bbb' : color }}
-                    />
-                  </button>
-                )
-              })}
-            </div>
-  )
+  const g = { ...TOOLS[tool], ...(wide ? WIDE_TOOLS[tool] : {}) }
   const step = STEPS[tip]?.id
   // the fit button only exists while zoomed: no zoom (Next was used) → nothing to reset
   useEffect(() => {
@@ -404,14 +369,8 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       {/* card-sized paper: two fingers zoom, tilt and move the whole card (it can go past the screen) */}
       <div
         data-tour="paper"
-        className={`absolute h-[515px] w-[360px] ${wide ? `origin-top-left transition-[left] duration-300 ${preview ? 'invisible' : ''}` : 'top-[145px] left-[21px] transition-transform duration-300'}`}
-        style={
-          wide
-            ? { top: 100, left: tab === 'draw' ? (w - WIDE_PAPER_W) / 2 : (w - WIDE_PAPER_W - WIDE_MEMO_GAP - WIDE_MEMO_W) / 2, transform: `scale(${WIDE_K})` }
-            : tab === 'draw'
-              ? shrink(515)
-              : undefined
-        }
+        className={`absolute transition-transform duration-300 ${wide ? '' : 'top-[145px] left-[21px] h-[515px] w-[360px]'}`}
+        style={wide ? { left: WIDE_PAPER.left, top: WIDE_PAPER.top, width: WIDE_PAPER.w, height: WIDE_PAPER.h, transform: tab === 'memo' ? `translateX(${WIDE_PAPER.memoShift}px)` : undefined } : tab === 'draw' ? shrink(515) : undefined}
       >
         <DrawingCanvas
           ref={canvas}
@@ -435,18 +394,15 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
           paperClassName="rounded-[14px]"
           paper={<PaperFrame />}
         >
-          {empty && tab === 'draw' && <p className="pointer-events-none absolute inset-x-0 top-[241px] text-center text-[25px] tracking-[-0.5px]">{tr('A few lines will do!')}</p>}
+          {empty && tab === 'draw' && <p className={`pointer-events-none absolute inset-x-0 text-center text-[25px] tracking-[-0.5px] ${wide ? 'top-[328px]' : 'top-[241px]'}`}>{tr('A few lines will do!')}</p>}
         </DrawingCanvas>
       </div>
 
       {/* header */}
-      <div className={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0 ${wide ? 'h-[96px]' : 'h-[135px]'}`} />
-      <WideShift from={[24, 75]} to={[40, 30]}>
-      <button aria-label={tr('Back')} onClick={back} className="absolute top-[75px] left-[24px] z-20 size-[50px]">
+      <div className={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0 ${wide ? 'h-[100px]' : 'h-[135px]'}`} />
+      <button aria-label={tr('Back')} onClick={back} className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] left-[40px]' : 'top-[75px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      </WideShift>
-      <WideShift from={[198, 86]} to={[w / 2, 41]}>
       {(['draw', 'memo'] as const).map((t) => (
         <button
           key={t}
@@ -461,35 +417,36 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
           }}
           aria-pressed={tab === t}
           data-tour={t === 'memo' ? 'memo' : undefined}
-          className={`absolute top-[86px] z-20 -translate-x-1/2 text-[24px] leading-[1.3] `}
-          style={{ left: t === 'draw' ? 154 : 242.5 }}
+          className={`absolute z-20 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[40px]' : 'top-[86px]'}`}
+          style={{ left: wide ? (t === 'draw' ? 561 : 649) : t === 'draw' ? 154 : 242.5 }}
         >
           {tr(t === 'draw' ? 'Drawing' : 'Memo')}
         </button>
       ))}
-      <img src={tab === 'draw' ? lineDraw : lineMemo} alt="" className="pointer-events-none absolute top-[113px] z-20 h-[3px]" style={tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }} />
-      </WideShift>
-      <WideShift from={[328, 75]} to={[w - 90, 30]}>
+      <img
+        src={tab === 'draw' ? lineDraw : lineMemo}
+        alt=""
+        className={`pointer-events-none absolute z-20 h-[3px] max-w-none ${wide ? 'top-[69px]' : 'top-[113px]'}`}
+        style={wide ? (tab === 'draw' ? { left: 515, width: 92 } : { left: 619, width: 60 }) : tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }}
+      />
       <button
         aria-label={tr('Finish drawing')}
         data-tour="finish"
         onClick={check}
-        className="absolute top-[75px] right-[24px] z-20 size-[50px]">
+        className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] right-[40px]' : 'top-[75px] right-[24px]'}`}>
         <img src={checkIcon} alt="" className="size-full" />
       </button>
-      </WideShift>
 
       {/* memo: dims everything (header stays tappable through it) */}
       {tab === 'memo' && !preview && (
         <>
           {!wide && <div className="animate-fade-in pointer-events-none absolute inset-0 z-10 bg-black/35 backdrop-blur-[1.5px]" />}
-          <WideShift from={[21, 150]} to={[(w - WIDE_PAPER_W - WIDE_MEMO_GAP - WIDE_MEMO_W) / 2 + WIDE_PAPER_W + WIDE_MEMO_GAP, 100]}>
-          <div className="animate-fade-in absolute inset-0 top-[140px] z-20">
+          <div className={`absolute z-20 ${wide ? 'animate-fade-in h-[700px] w-[402px]' : 'inset-0 top-[140px]'}`} style={wide ? { left: 637.8, top: 134.5 } : undefined}>
             <div data-tour="memo-fill" className="pointer-events-none absolute top-0 left-[16px] h-[520px] w-[370px]" />
             {/* folder-tab box around the moods (Figma 787:3578 Vector 413) */}
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
             <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>{tr('Mood')}</span>
-            <label onClick={() => placeRef.current?.focus()} className={`absolute top-[11px] right-[25px] flex cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
+            <label onClick={() => placeRef.current?.focus()} className={`absolute flex ${wide ? 'top-[-30.5px] right-[16px]' : 'top-[11px] right-[25px]'} cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
               <input
                 value={place}
                 onChange={(e) => {
@@ -551,17 +508,15 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
               />
             </div>
           </div>
-          </WideShift>
         </>
       )}
 
       {/* toolbar */}
       {tab === 'draw' && (
         <Bottom>
-          <WideShift from={[0, 874]} to={[40, 834]}>
-          {!wide && <div className="pointer-events-none absolute top-[704px] left-0 h-[170px] w-[402px] rounded-t-[20px] bg-gradient-to-b from-[#f0f0f0]/0 to-[#f0f0f0]" />}
+          <div className="pointer-events-none absolute top-[704px] left-0 h-[170px] rounded-t-[20px] bg-gradient-to-b from-[#f0f0f0]/0 to-[#f0f0f0]" style={{ width: wide ? 1194 : 402 }} />
           {(['pen', 'highlighter', 'eraser'] as const).map((t) => {
-            const s = TOOLS[t]
+            const s = { ...TOOLS[t], ...(wide ? WIDE_TOOLS[t] : {}) }
             return (
               <button
                 key={t}
@@ -576,13 +531,10 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
               </button>
             )
           })}
-          {wide && sizeBubble}
-          </WideShift>
-          <WideShift from={[190, 874]} to={[70, 664]}>
-          <button aria-label={tr('Undo')} onClick={() => canvas.current?.undo()} className="absolute top-[801px] left-[201px] h-[24.6px] w-[22.7px]">
+          <button aria-label={tr('Undo')} onClick={() => canvas.current?.undo()} className="absolute top-[801px] h-[24.6px] w-[22.7px]" style={{ left: wide ? WIDE_BAR.undo : 201 }}>
             <UndoV2 on={history.undo} />
           </button>
-          <button aria-label={tr('Redo')} onClick={() => canvas.current?.redo()} className="absolute top-[799px] left-[239.7px] h-[27.7px] w-[20.2px]">
+          <button aria-label={tr('Redo')} onClick={() => canvas.current?.redo()} className="absolute top-[799px] h-[27.7px] w-[20.2px]" style={{ left: wide ? WIDE_BAR.redo : 239.7 }}>
             <RedoV2 on={history.redo} />
           </button>
           <button
@@ -591,7 +543,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
               done('guide')
             }}
             data-tour="guide"
-            aria-pressed={guide} aria-label={tr('Guide')} className="absolute top-[774px] left-[268px] h-[63px] w-[68px]">
+            aria-pressed={guide} aria-label={tr('Guide')} className="absolute top-[774px] h-[63px] w-[68px]" style={{ left: wide ? WIDE_BAR.guide : 268 }}>
             <span className="absolute inset-x-[-14px] top-0 text-center text-[25px] leading-[normal] tracking-[-0.5px] whitespace-nowrap">{tr('Guide')}</span>
             <span className="absolute top-[39px] left-[11px] h-[23px] w-[46px]">
               <ToggleIcon on={guide} />
@@ -607,12 +559,41 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
               if (open !== 'color') done('color-open')
             }}
             data-tour="color"
-            className="absolute top-[793px] left-[344.7px] h-[38.4px] w-[38.8px]"
+            className="absolute top-[793px] h-[38.4px] w-[38.8px]"
+            style={{ left: wide ? WIDE_BAR.color : 344.7 }}
           >
             <ColorWheelV2 color={color} />
           </button>
 
-          {!wide && sizeBubble}
+          {/* thickness: 5 steps in a bubble above the picked tool */}
+          {open === 'size' && (
+            <div data-tour="sizes" className="animate-pop-in absolute top-[713px] h-[43.6px] w-[148px]" style={{ left: g.bubble }}>
+              <SizeBubbleV2 />
+              {SIZES.map((s, i) => {
+                const side = [7, 9, 12, 15, 18][i]
+                return (
+                  <button
+                    key={s}
+                    aria-label={tr('Size {n}', { n: s })}
+                    aria-pressed={size === s}
+                    onClick={() => {
+                      log('size_pick', { tool, size: s, from: size })
+                      setSize(s)
+                      setOpen(null)
+                      done('size-pick')
+                    }}
+                    className="absolute top-[9px] flex h-[24px] w-[26px] -translate-x-1/2 items-center justify-center"
+                    style={{ left: [22, 42, 64, 90, 118][i] }}
+                  >
+                    <span
+                      className={`${tool === 'highlighter' ? 'rotate-[-12deg] rounded-[2px]' : 'rounded-full'} ${size === s ? 'outline-[1.5px] outline-offset-[3px] outline-black' : ''}`}
+                      style={{ width: side, height: tool === 'highlighter' ? side * 0.8 : side, background: tool === 'eraser' ? '#bbb' : color }}
+                    />
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {/* back to normal size after pinch zoom */}
           {zoomed && (
@@ -624,19 +605,20 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
                 canvas.current?.resetView()
                 done('fit')
               }}
-              className="animate-pop-in absolute top-[705.75px] left-[328.75px] size-[52.5px]">
+              className="animate-pop-in absolute top-[705.75px] size-[52.5px]"
+              style={{ left: wide ? WIDE_BAR.fit : 328.75 }}>
               {/* Figma drawing 719:10468 Frame 128, no fill */}
               <img src={fitIcon} alt="" className="size-full" />
             </button>
           )}
-          </WideShift>
         </Bottom>
       )}
 
-      {picking && <p className="animate-fade-in pointer-events-none absolute inset-x-0 top-[124px] z-10 text-center text-[17px] text-[#555]">{tr('Tap the drawing to pick a color')}</p>}
+      {picking && <p className={`animate-fade-in pointer-events-none absolute inset-x-0 z-10 text-center text-[17px] text-[#555] ${wide ? 'top-[80px]' : 'top-[124px]'}`}>{tr('Tap the drawing to pick a color')}</p>}
 
       {open === 'color' && (
         <ColorPanel
+          wide={wide}
           color={color}
           onChange={setColor}
           onClose={() => {
@@ -653,9 +635,50 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
       )}
 
       {/* confirm (Figma drawing-handwrite 745:694): card + speech bubble */}
-      {preview && (
+      {/* iPad sideways: the card where the paper was, the bubble and buttons to its right */}
+      {preview && wide && (
+        <div className="animate-fade-in absolute inset-0 top-[100px] z-30 bg-[#f0f0f0]">
+          <div className="absolute top-[4px] w-[488px]" style={{ left: WIDE_PAPER.left + WIDE_PAPER.memoShift + 60 }}>
+            <CardView card={{ ...draft(preview), id: 'preview', createdAt: '', serial: '' }} />
+          </div>
+          <div className="animate-pop-in">
+            <span className="absolute top-[230px] left-[700px] h-[122px] w-[368px]">
+              <ConfirmBubble />
+            </span>
+            <p className="absolute top-[246px] left-[885px] w-[370px] -translate-x-1/2 text-center text-[24.3px] leading-[1.2] whitespace-pre-line">
+              {tr('Ready to finish?\nYou won’t be able to edit this afterward.')}
+            </p>
+            <button
+              onClick={() => {
+                rememberPlace(place.trim())
+                log('finish', { mood, strokes: strokes() })
+                onFinish(draft(preview))
+              }}
+              className="absolute top-[325.6px] left-[746px] h-[54.8px] w-[113px]"
+            >
+              <span className="absolute inset-0 rotate-[-178.73deg]">
+                <PillFinish />
+              </span>
+              <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
+            </button>
+            <button
+              data-tour="go-back"
+              onClick={() => {
+                setPreview(null)
+                done('back')
+              }}
+              className="absolute top-[323px] left-[903px] h-[58.3px] w-[133.6px]"
+            >
+              <span className="absolute inset-0 rotate-[-177.79deg]">
+                <PillBack />
+              </span>
+              <span className="relative text-[24.3px] leading-[1.1]">{tr('Go Back')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+      {preview && !wide && (
         <div className="animate-fade-in absolute inset-0 top-[130px] z-30 bg-[#f0f0f0]">
-          <WideShift from={[0, 0]} to={[(w - 402) / 2, 0]}>
           <div className="absolute top-[15px] left-[21px] w-[360px]" style={shrink(515)}>
             <CardView card={{ ...draft(preview), id: 'preview', createdAt: '', serial: '' }} />
           </div>
@@ -697,7 +720,6 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
               </div>
             </Bottom>
           </div>
-          </WideShift>
         </div>
       )}
 
@@ -722,7 +744,8 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
 
 // Colors panel (Figma Color Picker in 719:10698): spectrum (hue → right, light → top, dark → bottom),
 // opacity slider, eyedropper, close.
-function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string; onChange: (c: string) => void; onClose: () => void; onEyedropper: () => void }) {
+// iPad sideways: the same panel above the color wheel, at the right
+function ColorPanel({ wide, color, onChange, onClose, onEyedropper }: { wide: boolean; color: string; onChange: (c: string) => void; onClose: () => void; onEyedropper: () => void }) {
   const base = color.slice(0, 7)
   const alpha = color.length === 9 ? parseInt(color.slice(7), 16) / 255 : 1
   const [knob, setKnob] = useState<{ x: number; y: number } | null>(null)
@@ -748,12 +771,11 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
   return (
     <div className="animate-fade-in absolute inset-0 z-40 bg-black/35 backdrop-blur-[1.5px]" onClick={onClose}>
       <Bottom>
-        <WideShift from={[11, 371]} to={[40, 334]}>
         <div
           role="dialog"
           aria-label={tr('Colors')}
           data-tour="colors"
-          className="animate-pop-in absolute top-[371px] left-[11px] h-[460px] w-[380px] overflow-hidden rounded-[20px] bg-white shadow-[0_3px_20px_rgba(0,0,0,0.1)]"
+          className={`animate-pop-in absolute top-[371px] h-[460px] w-[380px] overflow-hidden ${wide ? 'left-[790px]' : 'left-[11px]'} rounded-[20px] bg-white shadow-[0_3px_20px_rgba(0,0,0,0.1)]`}
           onClick={(e) => e.stopPropagation()}
         >
           <p className="absolute inset-x-0 top-[19px] text-center text-[20px] leading-[1.3] text-[#121212]">{tr('Colors')}</p>
@@ -795,7 +817,6 @@ function ColorPanel({ color, onChange, onClose, onEyedropper }: { color: string;
             <p className="w-[44px] text-right text-[17px] leading-[1.3]">{Math.round(alpha * 100)}%</p>
           </div>
         </div>
-        </WideShift>
       </Bottom>
     </div>
   )
