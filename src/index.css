@@ -74,18 +74,20 @@ body {
   display: none;
 }
 
-/* tablet held sideways: the landscape frame fills the screen (main.tsx), no fake phone */
-.wide body {
-  background: #fff;
-}
+/* iPad sideways (lib/wide.ts): 1194×834 landscape frame, no fake phone around it; on the iPad it fills the screen */
 .wide #root {
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: 24px;
 }
 .wide .fake-chrome {
   display: none;
 }
-.wide { --interview-scale: 0.9; } /* the 874-tall interview frame inside the 834-tall screen */
+.tablet.wide body {
+  background: #f9f9f9;
+}
+.tablet.wide #root {
+  border-radius: 0;
+  box-shadow: none;
+}
 
 /* admin "view as" (lib/viewAs.ts): the phone sits on the admin page's white */
 .view-as body {
@@ -225,7 +227,7 @@ img {
 }
 .animate-sheet-away { animation: sheet-away 0.5s cubic-bezier(0.33, 0, 0.2, 1) both; }
 :root { --interview-scale: 0.9; }
-.phone { --interview-scale: 1; }
+.phone, .wide { --interview-scale: 1; }
 
 /* Tada: card lands with a wobble */
 @keyframes tada {

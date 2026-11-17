@@ -9,14 +9,16 @@ import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, S
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
-import { useLayout } from '../lib/layout'
-import { WideShift } from '../components/wide'
+import { useWide } from '../lib/wide'
 
 // New Figma GUI (prototyping › 콜렉션 725:*): town strip → selected town's deck (3×2 pages, slot 1 = Head)
 // → other towns' cards. Long-press to drag: into the deck (moves in), onto a card (the two swap), or
 // within the deck (reorder). Detail overlay with Delete.
-const PER_PAGE = 6
 const HOLD_MS = 350
+// deck geometry (frame px). Phone: 3×2 pages. iPad sideways (Figma iPad · collection 1033:10907): one 9×2 page
+// (every slot of a town) in a box across the screen, the other towns' people 9 to a row under it.
+const PHONE = { perPage: 6, cols: 3, tile: 90, col: 125, row: 116, tileX: 31, tileY: 20, clipL: 13, clipW: 376, top: 243, h: 257, boxL: 10, boxW: 382, boxH: 256 }
+const WIDE = { perPage: 18, cols: 9, tile: 88, col: 117.8, row: 111.8, tileX: 82, tileY: 27, clipL: 33, clipW: 1128, top: 235, h: 254, boxL: 30, boxW: 1134, boxH: 254 }
 
 type Drag = { id: string; from: 'deck' | 'rest'; x: number; y: number }
 
@@ -35,8 +37,9 @@ export default function CollectionScreen({
   onTown: (id: string) => void
   onBack: () => void
 }) {
-  // sideways tablet (Figma 09 iPad · collection): the town's box on the left, everyone else on the right
-  const { wide } = useLayout()
+  const wide = useWide()
+  const G = wide ? WIDE : PHONE
+  const PER_PAGE = G.perPage
   const [newest, setNewest] = useState(true)
   const [page, setPage] = useState(0)
   const [openId, setOpenId] = useState<string | null>(openCard ?? null)
@@ -152,14 +155,17 @@ export default function CollectionScreen({
   })
 
   // Figma Collection geometry (frame px): 90px tiles, 125 apart, rows 116 apart
-  const TILE = 90
-  const COL = 125
+  const TILE = G.tile
+  const COL = G.col
   const PITCH = 105
-  const stripW = Math.max(402, 61 + (state.towns.length - 1) * PITCH + 60)
-  const bandW = stripW - 52 + 40
-  // deck pages scroll inside the hand-drawn box only (box: left 10, 382 wide; clip just inside its stroke)
-  const CLIP_L = 13
-  const CLIP_W = 376
+  // first town's centre, and where the grey band starts
+  const START = wide ? 113 : 61
+  const BAND_L = wide ? 104 : 52
+  const stripW = Math.max(wide ? 1194 : 402, START + (state.towns.length - 1) * PITCH + 60)
+  const bandW = stripW - BAND_L + 40
+  // deck pages scroll inside the hand-drawn box only (clip just inside its stroke)
+  const CLIP_L = G.clipL
+  const CLIP_W = G.clipW
 
   // drawing zoomed on the upper body, like the Figma tiles
   const tile = (c: Card, from: Drag['from'], label: string) => (
@@ -174,29 +180,27 @@ export default function CollectionScreen({
         <img src={c.thumb ?? c.image} alt="" draggable={false} className={c.thumb ? 'pointer-events-none absolute inset-0 size-full object-cover' : 'pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none'} />
       </span>
       {/* hand-drawn black frame */}
-      <SketchyBox w={90} h={90} seed={c.id.charCodeAt(0) + c.id.charCodeAt(1)} />
+      <SketchyBox w={TILE} h={TILE} seed={c.id.charCodeAt(0) + c.id.charCodeAt(1)} />
     </button>
   )
 
   return (
     <div ref={root} className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <WideShift from={[24, 85]} to={[40, 40]}>
-      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[85px] left-[24px] z-20 size-[40px]">
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      </WideShift>
-      <p className="absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3]" style={{ top: wide ? 44 : 89 }}>{tr('Collection')}</p>
-      <TextButton onClick={() => setNewest(!newest)} className="absolute z-20 text-[17px]" style={wide ? { top: 48, right: 40 } : { top: 93, right: 24 }}>
+      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{tr('Collection')}</p>
+      <TextButton onClick={() => setNewest(!newest)} className={`absolute z-20 text-[17px] ${wide ? 'top-[40px] right-[40px]' : 'top-[93px] right-[24px]'}`}>
         {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
 
       {/* towns on one grey band; the picked one gets the dark ring */}
       {/* no bounce past the ends, so the band's cut-off end never shows */}
-      <div className="absolute inset-x-0 h-[100px] overflow-x-auto overflow-y-hidden overscroll-x-none [scrollbar-width:none]" style={{ top: wide ? 92 : 134 }}>
+      <div className={`absolute inset-x-0 h-[100px] overflow-x-auto ${wide ? 'top-[105px]' : 'top-[134px]'} overflow-y-hidden overscroll-x-none [scrollbar-width:none]`}>
         <div className="relative h-full" style={{ width: stripW }}>
           {/* the hand-drawn grey band (Town List's, without the outline), laid sideways; its end cap runs past the
               strip's right edge and is cut off there */}
-          <div className="pointer-events-none absolute top-[5px] h-[60px] overflow-hidden" style={{ left: 52, width: stripW - 52 }}>
+          <div className="pointer-events-none absolute top-[5px] h-[60px] overflow-hidden" style={{ left: BAND_L, width: stripW - BAND_L }}>
             <img src={bandImg} alt="" className="absolute top-0 left-0 w-[60px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(60px) rotate(-90deg)' }} />
           </div>
           {/* iPhone can still bounce the strip past its end: a flat grey continuation drawn as a box-shadow
@@ -206,7 +210,7 @@ export default function CollectionScreen({
             const on = t.id === town.id
             const size = on ? 64 : 52
             return (
-              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: 61 + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
+              <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: START + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
                 <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} outline={!on} />
                 <span className="absolute left-1/2 w-[100px] -translate-x-1/2 truncate text-center text-[16px] leading-[normal]" style={{ top: on ? 72 : 66 }}>
                   {townName(t.name)}
@@ -218,10 +222,9 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <WideShift from={[0, 243]} to={[40, 200]}>
-      <div data-deck className="absolute inset-x-0 top-[243px] h-[257px]">
+      <div data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h }}>
         {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
-        <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] left-[10px] h-[256px] w-[382px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} />
+        <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH }} />
         <div
           className="absolute top-[4px] bottom-[4px] flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[18px] [scrollbar-width:none]"
           // clip-path as well: iPhone Safari can paint a scrolling box's children outside its rounded overflow clip
@@ -235,12 +238,12 @@ export default function CollectionScreen({
                 if (at >= MAX_RESIDENTS) return null
                 const c = deck[at]
                 return (
-                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: 31 - CLIP_L + (k % 3) * COL, top: 20 + Math.floor(k / 3) * 116, width: TILE, height: TILE }}>
+                  <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: G.tileX - CLIP_L + (k % G.cols) * COL, top: G.tileY + Math.floor(k / G.cols) * G.row, width: TILE, height: TILE }}>
                     {c ? (
                       <>
                         {tile(c, 'deck', `${c.nickname || tr('Someone')}${at === 0 ? tr(', head') : ''}`)}
                         {at === 0 && (
-                          <span className="pointer-events-none absolute inset-x-[2px] top-[67px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]">{tr('Head')}</span>
+                          <span className="pointer-events-none absolute inset-x-[2px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]" style={{ top: TILE - 23 }}>{tr('Head')}</span>
                         )}
                       </>
                     ) : (
@@ -252,22 +255,21 @@ export default function CollectionScreen({
             </div>
           ))}
         </div>
-        <div className="pointer-events-none absolute top-[240px] left-1/2 flex -translate-x-1/2 gap-[8px]">
+        <div className={`pointer-events-none absolute top-[240px] left-1/2 flex -translate-x-1/2 gap-[8px] ${pages < 2 ? 'hidden' : ''}`}>
           {Array.from({ length: pages }, (_, p) => (
             <span key={p} className={`size-[5px] rounded-full ${p === page ? 'bg-black' : 'bg-[#ccc]'}`} />
           ))}
         </div>
       </div>
-      </WideShift>
 
       {/* everyone else (only this part scrolls) */}
-      <div className={`absolute bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[200px] right-[40px] left-[482px]' : 'inset-x-0 top-[500px]'}`}>
+      <div className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[505px]' : 'top-[500px]'}`}>
         {rest.length === 0 ? (
           <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">{tr('People in other towns show up here.')}</p>
         ) : (
-          <div className={`grid gap-x-[35px] gap-y-[25px] pb-[70px] ${wide ? 'grid-cols-[repeat(auto-fill,90px)] pt-[20px]' : 'grid-cols-[repeat(3,90px)] pt-[25px] pl-[31px]'}`}>
+          <div className={`grid pb-[70px] ${wide ? 'grid-cols-[repeat(9,88px)] gap-x-[29.8px] gap-y-[24px] pt-[27px] pl-[82px]' : 'grid-cols-[repeat(3,90px)] gap-x-[35px] gap-y-[25px] pt-[25px] pl-[31px]'}`}>
             {rest.map((c) => (
-              <div key={c.id} className="size-[90px]">
+              <div key={c.id} style={{ width: TILE, height: TILE }}>
                 {tile(c, 'rest', c.nickname || tr('Someone'))}
               </div>
             ))}
@@ -290,7 +292,7 @@ export default function CollectionScreen({
         </div>
       )}
 
-      {open && <Detail card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} />}
+      {open && <Detail wide={wide} card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} />}
 
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
@@ -298,23 +300,21 @@ export default function CollectionScreen({
 }
 
 // card overlay (Figma 725:13761): tap the drawing to hide the card text, drag to tilt it around
-function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: string; onClose: () => void; onDelete: () => void }) {
+// iPad sideways: the card in the middle of the screen, town name and close above it, Let go at its lower right
+function Detail({ wide, card, townName, onClose, onDelete }: { wide: boolean; card: Card; townName: string; onClose: () => void; onDelete: () => void }) {
   const [plain, setPlain] = useState(false)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const start = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const [held, setHeld] = useState(false)
-  const { w } = useLayout()
 
   return (
     <div className="animate-fade-in absolute inset-0 z-30 bg-black/35 text-white backdrop-blur-[1.5px]">
-      {/* sideways tablet: the phone layout in the middle */}
-      <WideShift from={[0, 0]} to={[(w - 402) / 2, -20]}>
-      <p className="absolute top-[170.5px] left-[21px] text-[25px] leading-[1.1]">{townName}</p>
-      <button aria-label={tr('Close')} onClick={onClose} className="absolute top-[166px] left-[349px] flex h-[37px] w-[35px] items-center justify-center">
+      <p className={`absolute text-[25px] leading-[1.1] ${wide ? 'top-[72px] left-[417px]' : 'top-[170.5px] left-[21px]'}`}>{townName}</p>
+      <button aria-label={tr('Close')} onClick={onClose} className={`absolute flex h-[37px] w-[35px] items-center justify-center ${wide ? 'top-[68px] left-[745px]' : 'top-[166px] left-[349px]'}`}>
         <img src={closeRing} alt="" className="absolute inset-0 size-full" />
         <img src={closeX} alt="" className="relative h-[14.8px] w-[12.3px]" />
       </button>
-      <div className="absolute top-[210px] left-[21px] w-[360px] [perspective:700px]" style={shrink(515)}>
+      <div className={`absolute w-[360px] [perspective:700px] ${wide ? 'top-[112px] left-[417px]' : 'top-[210px] left-[21px]'}`} style={wide ? undefined : shrink(515)}>
         <div
           className="animate-pop-in touch-none"
           style={{
@@ -352,13 +352,15 @@ function Detail({ card, townName, onClose, onDelete }: { card: Card; townName: s
           <CardView card={card} plain={plain} />
         </div>
       </div>
-      <Bottom>
-        <button onClick={onDelete} className="absolute top-[735px] left-[280px] flex h-[43px] w-[102px] items-center justify-center">
-          <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
-          <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
-        </button>
-      </Bottom>
-      </WideShift>
+      {(() => {
+        const letGo = (
+          <button onClick={onDelete} className={`absolute flex h-[43px] w-[102px] items-center justify-center ${wide ? 'top-[652px] left-[675px]' : 'top-[735px] left-[280px]'}`}>
+            <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
+            <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
+          </button>
+        )
+        return wide ? letGo : <Bottom>{letGo}</Bottom>
+      })()}
     </div>
   )
 }

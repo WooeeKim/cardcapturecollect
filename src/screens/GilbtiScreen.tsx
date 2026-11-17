@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { waiting } from '../components/Loading'
-import { Bottom, LangButton, TextButton } from '../components/ui'
+import { Bottom, LangButton, TextButton, WideCol } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
 import type { User } from '../lib/auth'
 import { QUESTIONS, TYPES, answered, submit, type Answer, type Answers, type Result, type TypeId } from '../lib/gilbti'
 import { tr } from '../lib/i18n'
-import { useLayout } from '../lib/layout'
-import { Column } from '../components/wide'
+import { useWide } from '../lib/wide'
 
 // 길BTI (Subway-TI) pre-interview: intro → one question per page → result (the 2×2 persona).
 // Onboarding step after log in + nickname (App.tsx), so every tester's answers are tied to an account.
@@ -24,7 +23,8 @@ export function Pill({ label, onClick, back = false, off = false }: { label: str
   )
 }
 
-export function TypeGrid({ type }: { type: TypeId }) {
+// wide = iPad sideways (Figma iPad · gilbti-result): bigger cells, wider row labels
+export function TypeGrid({ type, wide = false }: { type: TypeId; wide?: boolean }) {
   const cells: { id: TypeId; row: 0 | 1; col: 0 | 1 }[] = [
     { id: 'both', row: 0, col: 0 },
     { id: 'record', row: 0, col: 1 },
@@ -32,7 +32,7 @@ export function TypeGrid({ type }: { type: TypeId }) {
     { id: 'neither', row: 1, col: 1 },
   ]
   return (
-    <div className="grid grid-cols-[64px_1fr_1fr] grid-rows-[28px_1fr_1fr] gap-[4px] text-[14px] leading-[1.15]">
+    <div className={`grid text-[14px] leading-[1.15] ${wide ? 'grid-cols-[76px_151px_151px] grid-rows-[28px_73px_73px] gap-x-[7px] gap-y-[7px]' : 'grid-cols-[64px_1fr_1fr] grid-rows-[28px_1fr_1fr] gap-[4px]'}`}>
       <span />
       <span className="self-end text-center text-[#6b6b6b]">{tr('Likes observing')}</span>
       <span className="self-end text-center text-[#6b6b6b]">{tr('Not into it')}</span>
@@ -40,7 +40,7 @@ export function TypeGrid({ type }: { type: TypeId }) {
         <div key={c.id} className="contents">
           {c.col === 0 && <span className="self-center text-right text-[#6b6b6b]">{tr(c.row === 0 ? 'Likes recording' : 'Not into recording')}</span>}
           <span
-            className={`flex h-[64px] items-center justify-center rounded-[8px] border-[2px] px-[6px] text-center text-[16px] ${
+            className={`flex items-center ${wide ? 'h-[73px]' : 'h-[64px]'} justify-center rounded-[8px] border-[2px] px-[6px] text-center text-[16px] ${
               c.id === type ? 'border-[#2e2e2e] bg-[#2e2e2e] text-white' : 'border-dashed border-[#b5b5b5] text-[#9a9a9a]'
             }`}
           >
@@ -63,7 +63,7 @@ export default function GilbtiScreen({
   onDone: (r: Result) => void
   onClose?: () => void // only from My Page; onboarding can't be skipped
 }) {
-  const { wide, w } = useLayout()
+  const wide = useWide()
   const n = QUESTIONS.length
   const [step, setStep] = useState(-1) // -1 intro, 0..n-1 questions, n result
   const [answers, setAnswers] = useState<Answers>({})
@@ -82,9 +82,36 @@ export default function GilbtiScreen({
   }
 
   // ---------- intro ----------
+  // iPad sideways (no Figma frame; follows iPad · welcome / gilbti-result): title on the left, the note on the
+  // right, Start in the middle at the bottom
+  if (step === -1 && wide)
+    return (
+      <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+        <LangButton className="top-[36px] left-[1104px] z-10" />
+        <div className="absolute top-[280px] left-[150px] w-[342px]">
+          <p className="text-[18px] text-[#7a7a7a]">{tr('Before you start')}</p>
+          <h1 className="mt-[6px] text-[44px] leading-[1.05]">{tr('Subway-TI')}</h1>
+        </div>
+        <div className="absolute top-[286px] left-[680px] w-[342px]">
+          <p className="text-[22px] leading-[1.35] text-[#3d3d3d]">
+            {tr('A few quick questions about how you ride, watch and record.')}
+            <br />
+            {tr('About 2 minutes.')}
+          </p>
+          <p className="mt-[18px] text-[16px] leading-[1.35] text-[#8a8a8a]">{tr('Only our team sees your answers. They help us understand who uses the app.')}</p>
+        </div>
+        <div className="absolute top-[690px] inset-x-0 flex flex-col items-center gap-[22px]">
+          <Pill label={tr('Start')} onClick={() => setStep(0)} />
+          {onClose && (
+            <TextButton dim className="text-[19px]" onClick={onClose}>
+              {tr('Close')}
+            </TextButton>
+          )}
+        </div>
+      </div>
+    )
   if (step === -1)
     return (
-      <Column className="bg-[#f9f9f9]">
       <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
         <LangButton className="top-[90px] left-[324px] z-10" />
         <div className="absolute inset-x-[36px] top-[180px]">
@@ -108,29 +135,26 @@ export default function GilbtiScreen({
           </div>
         </Bottom>
       </div>
-      </Column>
     )
 
   // ---------- result ----------
-  if (step === n && result && wide) {
-    // sideways tablet: the type on the left, the 2×2 on the right, Next bottom right (Figma 09 iPad · gilbti-result)
-    const x = (w - 960) / 2
+  // iPad sideways (Figma iPad · gilbti-result 1024:2556): the type on the left, the 2×2 grid on the right
+  if (step === n && result && wide)
     return (
       <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-        <div className="absolute top-[260px] w-[420px]" style={{ left: x }}>
-          <p className="text-[20px] text-[#7a7a7a]">{tr('Your Subway-TI')}</p>
-          <h1 className="animate-pop-in mt-[4px] text-[46px] leading-[1.1]">{tr(TYPES[result.type].name)}</h1>
-          <p className="mt-[12px] text-[22px] leading-[1.35] text-[#3d3d3d]">{tr(TYPES[result.type].line)}</p>
+        <div className="absolute top-[300px] left-[150px] w-[342px]">
+          <p className="text-[18px] text-[#7a7a7a]">{tr('Your Subway-TI')}</p>
+          <h1 className="animate-pop-in mt-[4px] text-[38px] leading-[1.1]">{tr(TYPES[result.type].name)}</h1>
+          <p className="mt-[10px] text-[19px] leading-[1.35] text-[#3d3d3d]">{tr(TYPES[result.type].line)}</p>
         </div>
-        <div className="absolute top-[250px] w-[440px]" style={{ left: x + 520 }}>
-          <TypeGrid type={result.type} />
+        <div className="absolute top-[278px] left-[635px]">
+          <TypeGrid type={result.type} wide />
         </div>
-        <div className="absolute top-[720px]" style={{ left: w - 118 - 90 }}>
+        <div className="absolute top-[690px] inset-x-0 flex justify-center">
           <Pill label={tr(onClose ? 'Done' : 'Next')} onClick={() => onDone(result)} />
         </div>
       </div>
     )
-  }
   if (step === n && result)
     return (
       <div className="animate-fade-in relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
@@ -160,8 +184,9 @@ export default function GilbtiScreen({
     if (step < n - 1) setTimeout(() => setStep((s) => (s === step ? s + 1 : s)), 260)
   }
 
+  // iPad sideways (Figma iPad · gilbti-q1 1024:2524): the phone question in a column in the middle
   return (
-    <Column className="bg-[#f9f9f9]">
+    <WideCol>
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <div className="absolute inset-x-[30px] top-[84px]">
         <div className="flex items-baseline justify-between text-[16px] text-[#7a7a7a]">
@@ -263,6 +288,6 @@ export default function GilbtiScreen({
         </div>
       </Bottom>
     </div>
-    </Column>
+    </WideCol>
   )
 }

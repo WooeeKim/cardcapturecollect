@@ -5,18 +5,19 @@ import AdminPage from './AdminPage'
 import App from './App'
 import { Splash } from './components/Splash'
 import { setFrameMatrix } from './lib/frame'
-import { PHONE_W, WIDE_H, setLayout } from './lib/layout'
+import { WIDE_H, WIDE_W, setWide } from './lib/wide'
 import { preloadAssets } from './lib/preload'
 import { installTouchGlow } from './lib/touchGlow'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
-// - Tablet held upright (or near-square, like an unfolded Fold): like PC, but scaled up to fill the screen.
-// - Tablet held sideways: a landscape frame WIDE_H tall and as wide as the screen (lib/layout.ts).
+// - Tablet (iPad, unfolded Fold): like PC, but scaled up to fill the screen.
+//   Held sideways it switches to the 1194×834 landscape frame (lib/wide.ts, Figma 09 iPad 가로 (안)).
 // - Phone: fills the screen width; the height follows the screen (--cut = how much shorter than 874).
 //   The top TOP px (fake status bar area) are pushed off-screen. Held sideways, the app is rotated
 //   back so it always stays portrait.
 const TOP = 40
+const FORCE_WIDE = new URLSearchParams(location.search).has('ipad')
 // client px the whole frame is moved up so the focused text field sits above the on-screen keyboard
 let kbLift = 0
 
@@ -37,14 +38,14 @@ function fit() {
   const sideways = phone && (angle === 90 || angle === 270)
   let m = new DOMMatrix()
   let height = 874
-  let width = PHONE_W
-  // sideways tablet with room for the landscape layouts (4:3 iPads yes, a near-square unfolded Fold no)
-  const wide = tablet && innerWidth >= innerHeight * 1.2
+  // iPad sideways (or ?ipad on a wide window): the 1194×834 landscape frame, scaled to fill the screen
+  const wide = (tablet || FORCE_WIDE) && innerWidth > innerHeight
+  setWide(wide)
   if (wide) {
-    const k = innerHeight / WIDE_H
     height = WIDE_H
-    width = innerWidth / k
-    m = m.scale(k)
+    const pad = tablet ? 0 : 24
+    const k = Math.max(0.3, Math.min(tablet ? Infinity : 1, (innerWidth - pad) / WIDE_W, (innerHeight - pad) / WIDE_H))
+    m = m.translate((innerWidth - WIDE_W * k) / 2, (innerHeight - WIDE_H * k) / 2).scale(k)
     if (kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
   } else if (!phone) {
     const k = Math.max(0.3, Math.min(tablet ? Infinity : 1, (innerWidth - 24) / 402, (innerHeight - 24) / 874))
@@ -62,11 +63,9 @@ function fit() {
   html.classList.toggle('phone', phone)
   html.classList.toggle('tablet', tablet)
   html.classList.toggle('wide', wide)
-  // sideways tablet: screens place things for the full height themselves; the phone column (Column) sets its own
-  html.style.setProperty('--cut', String(wide ? 0 : 874 - height))
-  root.style.width = `${width}px`
+  html.style.setProperty('--cut', String(874 - height))
+  root.style.width = wide ? `${WIDE_W}px` : ''
   root.style.height = `${height}px`
-  setLayout(wide, width)
   root.style.transform = m.toString()
   setFrameMatrix(m)
 }
