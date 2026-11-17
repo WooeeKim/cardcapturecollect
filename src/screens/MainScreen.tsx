@@ -16,6 +16,7 @@ import pillFollow from '../assets/proto/v2/pill-follow.svg'
 import pillMigration from '../assets/proto/v2/pill-migration.svg'
 import { framePoint, toLocal } from '../lib/frame'
 import groundSvg from '../assets/proto/ground/ground.svg?raw'
+import groundIpadSvg from '../assets/proto/ground/ground-ipad.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
@@ -25,10 +26,20 @@ import { useWide } from '../lib/wide'
 // Figma prototyping: main · main-onboarding · main-transit · main-carddeatail
 const SKY = 409 / 874 // horizon height ratio
 const WORLD = 2.5 // world width = screen width × WORLD
-// iPad sideways (Figma iPad · main 1024:2679): the ground starts at y 300 and is only a little wider than the
-// screen (Rectangle 124: 1340 wide), so almost the whole town shows at once
+// iPad sideways: the town is the Figma "grass" drawing (UX › 앱 확정, grass 1065:4015) at its own size and shape,
+// 1340 × 573, its top edge at y 300 — only a little wider than the screen, so almost the whole town shows at
+// once (camera starts centred, x −73). Not stretched like the phone ground: it runs past the screen bottom.
 const SKY_WIDE = 300 / 834
-const WORLD_WIDE = 1.15
+const GRASS_W = 1340.4
+const WORLD_WIDE = GRASS_W / 1194
+const GRASS_D = groundIpadSvg.match(/ d="([^"]+)"/)![1]
+// grass tufts in the iPad drawing (bigger than the phone's), [kind, x, y] = top-left inside the grass group
+const TUFT_WIDE = { crown: { w: 69.2, h: 52.2 }, sprout: { w: 52.5, h: 32.3 }, leaf: { w: 74.4, h: 25.1 } }
+const TUFTS_WIDE: [keyof typeof TUFT_WIDE, number, number][] = [
+  ['crown', 306.4, 298.2], ['crown', 1020.2, 356.2], ['crown', 857.1, 132.8], ['crown', 487.5, 150.9], ['crown', 421.5, 33.7], ['crown', 781.4, 440.8],
+  ['sprout', 457.9, 408.1], ['sprout', 830.6, 316.4], ['sprout', 625.8, 60.3], ['sprout', 936.9, 44.6], ['sprout', 175.9, 467.3],
+  ['leaf', 546.7, 350.2], ['leaf', 682.0, 236.6], ['leaf', 818.0, 68.7], ['leaf', 366.3, 202.8], ['leaf', 1011.3, 471.0], ['leaf', 1075.3, 228.2],
+]
 const MAX_S = 3
 const DETAIL_S = 2.1
 const COMMIT_EDGE = 56 // finger must reach this close to the opposite screen edge to switch town
@@ -130,6 +141,14 @@ export default function MainScreen({
   // grass tufts exactly where drawn in Figma, mapped onto the world's ground area; only their size follows distance
   const tufts = useMemo(() => {
     if (!size.w) return []
+    if (wide) {
+      // the iPad grass keeps its proportions: one scale for both axes
+      const k = W / GRASS_W
+      return TUFTS_WIDE.map(([kind, fx, fy]) => {
+        const t = TUFT_WIDE[kind]
+        return { kind, x: (fx + t.w / 2) * k, y: groundTop + (fy + t.h) * k, w: t.w * k, h: t.h * k }
+      })
+    }
     const sx = W / (GW - 2)
     const sy = (H - groundTop) / (GH - 2)
     return TUFTS.map(([kind, fx, fy]) => {
@@ -171,7 +190,8 @@ export default function MainScreen({
     const el = groundEl.current
     if (!el || !size.w) return
     const { s, x, y } = view.current
-    el.setAttribute('transform', `translate(${x + pull} ${y + groundTop * s}) scale(${(s * W) / GW} ${(s * (H - groundTop)) / GH})`)
+    if (wide) el.setAttribute('transform', `translate(${x + pull} ${y + groundTop * s}) scale(${(s * W) / GRASS_W})`)
+    else el.setAttribute('transform', `translate(${x + pull} ${y + groundTop * s}) scale(${(s * W) / GW} ${(s * (H - groundTop)) / GH})`)
   }
 
   // initial camera + walkers when size / residents known
@@ -432,7 +452,7 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <path ref={groundEl} d={GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path ref={groundEl} d={wide ? GRASS_D : GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
         <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
           {tufts.map((t, i) => (

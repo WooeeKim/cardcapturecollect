@@ -260,7 +260,7 @@ export default function TownListScreen({
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <Header title={tr('Town List')} onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label={tr('Add town')} onClick={startAdd} />} />
-      <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0 ${wide ? 'h-[116px]' : 'h-[186px]'}`} />
+      <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0 ${wide ? 'h-[120px]' : 'h-[186px]'}`} />
 
       <div ref={listEl} className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[121px]' : 'top-[149px]'}`}>
         <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
