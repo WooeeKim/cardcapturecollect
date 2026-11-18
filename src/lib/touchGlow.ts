@@ -27,9 +27,17 @@ export function installTouchGlow() {
   }
 
   // this listener is also what makes iOS Safari apply :active (the button press look in index.css)
-  addEventListener('touchstart', (e) => { for (const t of e.changedTouches) down(`t${t.identifier}`, t.clientX, t.clientY) }, opts)
-  addEventListener('touchmove', (e) => { for (const t of e.changedTouches) move(`t${t.identifier}`, t.clientX, t.clientY) }, opts)
   const lift = (e: TouchEvent) => { for (const t of e.changedTouches) up(`t${t.identifier}`) }
+  addEventListener('touchstart', (e) => {
+    for (const t of e.changedTouches) {
+      down(`t${t.identifier}`, t.clientX, t.clientY)
+      // touchend goes to the touched element even if it left the page meanwhile (e.g. swiping to the next
+      // town remounts the screen on pointerup), and then never reaches window: listen on the element too
+      t.target.addEventListener('touchend', lift as EventListener, opts)
+      t.target.addEventListener('touchcancel', lift as EventListener, opts)
+    }
+  }, opts)
+  addEventListener('touchmove', (e) => { for (const t of e.changedTouches) move(`t${t.identifier}`, t.clientX, t.clientY) }, opts)
   addEventListener('touchend', lift, opts)
   addEventListener('touchcancel', lift, opts)
 
