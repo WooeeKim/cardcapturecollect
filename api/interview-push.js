@@ -1,5 +1,5 @@
 // POST /api/interview-push (Vercel function) — the daily 8 p.m. interview push to every phone that allowed notifications.
-// Called by Supabase pg_cron at 20:00 KST on 11/16–11/22 (supabase/migrations/011_interview.sql), not by people.
+// Called by Supabase pg_cron at 22:00 KST on 11/16–11/22 (supabase/migrations/011_interview.sql), not by people.
 // Header: Authorization: Bearer <CRON_SECRET>. Tapping the notification opens the app, which shows the interview.
 // Env (Vercel → Settings → Environment Variables): CRON_SECRET, SUPABASE_SERVICE_ROLE_KEY (reads every subscription;
 // server only, never VITE_), plus the ones api/push.js uses: VITE_SUPABASE_URL, VITE_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ error: error.message })
 
   webpush.setVapidDetails(env.VAPID_SUBJECT || `https://${req.headers.host}`, env.VITE_VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
-  const payload = JSON.stringify({ title: 'It’s 8p.m. Interview Time!', body: '저녁 8시, 인터뷰 시간이에요! 눌러서 오늘 이야기를 들려주세요.', url: '/' })
+  const payload = JSON.stringify({ title: 'It’s 10p.m. Interview Time!', body: '밤 10시, 인터뷰 시간이에요! 눌러서 오늘 이야기를 들려주세요.', url: '/' })
   const results = await Promise.all(
     rows.map((r) =>
       webpush.sendNotification(r.sub, payload, { TTL: 60 * 60 * 4 }).then(

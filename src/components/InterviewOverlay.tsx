@@ -142,7 +142,7 @@ export default function InterviewOverlay({ kind, onDone }: { kind: Kind; onDone:
           <div className="animate-pop-in">
             <img src={bubble} alt="" className="absolute top-[353px] left-[73px] h-[122px] w-[257px] max-w-none" />
             <p className="absolute top-[382px] left-1/2 -translate-x-1/2 text-center text-[27px] leading-[1.1] tracking-[-0.27px] whitespace-nowrap">
-              {tr('It’s 8p.m.')}
+              {tr('It’s 10p.m.')}
               <br />
               {tr('Interview Time!')}
             </p>

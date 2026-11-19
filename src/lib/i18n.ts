@@ -330,7 +330,7 @@ const DICT: Record<string, string> = {
   'Profile picture': '프로필 사진',
   'Pick one of your people.': '내 마을 사람 중 한 명을 골라요.',
   // daily 8 p.m. interview (components/InterviewOverlay.tsx)
-  'It’s 8p.m.': '저녁 8시,',
+  'It’s 10p.m.': '밤 10시,',
   'Interview Time!': '인터뷰 시간이에요!',
   'Why didn’t you draw today?': '오늘은 왜 아무도 안 그렸나요?',
   'In what situation did you collect?': '어떤 상황에서 수집했나요?',
