@@ -258,6 +258,22 @@ img {
 .walker.walking .bob { animation-play-state: running; }
 /* picked up: legs kick fast (바둥바둥) */
 .walker.held .bob { animation-play-state: running; animation-duration: 0.22s !important; }
+.walker.held .walk-word { display: none; }
+/* held: sweat drops (땀 삐질삐질) squeeze out beside the head and slide off, over and over */
+.walker .sweat { display: none; }
+.walker.held .sweat { display: block; }
+.walker.held .sweat-l { animation: sweat-l 0.7s ease-out infinite; transform-origin: 100% 0; }
+.walker.held .sweat-r { animation: sweat-r 0.7s ease-out 0.35s infinite both; transform-origin: 0 0; }
+@keyframes sweat-l {
+  0% { translate: 8px -2px; scale: 0.5; opacity: 0; }
+  25% { opacity: 1; scale: 1; }
+  100% { translate: -6px 10px; scale: 0.9; opacity: 0; }
+}
+@keyframes sweat-r {
+  0% { translate: -8px -2px; scale: 0.5; opacity: 0; }
+  25% { opacity: 1; scale: 1; }
+  100% { translate: 6px 10px; scale: 0.9; opacity: 0; }
+}
 
 /* Town List: a town opens smoothly — box grows out of the grey line, thumbnail swells, text fades in */
 @keyframes tl-box {

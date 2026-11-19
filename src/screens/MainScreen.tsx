@@ -7,7 +7,9 @@ import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
 import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
-import { moodOf } from '../lib/moods'
+import { heldLines, moodOf } from '../lib/moods'
+import sweatLeft from '../assets/proto/sweat-left.svg'
+import sweatRight from '../assets/proto/sweat-right.svg'
 import { TONES, type Card, type State, type Town } from '../lib/store'
 import { Bottom } from '../components/ui'
 import cardPanel from '../assets/proto/v2/card-panel.svg'
@@ -98,6 +100,8 @@ type Grab = {
   z: number
   vz: number
   kick: number // time to the next struggle kick
+  say: number // seconds the current speech line still shows (0 = no bubble)
+  line: number // seconds until a new line may replace it
 }
 type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1; g?: Grab }
 
@@ -328,17 +332,21 @@ export default function MainScreen({
   function stepGrab(w: Walker, g: Grab, dt: number, t: number) {
     const k = depth(g.sy)
     if (g.phase === 'held') {
-      // grip velocity from the finger, smoothed; its change = how hard the hand jerks the grip
-      const nvx = (g.fx - g.px) / dt
-      const nvy = (g.fy - g.py) / dt
+      // grip eases onto the finger (no jump when grabbed lower than the head); its velocity, smoothed,
+      // and that velocity's change = how hard the hand jerks the grip
+      const ease = 1 - Math.exp(-30 * dt)
+      const nx = g.px + (g.fx - g.px) * ease
+      const ny = g.py + (g.fy - g.py) * ease
+      const nvx = (nx - g.px) / dt
+      const nvy = (ny - g.py) / dt
       const ovx = g.vx
       const ovy = g.vy
       g.vx += (nvx - g.vx) * 0.35
       g.vy += (nvy - g.vy) * 0.35
       const ax = HAND_PULL * Math.max(-8000, Math.min(8000, (g.vx - ovx) / dt))
       const ay = HAND_PULL * Math.max(-8000, Math.min(8000, (g.vy - ovy) / dt))
-      g.px = g.fx
-      g.py = g.fy
+      g.px = nx
+      g.py = ny
       // pendulum with a moving pivot: the body's middle lags behind the hand and swings back
       const rx = -g.gu * k
       const ry = (-charH * 0.5 - g.gv) * k
@@ -421,6 +429,7 @@ export default function MainScreen({
           ;(el.firstElementChild as HTMLElement).style.rotate = ''
         }
         shadows.current.get(w.id)?.style.setProperty('opacity', '0')
+        says.current.get(w.id)?.style.setProperty('display', 'none')
         return
       }
     }
@@ -443,17 +452,90 @@ export default function MainScreen({
       sh.style.opacity = String(Math.max(0.15, 0.5 - g.z / 600))
       sh.style.zIndex = String(Math.round(g.sy))
     }
+    // speech: a mood line pops up while the hand moves it around, changes now and then, fades after it stops
+    const say = says.current.get(w.id)
+    if (say) {
+      g.line -= dt
+      const moving = g.phase === 'held' && Math.hypot(g.vx, g.vy) > 260
+      if (moving && g.line <= 0) {
+        const lines = heldLines(state.cards[w.id]?.mood ?? '')
+        const bub = say.firstElementChild as HTMLElement
+        const was = bub.textContent
+        const pick = lines.filter((l) => tr(l) !== was)
+        bub.textContent = tr(pick[Math.floor(Math.random() * pick.length)] ?? lines[0])
+        bub.classList.remove('animate-pop-in')
+        void bub.offsetWidth // restart the pop
+        bub.classList.add('animate-pop-in')
+        g.line = 1.8 + Math.random() * 1.2
+        g.say = 1.6
+      } else if (moving) g.say = Math.max(g.say, 0.5)
+      else g.say -= dt
+      say.style.display = g.say > 0 ? '' : 'none'
+      if (g.say > 0) say.style.transform = `translate(${g.px}px, ${g.py - 12 * k}px) scale(${k})`
+    }
   }
 
   // long-press grabbed a character at world point (wx, wy)
+  // top of the head in the character's box (feet = 0,0): the drawing is trimmed to its lines and sits
+  // object-contain at the bottom, so the head is its top edge; x = middle of the topmost drawn pixels
+  const heads = useRef(new Map<string, { u: number; v: number }>())
+  function headOf(id: string, dir: 1 | -1) {
+    let h = heads.current.get(id)
+    const img = els.current.get(id)?.querySelector('img')
+    if (!h && img?.naturalWidth) {
+      const bw = charH * 0.8
+      const sc = Math.min(bw / img.naturalWidth, charH / img.naturalHeight)
+      const dw = img.naturalWidth * sc
+      const dh = img.naturalHeight * sc
+      h = { u: 0, v: -dh }
+      try {
+        const cw = 48
+        const ch = Math.max(1, Math.round((cw * img.naturalHeight) / img.naturalWidth))
+        const c = document.createElement('canvas')
+        c.width = cw
+        c.height = ch
+        const ctx = c.getContext('2d')!
+        ctx.drawImage(img, 0, 0, cw, ch)
+        const { data } = ctx.getImageData(0, 0, cw, ch)
+        for (let y = 0; y < ch; y++) {
+          let sum = 0
+          let n = 0
+          for (let x = 0; x < cw; x++) if (data[(y * cw + x) * 4 + 3] > 40) (sum += x), n++
+          if (n) {
+            h = { u: -dw / 2 + ((sum / n + 0.5) / cw) * dw, v: -dh + (y / ch) * dh }
+            break
+          }
+        }
+      } catch {
+        /* unreadable image: middle of the top edge */
+      }
+      heads.current.set(id, h)
+    }
+    h ??= { u: 0, v: -charH }
+    return { u: h.u * dir, v: h.v } // the drawing is mirrored when walking left
+  }
+
   function pickUp(id: string, wx: number, wy: number) {
     const w = walkers.current.find((x) => x.id === id)
     if (!w || w.g) return false
     const k = depth(w.y)
-    const gu = Math.max(-charH * 0.4, Math.min(charH * 0.4, (wx - w.x) / k))
-    const gv = Math.max(-charH, Math.min(0, (wy - w.y) / k))
-    w.g = { phase: 'held', gu, gv, px: wx, py: wy, fx: wx, fy: wy, vx: 0, vy: 0, a: 0, w: 0, sx: w.x, sy: w.y, z: 0, vz: 0, kick: 0.05 }
-    els.current.get(id)?.classList.add('held')
+    // always held by the top of the head, wherever it was pressed; the head then rises to the finger
+    const { u: gu, v: gv } = headOf(id, w.dir)
+    const hx = w.x + gu * k
+    const hy = w.y + gv * k
+    w.g = { phase: 'held', gu, gv, px: hx, py: hy, fx: wx, fy: wy, vx: 0, vy: 0, a: 0, w: 0, sx: w.x, sy: w.y, z: 0, vz: 0, kick: 0.05, say: 0, line: 0 }
+    const el = els.current.get(id)
+    if (el) {
+      // sweat drops on both sides of the head (box px: left edge = -0.4·charH, top = -charH)
+      const hx = gu + charH * 0.4
+      const hy = gv + charH
+      const [l, r] = el.querySelectorAll<HTMLElement>('.sweat')
+      l.style.left = `${hx - 46}px`
+      l.style.top = `${hy + 14}px`
+      r.style.left = `${hx + 14}px`
+      r.style.top = `${hy + 18}px`
+      el.classList.add('held')
+    }
     vibrate(30)
     return true
   }
@@ -480,6 +562,7 @@ export default function MainScreen({
   const pullRef = useRef(0)
   const holdTimer = useRef<number | null>(null)
   const shadows = useRef(new Map<string, HTMLDivElement>())
+  const says = useRef(new Map<string, HTMLDivElement>())
   function cancelHold() {
     if (holdTimer.current !== null) clearTimeout(holdTimer.current)
     holdTimer.current = null
@@ -717,6 +800,20 @@ export default function MainScreen({
               style={{ opacity: 0 }}
             />
           ))}
+          {/* what a carried character says, above its head and kept upright (lines per mood: moods.ts) */}
+          {cards.map((c) => (
+            <div
+              key={`say-${c.id}`}
+              ref={(el) => {
+                if (el) says.current.set(c.id, el)
+                else says.current.delete(c.id)
+              }}
+              className="pointer-events-none absolute top-0 left-0 z-[100001] origin-bottom"
+              style={{ display: 'none' }}
+            >
+              <span className="absolute bottom-0 left-0 -translate-x-1/2 rounded-full border-2 border-[#222] bg-white px-[10px] py-[2px] font-hand text-[17px] whitespace-nowrap" />
+            </div>
+          ))}
           {cards.map((c) => {
             const m = moodOf(c.mood)
             return (
@@ -733,9 +830,12 @@ export default function MainScreen({
                 <div className="size-full">
                   <img src={c.image} alt={c.nickname || 'resident'} draggable={false} className="bob size-full object-contain object-bottom" style={{ animationDuration: `${m.step}s` }} />
                 </div>
+                {/* 땀 삐질삐질 beside the head while held (Figma UX 858:804); placed at the head in pickUp */}
+                <img src={sweatLeft} alt="" draggable={false} className="sweat sweat-l pointer-events-none absolute w-[30px] max-w-none" />
+                <img src={sweatRight} alt="" draggable={false} className="sweat sweat-r pointer-events-none absolute w-[32px] max-w-none" />
                 {m.word && openId !== c.id && (
                   <span
-                    className="pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
+                    className="walk-word pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
                     style={{ animation: `bubble-blink 9s ease-in-out ${-(c.serial.charCodeAt(c.serial.length - 1) % 9)}s infinite`, opacity: 0 }}
                   >
                     {tr(m.word)}
