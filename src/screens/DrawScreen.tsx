@@ -846,7 +846,7 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
   return (
     <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
       {sparks.map((s, i) => (
-        <img key={i} src={s.src} alt="" className="pointer-events-none absolute" style={{ left: s.x, top: s.y, width: s.w, height: s.h, animation: `spark 1.4s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
+        <img key={i} src={s.src} alt="" className="pointer-events-none absolute" style={{ left: s.x, top: s.y, width: s.w, height: s.h, animation: `spark-stay 0.7s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
       ))}
       <div className="absolute top-[203.6px] left-[50.7px] w-[300px]" style={shrink(470)}>
         <div className="animate-tada drop-shadow-[0_6px_14px_rgba(0,0,0,0.15)]">
