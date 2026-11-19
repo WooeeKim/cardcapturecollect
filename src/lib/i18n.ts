@@ -1,17 +1,17 @@
 import { useSyncExternalStore } from 'react'
 
-// App language: English ↔ 한국어 (the globe button). Only words the app itself shows are
+// App language: 한국어 ↔ English (the globe button). 한국어 comes first and is the default. Only words the app itself shows are
 // translated; what people type (names, memos, town names) stays as written. Keys are the English text.
 export type Lang = 'en' | 'ko'
-const ORDER: Lang[] = ['en', 'ko']
+const ORDER: Lang[] = ['ko', 'en']
 const KEY = 'subwayseal.lang'
 
 let lang: Lang = (() => {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'ko' ? v : 'en' // a saved 'ja' (Japanese was removed) falls back to English
+    return v === 'en' ? v : 'ko' // nothing saved (or an old 'ja') starts in 한국어
   } catch {
-    return 'en'
+    return 'ko'
   }
 })()
 const listeners = new Set<() => void>()
