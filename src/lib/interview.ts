@@ -2,15 +2,16 @@ import { supabase, type User } from './auth'
 import { deviceId } from './gilbti'
 import type { State } from './store'
 
-// Daily 8 p.m. interview (Figma UX › "08 매일 20시 인터뷰"), 2026-11-16 … 11-22, phone's local time.
-// - Each day's interview opens at 20:00 and can be answered until 19:59 the next day (then the next one opens).
+// Daily 10 p.m. interview (Figma UX › "08 매일 20시 인터뷰"; moved from 20:00 to 22:00 on 11/19), 2026-11-16 … 11-22,
+// phone's local time.
+// - Each day's interview opens at 22:00 and can be answered until 21:59 the next day (then the next one opens).
 // - Who made no card in that day's window gets "Why didn't you draw today?"; everyone else gets the 3 questions.
-//   Window = previous day 20:00 → this day 20:00 (the first day: 00:00 → 20:00).
+//   Window = previous day 22:00 → this day 22:00 (the first day: 00:00 → 22:00).
 // - Answers are kept on this device first, then sent to Supabase table interview_responses
 //   (supabase/migrations/011_interview.sql); a failed send is retried on the next start.
 export const FIRST_DAY = '2026-11-16'
 export const LAST_DAY = '2026-11-22'
-export const HOUR = 20
+export const HOUR = 22
 
 export type Kind = 'drew' | 'didnt_draw'
 export type Slot = { day: string; from: Date; to: Date }
@@ -21,7 +22,7 @@ export const FEELINGS = ['Interested', 'Excited', 'Bored', 'Indifferent'] as con
 const p2 = (n: number) => String(n).padStart(2, '0')
 export const ymd = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
 
-// the interview this moment belongs to: the day whose 20:00 passed most recently (null outside the test week)
+// the interview this moment belongs to: the day whose 22:00 passed most recently (null outside the test week)
 export function currentSlot(now = new Date()): Slot | null {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   if (now.getHours() < HOUR) d.setDate(d.getDate() - 1)

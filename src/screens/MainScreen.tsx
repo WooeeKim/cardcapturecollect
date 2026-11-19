@@ -113,6 +113,8 @@ export default function MainScreen({
   onDraw,
   onSwitch,
   onMigrate,
+  canMigrate = () => true,
+  canOpen = () => true,
 }: {
   state: State
   town: Town
@@ -125,6 +127,9 @@ export default function MainScreen({
   onDraw: () => void
   onSwitch: (townId: string) => void // swiped to the next / previous town: it opens at its center
   onMigrate: (cardId: string) => void
+  // shared town (lib/square.ts): other people's cards there can't be moved or opened in your Collection
+  canMigrate?: (cardId: string) => boolean
+  canOpen?: (cardId: string) => boolean
 }) {
   const wide = useWide()
   const box = useRef<HTMLDivElement>(null)
@@ -820,14 +825,14 @@ export default function MainScreen({
         </button>
       )}
 
-      {open && <Detail wide={wide} card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} />}
+      {open && <Detail wide={wide} card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={canMigrate(open.id) ? () => onMigrate(open.id) : undefined} onOpen={canOpen(open.id) ? () => onOpenCard(open.id) : undefined} />}
     </div>
   )
 }
 
 // card info under the zoomed character (Figma main-carddeatail 787:759: hand-drawn panel + Follow / Migration pills)
 // iPad sideways: the same panel, centred at the bottom
-function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: boolean; card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void; onOpen: () => void }) {
+function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: boolean; card: Card; onClose: () => void; onFollow: () => void; onMigrate?: () => void; onOpen?: () => void }) {
   const [drag, setDrag] = useState(0)
   const start = useRef<number | null>(null)
   return (
@@ -837,7 +842,7 @@ function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: bo
         style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
         // tapping the card area (not a button, not the pull strip) opens this card in Collection
         onClick={(e) => {
-          if (!(e.target as HTMLElement).closest('button, [data-pull]')) onOpen()
+          if (!(e.target as HTMLElement).closest('button, [data-pull]')) onOpen?.()
         }}
       >
         <img src={cardPanel} alt="" className="pointer-events-none absolute top-[-1px] left-[-1px] h-[256px] w-[382px] max-w-none" />
@@ -870,10 +875,12 @@ function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: bo
           <img src={pillFollow} alt="" className="absolute inset-0 size-full" />
           <span className="relative text-[24.3px] leading-[1.1]">{tr('Follow')}</span>
         </button>
-        <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
-          <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
-          <span className="relative text-[24.3px] leading-[1.1]">{tr('Migration')}</span>
-        </button>
+        {onMigrate && (
+          <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
+            <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
+            <span className="relative text-[24.3px] leading-[1.1]">{tr('Migration')}</span>
+          </button>
+        )}
       </div>
     </Bottom>
   )

@@ -3,7 +3,7 @@ import { supabase } from '../lib/auth'
 import { FEELINGS } from '../lib/interview'
 import { when, type Row } from './data'
 
-// 8pm: the daily 8 p.m. interview (interview_responses, supabase/migrations/011_interview.sql).
+// 10pm: the daily 10 p.m. interview (interview_responses, supabase/migrations/011_interview.sql).
 // Per day: who answered, who drew vs didn't, how they felt; below, every answer (+ CSV).
 type Resp = {
   id: string
@@ -46,7 +46,7 @@ export function Interview({ rows }: { rows: Row[] }) {
     const lines = shown.map((r) => [r.day, r.created_at, nameOf(r), r.email ?? `guest ${r.device_id.slice(0, 8)}`, r.kind, r.cards, r.answers.situation, r.answers.who_why, feelingOf(r), r.answers.why_not].map(q).join(','))
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob(['﻿' + [head.join(','), ...lines].join('\n')], { type: 'text/csv;charset=utf-8' }))
-    a.download = `subwayseal-8pm-${day}.csv`
+    a.download = `subwayseal-10pm-${day}.csv`
     a.click()
   }
 

@@ -16,7 +16,7 @@ import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
 // - Stats: time in the app / per screen, when, drawing tools, cards, moods, feedback — everyone or one person,
 //          by Subway-TI type (app_events, docs/logging-plan.md)
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
-// - 8pm: the daily 8 p.m. interview answers (interview_responses), per day + CSV
+// - 10pm: the daily 10 p.m. interview answers (interview_responses), per day + CSV
 // - Notify: pick phones that allowed notifications and send them one (push_subscriptions, api/push.js)
 type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti' | 'interview' | 'notify'
 const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti', 'interview', 'notify']
@@ -145,7 +145,7 @@ export default function AdminPage() {
               ['people', `People (${testers.length})`],
               ['stats', 'Stats'],
               ['gilbti', `Subway-TI (${latest.length})`],
-              ['interview', '8pm'],
+              ['interview', '10pm'],
               ['notify', 'Notify'],
             ] as const
           ).map(([id, label]) => (
