@@ -19,20 +19,27 @@ const LINES: Record<Lang, string[]> = {
 }
 
 let count = 0
+let introCount = 0
 const listeners = new Set<() => void>()
-const bump = (d: number) => {
+const bump = (d: number, intro: boolean) => {
   count += d
+  if (intro) introCount += d
   listeners.forEach((f) => f())
 }
 
-export async function waiting<T>(p: Promise<T>): Promise<T> {
-  bump(1)
+// `intro`: the first log-in on the welcome screen — instead of the ring, the app name writes itself
+// word by word (card → capture → collect) while the account loads.
+export async function waiting<T>(p: Promise<T>, { intro = false } = {}): Promise<T> {
+  bump(1, intro)
   try {
     return await p
   } finally {
-    bump(-1)
+    bump(-1, intro)
   }
 }
+
+// how long the intro needs to show all three words once (IntroLoading) — callers can wait at least this long
+export const INTRO_MS = 1900
 
 const pick = (n: number, not = -1) => {
   const i = Math.floor(Math.random() * (n - 1))
@@ -41,11 +48,34 @@ const pick = (n: number, not = -1) => {
 
 // mounted once in App
 export function LoadingLayer() {
-  const busy = useSyncExternalStore(
+  const state = useSyncExternalStore(
     (f) => (listeners.add(f), () => listeners.delete(f)),
-    () => count > 0,
+    () => (introCount > 0 ? 'intro' : count > 0 ? 'busy' : 'idle'),
   )
-  return busy ? <Loading /> : null
+  return state === 'intro' ? <IntroLoading /> : state === 'busy' ? <Loading /> : null
+}
+
+const WORDS = ['card', 'capture', 'collect']
+const LOOP_MS = 3200 // three words in, a short hold, fade out, again (only if the load is still going)
+
+// Same look as the launch Splash, but the words arrive one at a time.
+function IntroLoading() {
+  const [round, setRound] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setRound((r) => r + 1), LOOP_MS)
+    return () => clearInterval(t)
+  }, [])
+  return (
+    <div role="status" aria-label="card capture collect" className="loading-cover absolute inset-0 z-[95] flex items-center justify-center bg-[#f9f9f9] font-hand">
+      <h1 key={round} className="intro-round text-center text-[40px] leading-[1.05] tracking-[-0.8px]">
+        {WORDS.map((w, i) => (
+          <span key={w} className="intro-word block" style={{ animationDelay: `${300 + i * 500}ms` }}>
+            {w}
+          </span>
+        ))}
+      </h1>
+    </div>
+  )
 }
 
 function Loading() {
