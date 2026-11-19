@@ -5,35 +5,22 @@ import { tr } from '../lib/i18n'
 import type { Card } from '../lib/store'
 import { viewAsId } from '../lib/viewAs'
 import { Popup, type PopupAction } from './ui'
+import saveSvg from '../assets/proto/v2/icon-save.svg?raw'
+import shareSvg from '../assets/proto/v2/icon-share.svg?raw'
 
 // Save (down arrow) and Share (curved arrow) icons for one card: on the finished-card screen and the
 // Collection card view. Save → phone share sheet with the image (Save Image) or a PNG download.
 // Share → makes a public link to the card, then a second tap shares or copies it.
 
-// hand-drawn line icons (slightly wobbly strokes), like the finished-card screen design
-export function SaveIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-full" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12.2 3.2C12 6.4 12.3 10.2 12.05 15.4" />
-      <path d="M7.9 11.6C9.3 12.9 10.7 14.3 12.1 15.6C13.3 14.2 14.6 12.8 16 11.5" />
-      <path d="M4.6 20.4C8.2 20.1 12.6 20.6 19.5 20.2" />
-    </svg>
-  )
-}
-
-export function ShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-full" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12.1 15.2C11.9 11.6 12.2 7.4 12 3.4" />
-      <path d="M8.3 7.3C9.6 6 10.8 4.6 12 3.3C13.2 4.5 14.4 5.8 15.7 7" />
-      <path d="M4.7 10.8C4.4 14.3 4.7 17.6 4.6 20.9C9.4 20.6 14.6 21.1 19.6 20.7C19.8 17.4 19.4 14.1 19.5 10.9" />
-    </svg>
-  )
-}
+// Figma UX › drawing-finish (1138:2642): hand-drawn save / share icons (Group 152 / 154), stroke in currentColor
+const fit = (svg: string) => svg.replace(/width="[\d.]+" height="[\d.]+"/, 'width="100%" height="100%"')
+export const SaveIcon = () => <span aria-hidden className="block size-full" dangerouslySetInnerHTML={{ __html: fit(saveSvg) }} />
+export const ShareIcon = () => <span aria-hidden className="block size-full" dangerouslySetInnerHTML={{ __html: fit(shareSvg) }} />
+const ICONS = { save: { w: 23.6, h: 29.1 }, share: { w: 29, h: 27.6 } }
 
 type Pop = { message: string; actions: PopupAction[] } | null
 
-export default function CardActions({ card, light = false, className = '', size = 30, gap = 14 }: { card: Card; light?: boolean; className?: string; size?: number; gap?: number }) {
+export default function CardActions({ card, light = false, className = '', scale = 1, gap = 4 }: { card: Card; light?: boolean; className?: string; scale?: number; gap?: number }) {
   const [busy, setBusy] = useState<'save' | 'share' | null>(null)
   const [pop, setPop] = useState<Pop>(null)
   const close = () => setPop(null)
@@ -86,14 +73,15 @@ export default function CardActions({ card, light = false, className = '', size 
     })
   }
 
-  const btn = `flex items-center justify-center p-[7px] transition-opacity ${light ? 'text-white' : 'text-black'}`
+  const btn = `flex items-end justify-center p-[5px] transition-opacity box-content ${light ? 'text-white' : 'text-black'}`
+  const box = (k: keyof typeof ICONS) => ({ width: ICONS[k].w * scale, height: ICONS[k].h * scale })
   return (
     <>
-      <div className={`flex items-center ${className}`} style={{ gap }}>
-        <button aria-label={tr('Save image')} onClick={save} className={`${btn} ${busy === 'save' ? 'opacity-40' : ''}`} style={{ width: size + 14, height: size + 14 }}>
+      <div className={`flex items-end ${className}`} style={{ gap }}>
+        <button aria-label={tr('Save image')} onClick={save} className={`${btn} ${busy === 'save' ? 'opacity-40' : ''}`} style={box('save')}>
           <SaveIcon />
         </button>
-        <button aria-label={tr('Share link')} onClick={share} className={`${btn} ${busy === 'share' ? 'opacity-40' : ''}`} style={{ width: size + 14, height: size + 14 }}>
+        <button aria-label={tr('Share link')} onClick={share} className={`${btn} ${busy === 'share' ? 'opacity-40' : ''}`} style={box('share')}>
           <ShareIcon />
         </button>
       </div>
