@@ -253,8 +253,7 @@ export default function TownListScreen({
             {pill(tr('Done'), save, 311)}
           </>
         ) : action ? (
-          // a new drawing goes to one of your towns first; it can move to the shared town from there
-          sq && mode === 'send' ? null : pill(action, () => place(t!), action.length > 4 ? 296 : 311)
+          pill(action, () => place(t!), action.length > 4 ? 296 : 311)
         ) : sq ? null : (
           pill(tr('Edit'), () => {
             setDraft({ name: t!.name, bio: t!.bio })

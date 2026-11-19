@@ -13,7 +13,7 @@ import { loadImage } from './lib/preload'
 import { checkAdmin, currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { setScreen, startTracking } from './lib/events'
-import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, unplaceCard, type State } from './lib/store'
+import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, swapCards, townOf, unplaceCard, type Card, type State } from './lib/store'
 import { SQUARE_ID, SQUARE_PER_USER, loadSquare, moveIn, moveOut, withSquare, type SquareRow } from './lib/square'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
@@ -107,6 +107,8 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [])
   // what the screens draw: your towns + the shared town at the end, your cards + everyone's there
   const view = useMemo(() => withSquare(state, square.rows), [state, square.rows])
+  // Collection is your people only: Last Stop shows just the ones you moved there
+  const collectionView = useMemo(() => withSquare(state, square.rows.filter((r) => r.userId === user?.id)), [state, square.rows, user?.id])
   const mineInSquare = (id: string) => square.rows.some((r) => r.card.id === id && r.userId === user?.id)
 
   // switch the whole app to an account (or back to guest).
@@ -347,6 +349,69 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setRoute({ name: 'main', townId, enter, focus })
   }
 
+  // Last Stop is a town like any other; only its residents live on the server (lib/square.ts).
+  // Every move of one of your people goes through here: into / out of Last Stop, or between your own towns.
+  const squareFull = () => tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr('Last Stop') })
+  const moveFailed = () => tr("Couldn't move this person. Try again in a moment.")
+  // `swap`: someone of yours just left Last Stop for this one, so the count isn't growing (the server still checks)
+  async function toSquare(card: Card, swap = false): Promise<boolean> {
+    const u = userRef.current
+    if (viewAsId) return setError(READ_ONLY), false
+    if (!u) return setError(tr('Log in to move someone to {name}.', { name: tr('Last Stop') })), false
+    if (!swap && squareInfo.mine >= SQUARE_PER_USER) return setError(squareFull()), false
+    const res = await waiting(moveIn(u, card))
+    if (!res.ok) return setError(res.why === 'cap' ? squareFull() : moveFailed()), false
+    setSquare((sq) => ({ ...sq, rows: [{ card, userId: u.id, movedAt: new Date().toISOString() }, ...sq.rows.filter((r) => r.card.id !== card.id)] }))
+    return true
+  }
+  async function fromSquare(cardId: string): Promise<boolean> {
+    if (viewAsId) return setError(READ_ONLY), false
+    if (!(await waiting(moveOut(cardId)))) return setError(moveFailed()), false
+    setSquare((sq) => ({ ...sq, rows: sq.rows.filter((r) => r.card.id !== cardId) }))
+    return true
+  }
+  async function moveCard(cardId: string, townId: string, at?: number): Promise<boolean> {
+    const card = view.cards[cardId]
+    if (!card) return false
+    const from = townOf(view, cardId)?.id
+    if (from === townId && townId === SQUARE_ID) return true // order inside Last Stop is by move-in time
+    if (townId === SQUARE_ID) {
+      if (!(await toSquare(card))) return false
+      commit((s) => unplaceCard(s, cardId))
+      return true
+    }
+    if (from === SQUARE_ID) {
+      if (!(await fromSquare(cardId))) return false
+      // the card comes back even if this device lost it
+      commit((s) => placeCard({ ...s, cards: { ...s.cards, [cardId]: s.cards[cardId] ?? card } }, cardId, townId, at))
+      return true
+    }
+    commit((s) => placeCard(s, cardId, townId, at))
+    return true
+  }
+  // Collection drag onto someone in another town: the two trade places, Last Stop included
+  async function swapCard(a: string, b: string) {
+    const ta = townOf(view, a)?.id
+    const tb = townOf(view, b)?.id
+    if (!ta || !tb) return
+    if (ta !== SQUARE_ID && tb !== SQUARE_ID) return commit((s) => swapCards(s, a, b))
+    const [inSq, out] = ta === SQUARE_ID ? [a, b] : [b, a]
+    const home = ta === SQUARE_ID ? tb : ta
+    const at = view.towns.find((t) => t.id === home)!.residents.indexOf(out)
+    if (!(await fromSquare(inSq))) return
+    const outCard = view.cards[out]!
+    const inCard = view.cards[inSq]!
+    commit((s) => {
+      const t = unplaceCard({ ...s, cards: { ...s.cards, [inSq]: s.cards[inSq] ?? inCard } }, out)
+      return placeCard(t, inSq, home, at)
+    })
+    if (!(await toSquare(outCard, true))) commit((s) => placeCard(s, out, home)) // Last Stop said no: back home
+  }
+  // a person let go while living in Last Stop leaves it too
+  const forget = (cardId: string) => {
+    if (mineInSquare(cardId)) fromSquare(cardId)
+  }
+
   // pending card vanished (e.g. storage reset) → go home
   const lost = (route.name === 'tada' || route.name === 'send') && !state.pending
   useEffect(() => {
@@ -369,7 +434,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onCollection={() => setRoute({ name: 'collection', townId: existing(town.id) })}
           onOpenCard={(cardId) => setRoute({ name: 'collection', townId: town.id, card: cardId })}
           canMigrate={(cardId) => !shared || (!viewAsId && mineInSquare(cardId))}
-          canOpen={() => !shared}
+          canOpen={(cardId) => !shared || (!viewAsId && mineInSquare(cardId))}
           onMyPage={() => setRoute({ name: 'mypage' })}
           onDraw={() => setRoute({ name: 'draw' })}
           onSwitch={(id) => goMain(id)}
@@ -401,31 +466,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           onGo={() => {}}
           onPlace={async (townId) => {
             if (viewAsId) return setError(READ_ONLY)
-            const u = userRef.current
-            if (townId === SQUARE_ID) {
-              // into the shared town: the server first, then out of your town
-              if (!u || !card) return
-              if (squareInfo.mine >= SQUARE_PER_USER) return setError(tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr('Last Stop') }))
-              const res = await waiting(moveIn(u, card))
-              if (!res.ok) {
-                setError(res.why === 'cap' ? tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr('Last Stop') }) : tr("Couldn't move this person. Try again in a moment."))
-                return setRoute(route.back)
-              }
-              setSquare((sq) => ({ ...sq, rows: [{ card, userId: u.id, movedAt: new Date().toISOString() }, ...sq.rows.filter((r) => r.card.id !== card.id)] }))
-              commit((s) => unplaceCard(s, card.id))
-              return done(SQUARE_ID)
-            }
-            if (from === SQUARE_ID) {
-              // back home from the shared town (the card comes back even if this device lost it)
-              if (!card || !(await waiting(moveOut(card.id)))) {
-                setError(tr("Couldn't move this person. Try again in a moment."))
-                return setRoute(route.back)
-              }
-              setSquare((sq) => ({ ...sq, rows: sq.rows.filter((r) => r.card.id !== card.id) }))
-              commit((s) => placeCard({ ...s, cards: { ...s.cards, [card.id]: s.cards[card.id] ?? card } }, card.id, townId))
-              return done(townId)
-            }
-            commit((s) => placeCard(s, route.cardId, townId))
+            if (!(await moveCard(route.cardId, townId))) return setRoute(route.back)
             done(townId)
           }}
         />
@@ -443,9 +484,14 @@ export default function App({ onReady }: { onReady?: () => void }) {
           loggedIn={!!user}
           onBack={() => setRoute({ name: 'tada' })}
           onGo={() => {}}
-          onPlace={(townId) => {
-            const id = state.pending!.id
-            commit((s) => sendPending(s, townId))
+          onPlace={async (townId) => {
+            const pending = state.pending!
+            const id = pending.id
+            if (townId === SQUARE_ID) {
+              // a fresh drawing straight to Last Stop: it joins your people, living there instead of in one of your towns
+              if (!(await toSquare(pending))) return
+              commit((s) => (s.pending?.id === id ? { ...s, cards: { ...s.cards, [id]: pending }, pending: null } : s))
+            } else commit((s) => sendPending(s, townId))
             goMain(townId, 'center', id)
             if (!viewAsId && !userRef.current && !flag(PROMPTED)) {
               setFlag(PROMPTED, '1')
@@ -458,12 +504,16 @@ export default function App({ onReady }: { onReady?: () => void }) {
     case 'collection':
       screen = (
         <CollectionScreen
-          state={state}
+          state={collectionView}
           commit={commit}
-          townId={existing(route.townId)}
+          townId={route.townId === SQUARE_ID ? SQUARE_ID : existing(route.townId)}
+          onMoveCard={moveCard}
+          onSwap={swapCard}
+          onForget={forget}
           openCard={route.card}
           onTown={(id) => setRoute({ name: 'collection', townId: id })}
           onBack={() => goMain(existingMain(homeId))}
+          onMigrate={(cardId) => setRoute({ name: 'migrate', cardId, back: { ...route, card: cardId }, to: 'collection' })}
         />
       )
       break
