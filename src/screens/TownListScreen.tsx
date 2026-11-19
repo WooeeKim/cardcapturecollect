@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, Thumb, type PopupAction } from '../components/ui'
 import { framePoint } from '../lib/frame'
 import tlBox from '../assets/proto/v2/tl-box.svg'
-import tlBar from '../assets/proto/v2/tl-bar.svg'
+import { BUMPY_TOP, LINE_BG, stretchX } from '../lib/lineShapes'
 import tlClose from '../assets/proto/v2/tl-close.svg'
 import tlPill from '../assets/proto/v2/tl-edit.svg'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
@@ -24,10 +24,13 @@ const WIDE_HANDLE_X = 588
 const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
 // the shared town's open box has no Edit pill under it, so it's this much shorter (Figma Section 1, 1133:8068 Vector 405)
 const SQ_SHORT = 28
-// the grey line ends this far below the last row's thumbnail, rounded like its top (Figma Section 1, 1133:7217 Vector 537)
-const RAIL_TOP = 37
-const RAIL_PAD = 9
-const RAIL_CAP = 60 // bottom end = the line's own rounded top end, flipped
+// the grey line (Figma 261119 수정 › line_bg): 84 wide, centred on the thumbnails, from 12px above the first one to
+// 11px below the last; only its middle stretches as towns are added, the rounded ends keep their shape
+const RAIL_X = 24
+const RAIL_TOP = 44 - 12
+const RAIL_PAD = 11
+// the list scrolls up under a cover with a wavy bottom edge (Figma 울퉁불퉁), so it starts this much higher
+const UNDER = 40
 
 // the shared town (lib/square.ts, Figma Section 1 1133:7217 "Transfer"): one more row at the end of the list, the grey swirl
 // as its thumbnail (same ring as other towns); no Edit, no reorder
@@ -199,7 +202,9 @@ export default function TownListScreen({
   // the grey line runs from the first row to just under the last one (open rows have the bigger 84px thumbnail)
   const n = state.towns.length
   const last = square ? { top: squareTop, open: openId === SQUARE_ID } : adding ? { top: rowTop(n), open: true } : { top: rowTop(n - 1), open: openIndex === n - 1 }
+  const listTop = wide ? 121 : 149
   const railH = last.top + (last.open ? 84 : 70) + RAIL_PAD - RAIL_TOP
+  const railD = useMemo(() => stretchX(LINE_BG.d, LINE_BG.len, railH, LINE_BG.capStart, LINE_BG.capEnd), [railH])
 
   // hand-drawn pill button (Figma Vector 406); grey label for the "leave it" side
   const pill = (label: string, onClick: () => void, left: number, grey = false) => (
@@ -291,21 +296,17 @@ export default function TownListScreen({
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <Header title={tr('Town List')} onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label={tr('Add town')} onClick={startAdd} />} />
-      <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0 ${wide ? 'h-[120px]' : 'h-[186px]'}`} />
+      {/* the list slides up under a cover with a wavy bottom edge (Figma 261119 수정 › 울퉁불퉁), not a gradient */}
+      <svg aria-hidden viewBox={`0 0 ${BUMPY_TOP.w} ${BUMPY_TOP.h}`} preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 top-0 z-10 w-full" style={{ height: listTop }}>
+        <path d={BUMPY_TOP.d} fill="#F9F9F9" />
+      </svg>
 
-      <div ref={listEl} className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[121px]' : 'top-[149px]'}`}>
-        <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
-          {/* the grey line every town hangs on: it ends just under the last row with a rounded end like its top
-              (Figma Section 1). The line is stretched to length; its bottom end is the drawing's own top end, flipped,
-              so the curve keeps its shape however long the list is. */}
-          <div className="pointer-events-none absolute left-[20px] w-[96px] transition-[height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ top: RAIL_TOP, height: railH }}>
-            <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ bottom: RAIL_CAP }}>
-              <img src={tlBar} alt="" className="absolute top-0 left-0 w-[96px] max-w-none" style={{ height: Math.max(railH, 712) }} />
-            </div>
-            <div className="absolute inset-x-0 bottom-0 overflow-hidden" style={{ height: RAIL_CAP }}>
-              <img src={tlBar} alt="" className="absolute bottom-0 left-0 h-[712px] w-[96px] max-w-none -scale-y-100" />
-            </div>
-          </div>
+      <div ref={listEl} className="absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none]" style={{ top: listTop - UNDER }}>
+        <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginTop: UNDER, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
+          {/* the grey line every town hangs on (Figma line_bg), lying down in its own drawing: x 0 = bottom end */}
+          <svg aria-hidden className="pointer-events-none absolute overflow-visible" style={{ left: RAIL_X, top: RAIL_TOP, width: LINE_BG.thick, height: railH }} viewBox={`0 0 ${LINE_BG.thick} ${railH}`}>
+            <path d={railD} transform={`translate(0 ${railH}) rotate(-90)`} fill="#CCCCCC" stroke="#000" strokeWidth={2} strokeLinejoin="round" />
+          </svg>
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id

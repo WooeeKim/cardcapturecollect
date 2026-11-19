@@ -56,8 +56,8 @@ export function townName(name: string) {
 // English key → 한국어
 const DICT: Record<string, string> = {
   // shared town (lib/square.ts)
-  'Sharing Plaza': '공유 플라자',
-  Transfer: '공유 플라자',
+  'Sharing Plaza': '공유 광장',
+  Transfer: '공유 광장',
   'Residents {n}/no limits': '주민 {n}/제한 없음',
   'You can send your character only {n}!': '내 주민은 {n}명까지만 보낼 수 있어요!',
   '{name} details': '{name} 자세히',

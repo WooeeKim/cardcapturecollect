@@ -7,7 +7,7 @@ import transferIcon from '../assets/proto/v2/transfer.svg'
 // in table `square_cards`; moving it back deletes the row. Up to SQUARE_PER_USER per account, logged-in only.
 // Without Supabase (no key in .env.local) it's kept in this browser so the flow can still be tried.
 export const SQUARE_ID = 'square'
-export const SQUARE_NAME = 'Transfer' // Figma UX › 앱 확정 › Section 1; Korean keeps 공유 플라자 (lib/i18n.ts)
+export const SQUARE_NAME = 'Transfer' // Figma UX › 앱 확정 › Section 1; Korean: 공유 광장 (lib/i18n.ts)
 export const SQUARE_PER_USER = 3
 // the plaza's face in Town List and Collection (Figma Section 1, Group 156 1133:8067): the grey swirl, not its newest resident
 export const SQUARE_THUMB = transferIcon

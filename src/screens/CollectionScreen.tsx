@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import backIcon from '../assets/proto/v2/back40.svg'
 import closeRing from '../assets/proto/v2/detail-close-ring.svg'
 import closeX from '../assets/proto/v2/detail-close-x.svg'
 import deckBoxSvg from '../assets/proto/v2/deck-box.svg?raw'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
-import bandImg from '../assets/proto/v2/tl-bar.svg'
+import { BAND, stretchX } from '../lib/lineShapes'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
 import CardActions from '../components/CardActions'
 import { PillVillage } from '../components/v2'
@@ -206,11 +206,14 @@ export default function CollectionScreen({
   const TILE = G.tile
   const COL = G.col
   const PITCH = 105
-  // first town's centre, and where the grey band starts
+  // first town's centre; the grey band (Figma 261119 수정 › Collection_scroll, Vector 537) runs from just before the
+  // first town to just after the last (Transfer), rounded at both ends — only its middle stretches with more towns
   const START = wide ? 113 : 61
-  const BAND_L = wide ? 104 : 52
-  const stripW = Math.max(wide ? 1194 : 402, START + (state.towns.length - 1) * PITCH + 60)
-  const bandW = stripW - BAND_L + 40
+  const bandL = START - 32
+  const bandR = START + (state.towns.length - 1) * PITCH + 30
+  const bandLen = bandR - bandL
+  const bandD = useMemo(() => stretchX(BAND.d, BAND.len, bandLen, BAND.capStart, BAND.capEnd), [bandLen])
+  const stripW = Math.max(wide ? 1194 : 402, bandR + 24)
   // deck pages scroll inside the hand-drawn box only (clip just inside its stroke)
   const CLIP_L = G.clipL
   const CLIP_W = G.clipW
@@ -243,17 +246,12 @@ export default function CollectionScreen({
       </TextButton>
 
       {/* towns on one grey band; the picked one gets the dark ring */}
-      {/* no bounce past the ends, so the band's cut-off end never shows */}
       <div className={`absolute inset-x-0 h-[100px] overflow-x-auto ${wide ? 'top-[105px]' : 'top-[134px]'} overflow-y-hidden overscroll-x-none [scrollbar-width:none]`}>
         <div className="relative h-full" style={{ width: stripW }}>
-          {/* the hand-drawn grey band (Town List's, without the outline), laid sideways; its end cap runs past the
-              strip's right edge and is cut off there */}
-          <div className="pointer-events-none absolute top-[5px] h-[60px] overflow-hidden" style={{ left: BAND_L, width: stripW - BAND_L }}>
-            <img src={bandImg} alt="" className="absolute top-0 left-0 w-[60px] max-w-none origin-top-left" style={{ height: bandW, transform: 'translateY(60px) rotate(-90deg)' }} />
-          </div>
-          {/* iPhone can still bounce the strip past its end: a flat grey continuation drawn as a box-shadow
-              (shadows don't add scroll width), so the band never looks cut while dragging */}
-          <div className="pointer-events-none absolute top-[15px] h-[40px]" style={{ left: stripW - 600, width: 600, boxShadow: '600px 0 0 #ccc' }} />
+          {/* the hand-drawn grey band the towns sit on, with its own rounded ends */}
+          <svg aria-hidden className="pointer-events-none absolute top-[7px] overflow-visible" style={{ left: bandL, width: bandLen, height: BAND.thick }} viewBox={`0 0 ${bandLen} ${BAND.thick}`}>
+            <path d={bandD} fill="#CCCCCC" stroke="#000" strokeWidth={2} strokeLinejoin="round" />
+          </svg>
           {state.towns.map((t, i) => {
             const on = t.id === town.id
             const size = on ? 64 : 52
