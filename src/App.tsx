@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LoadingLayer, waiting } from './components/Loading'
 import { LoginSheet } from './components/LoginSheet'
 import NotifyPrompt from './components/NotifyPrompt'
@@ -13,7 +13,8 @@ import { loadImage } from './lib/preload'
 import { checkAdmin, currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { setScreen, startTracking } from './lib/events'
-import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, type State } from './lib/store'
+import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, townOf, unplaceCard, type State } from './lib/store'
+import { SQUARE_ID, SQUARE_PER_USER, loadSquare, moveIn, moveOut, withSquare, type SquareRow } from './lib/square'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import GilbtiScreen from './screens/GilbtiScreen'
@@ -98,6 +99,15 @@ export default function App({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     stateRef.current = state
   }, [state])
+  // shared town (lib/square.ts): everyone's people living there; ok=false while the server can't be read
+  const [square, setSquare] = useState<{ rows: SquareRow[]; ok: boolean }>({ rows: [], ok: true })
+  const refreshSquare = useCallback(async () => {
+    const r = await loadSquare(userRef.current)
+    setSquare((prev) => (r.ok ? { rows: r.rows, ok: true } : { rows: prev.rows, ok: false }))
+  }, [])
+  // what the screens draw: your towns + the shared town at the end, your cards + everyone's there
+  const view = useMemo(() => withSquare(state, square.rows), [state, square.rows])
+  const mineInSquare = (id: string) => square.rows.some((r) => r.card.id === id && r.userId === user?.id)
 
   // switch the whole app to an account (or back to guest).
   // Guest data on this device always joins the account being entered (sign-up or log-in); the guest copy is
@@ -299,6 +309,22 @@ export default function App({ onReady }: { onReady?: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, state.insideFilled3, commit])
 
+  const onSquare = route.name === 'main' && route.townId === SQUARE_ID
+  const listing = route.name === 'towns' || route.name === 'migrate' || route.name === 'send'
+  useEffect(() => {
+    if (ready) refreshSquare()
+  }, [ready, user?.id, onSquare, listing, refreshSquare])
+  useEffect(() => {
+    if (!ready || !onSquare) return
+    const timer = setInterval(refreshSquare, 30_000)
+    const back = () => document.visibilityState === 'visible' && refreshSquare()
+    document.addEventListener('visibilitychange', back)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', back)
+    }
+  }, [ready, onSquare, refreshSquare])
+
   // usage log (admin → Stats): app session from the first render, then the screen every event happens on
   useEffect(() => startTracking(), [])
   const screenName = !ready ? 'splash' : gate === 'login' ? 'login' : gate === 'nickname' ? 'nickname' : gate === 'gilbti' || retake ? 'gilbti' : route.name
@@ -309,6 +335,13 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [screenName, screenTown, tutorialDraw, retake])
 
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
+  const existingMain = (id: string) => (id === SQUARE_ID ? id : existing(id)) // the main screen can show the shared town
+  const squareInfo = {
+    town: view.towns[view.towns.length - 1],
+    chief: square.rows[0]?.card,
+    mine: square.rows.filter((r) => r.userId === user?.id).length,
+    ok: square.ok,
+  }
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {
     setHomeId(townId)
     setRoute({ name: 'main', townId, enter, focus })
@@ -323,17 +356,20 @@ export default function App({ onReady }: { onReady?: () => void }) {
   let screen
   switch (route.name) {
     case 'main': {
-      const town = state.towns.find((t) => t.id === route.townId) ?? state.towns[0]
+      const town = view.towns.find((t) => t.id === route.townId) ?? state.towns[0]
+      const shared = town.id === SQUARE_ID
       screen = (
         <MainScreen
           key={town.id}
-          state={state}
+          state={view}
           town={town}
           enter={route.enter}
           focusId={route.focus ?? null}
           onTowns={() => setRoute({ name: 'towns' })}
-          onCollection={() => setRoute({ name: 'collection', townId: town.id })}
+          onCollection={() => setRoute({ name: 'collection', townId: existing(town.id) })}
           onOpenCard={(cardId) => setRoute({ name: 'collection', townId: town.id, card: cardId })}
+          canMigrate={(cardId) => !shared || (!viewAsId && mineInSquare(cardId))}
+          canOpen={() => !shared}
           onMyPage={() => setRoute({ name: 'mypage' })}
           onDraw={() => setRoute({ name: 'draw' })}
           onSwitch={(id) => goMain(id)}
@@ -343,23 +379,54 @@ export default function App({ onReady }: { onReady?: () => void }) {
       break
     }
     case 'towns':
-      screen = <TownListScreen state={state} commit={commit} mode="browse" onBack={() => goMain(existing(homeId))} onGo={(id) => goMain(id)} onPlace={() => {}} />
+      screen = <TownListScreen state={state} commit={commit} mode="browse" square={squareInfo} loggedIn={!!user} onBack={() => goMain(existingMain(homeId))} onGo={(id) => goMain(id)} onPlace={() => {}} />
       break
     case 'migrate': {
-      const card = state.cards[route.cardId]
+      const card = view.cards[route.cardId]
+      const from = townOf(view, route.cardId)?.id
+      const done = (townId: string) => {
+        if (route.to === 'collection') setRoute({ name: 'collection', townId: route.back.name === 'collection' ? route.back.townId : existing(townId) })
+        else goMain(townId, 'center', route.cardId)
+      }
       screen = (
         <TownListScreen
           state={state}
           commit={commit}
           mode="migrate"
           card={card}
-          homeId={townOf(state, route.cardId)?.id}
+          homeId={from}
+          square={squareInfo}
+          loggedIn={!!user}
           onBack={() => setRoute(route.back)}
           onGo={() => {}}
-          onPlace={(townId) => {
+          onPlace={async (townId) => {
+            if (viewAsId) return setError(READ_ONLY)
+            const u = userRef.current
+            if (townId === SQUARE_ID) {
+              // into the shared town: the server first, then out of your town
+              if (!u || !card) return
+              if (squareInfo.mine >= SQUARE_PER_USER) return setError(tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr('Last Stop') }))
+              const res = await waiting(moveIn(u, card))
+              if (!res.ok) {
+                setError(res.why === 'cap' ? tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr('Last Stop') }) : tr("Couldn't move this person. Try again in a moment."))
+                return setRoute(route.back)
+              }
+              setSquare((sq) => ({ ...sq, rows: [{ card, userId: u.id, movedAt: new Date().toISOString() }, ...sq.rows.filter((r) => r.card.id !== card.id)] }))
+              commit((s) => unplaceCard(s, card.id))
+              return done(SQUARE_ID)
+            }
+            if (from === SQUARE_ID) {
+              // back home from the shared town (the card comes back even if this device lost it)
+              if (!card || !(await waiting(moveOut(card.id)))) {
+                setError(tr("Couldn't move this person. Try again in a moment."))
+                return setRoute(route.back)
+              }
+              setSquare((sq) => ({ ...sq, rows: sq.rows.filter((r) => r.card.id !== card.id) }))
+              commit((s) => placeCard({ ...s, cards: { ...s.cards, [card.id]: s.cards[card.id] ?? card } }, card.id, townId))
+              return done(townId)
+            }
             commit((s) => placeCard(s, route.cardId, townId))
-            if (route.to === 'collection') setRoute({ name: 'collection', townId: route.back.name === 'collection' ? route.back.townId : townId })
-            else goMain(townId, 'center', route.cardId)
+            done(townId)
           }}
         />
       )
@@ -372,6 +439,8 @@ export default function App({ onReady }: { onReady?: () => void }) {
           commit={commit}
           mode="send"
           card={state.pending}
+          square={squareInfo}
+          loggedIn={!!user}
           onBack={() => setRoute({ name: 'tada' })}
           onGo={() => {}}
           onPlace={(townId) => {
@@ -394,14 +463,14 @@ export default function App({ onReady }: { onReady?: () => void }) {
           townId={existing(route.townId)}
           openCard={route.card}
           onTown={(id) => setRoute({ name: 'collection', townId: id })}
-          onBack={() => goMain(existing(homeId))}
+          onBack={() => goMain(existingMain(homeId))}
         />
       )
       break
     case 'draw':
       screen = (
         <DrawScreen
-          onExit={() => goMain(existing(homeId))}
+          onExit={() => goMain(existingMain(homeId))}
           tutorial={route.tutorial}
           onFinish={(draft) => {
             // save first: if storage is full, stay here so the drawing isn't lost
@@ -445,7 +514,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           nickname={state.nickname ?? ''}
           intro={state.intro ?? ''}
           onProfile={(nickname, intro) => commit((s) => ({ ...s, nickname: nickname || undefined, intro: intro || undefined }))}
-          onBack={() => goMain(existing(homeId))}
+          onBack={() => goMain(existingMain(homeId))}
           onInterview={() => (viewAsId ? setError(READ_ONLY) : setRetake(true))}
           onLogin={(u) => enter(u).then(() => setRoute({ name: 'mypage' }))}
           onLogout={async () => {
