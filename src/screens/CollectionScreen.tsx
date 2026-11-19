@@ -20,10 +20,10 @@ import { SQUARE_ID, SQUARE_PER_USER, SQUARE_THUMB } from '../lib/square'
 const HOLD_MS = 350
 // deck geometry (frame px). Phone: 3×2 pages. iPad sideways (Figma iPad · collection 1033:10907): one 9×2 page
 // (every slot of a town) in a box across the screen, the other towns' people 9 to a row under it.
-const PHONE = { perPage: 6, cols: 3, tile: 90, col: 125, row: 116, tileX: 31, tileY: 20, clipL: 13, clipW: 376, top: 243, h: 257, boxL: 10, boxW: 382, boxH: 256 }
+const PHONE = { perPage: 6, cols: 3, tile: 90, col: 125, row: 116, tileX: 31, tileY: 20, clipL: 21, clipW: 360, top: 243, h: 257, boxL: 10, boxW: 382, boxH: 256 }
 // deck box outline (Figma Vector 413), drawn inline so its 2px line stays 2px when the plaza's box is shorter
 const DECK_D = deckBoxSvg.match(/ d="([^"]+)"/)![1]
-const WIDE = { perPage: 18, cols: 9, tile: 88, col: 117.8, row: 111.8, tileX: 82, tileY: 27, clipL: 33, clipW: 1128, top: 235, h: 254, boxL: 30, boxW: 1134, boxH: 254 }
+const WIDE = { perPage: 18, cols: 9, tile: 88, col: 117.8, row: 111.8, tileX: 82, tileY: 27, clipL: 52, clipW: 1090, top: 235, h: 254, boxL: 30, boxW: 1134, boxH: 254 }
 
 type Drag = { id: string; from: 'deck' | 'rest'; x: number; y: number }
 
@@ -214,7 +214,8 @@ export default function CollectionScreen({
   const bandLen = bandR - bandL
   const bandD = useMemo(() => stretchX(BAND.d, BAND.len, bandLen, BAND.capStart, BAND.capEnd), [bandLen])
   const stripW = Math.max(wide ? 1194 : 402, bandR + 24)
-  // deck pages scroll inside the hand-drawn box only (clip just inside its stroke)
+  // deck pages scroll inside the hand-drawn box only, clipped ~10px inside its outline so a card sliding past never
+  // touches or crosses it (Figma Collection: the tiles always sit clear of the box line)
   const CLIP_L = G.clipL
   const CLIP_W = G.clipW
 
