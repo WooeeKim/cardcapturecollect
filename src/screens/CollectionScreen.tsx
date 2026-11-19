@@ -7,7 +7,7 @@ import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import bandImg from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
 import { framePoint, toLocal } from '../lib/frame'
-import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
+import { MAX_RESIDENTS, deleteCard, townOf, type Card, type State } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
 
@@ -30,6 +30,9 @@ export default function CollectionScreen({
   onTown,
   onBack,
   onMigrate,
+  onMoveCard,
+  onSwap,
+  onForget,
 }: {
   state: State
   commit: (fn: (s: State) => State) => void
@@ -38,6 +41,10 @@ export default function CollectionScreen({
   onTown: (id: string) => void
   onBack: () => void
   onMigrate: (cardId: string) => void // Town List in move mode — any of your towns or Last Stop
+  // moves go through App so Last Stop (on the server) works like any other town
+  onMoveCard: (cardId: string, townId: string, at?: number) => unknown
+  onSwap: (a: string, b: string) => unknown
+  onForget: (cardId: string) => void // let go: also leaves Last Stop
 }) {
   const wide = useWide()
   const G = wide ? WIDE : PHONE
@@ -127,7 +134,7 @@ export default function CollectionScreen({
     // dropped on another card in the other area → the two trade places (no card ever loses its town)
     const other = hit?.closest<HTMLElement>('[data-card]')?.dataset.card
     const otherFrom = hit?.closest<HTMLElement>('[data-from]')?.dataset.from
-    if (other && other !== id && otherFrom !== from) return commit((s) => swapCards(s, id, other))
+    if (other && other !== id && otherFrom !== from) return void onSwap(id, other)
     const slot = hit?.closest<HTMLElement>('[data-slot]')
     const inDeck = slot || hit?.closest('[data-deck]')
     if (!inDeck) return // cards can't be taken out of a town by dragging
@@ -135,14 +142,14 @@ export default function CollectionScreen({
     if (from === 'rest' && deck.length >= MAX_RESIDENTS) {
       return setPopup({ message: tr('This town is full. Drop them on someone to swap places.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
     }
-    commit((s) => placeCard(s, id, town.id, at))
+    onMoveCard(id, town.id, at)
   }
 
   function askDelete(card: Card) {
     setPopup({
       message: tr('Let this person go?'),
       actions: [
-        { label: tr('Let go'), onClick: () => { commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
+        { label: tr('Let go'), onClick: () => { onForget(card.id); commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
         { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
