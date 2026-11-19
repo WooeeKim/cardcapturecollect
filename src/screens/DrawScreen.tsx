@@ -34,7 +34,7 @@ import { tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
 
 // New Figma GUI (prototyping › 그리기): Drawing | Memo tabs, hand-drawn toolbar, Colors panel with
-// eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "Choose a village" (719:11320).
+// eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "move in" (was "Choose a village", 719:11320).
 const SIZES = [2, 4, 8, 14, 22]
 // toolbar geometry in Figma frame px; `up` = how far the picked tool lifts
 const TOOLS = {
@@ -857,13 +857,13 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
         </div>
       </div>
       <Bottom>
-        {/* save the card as an image / share it as a link */}
-        <CardActions card={card} className="absolute top-[706px] left-1/2 -translate-x-1/2" />
-        <button onClick={onChoose} className="absolute top-[774px] left-[88px] flex h-[45px] w-[227px] items-center justify-center">
+        {/* one row under the card: save / share on the left, "move in" on the right */}
+        <CardActions card={card} className="absolute top-[774px] left-[40px]" />
+        <button onClick={onChoose} className="absolute top-[774px] left-[240px] flex h-[45px] w-[118px] items-center justify-center">
           <span className="absolute inset-[-2.22%_-0.44%]">
             <PillVillage />
           </span>
-          <span className="relative text-[21px] leading-[1.1]">{tr('Choose a village')}</span>
+          <span className="relative text-[21px] leading-[1.1]">{tr('move in')}</span>
         </button>
       </Bottom>
     </div>

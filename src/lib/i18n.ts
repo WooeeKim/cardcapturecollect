@@ -149,7 +149,7 @@ const DICT: Record<string, string> = {
   Opacity: '불투명도',
   Finish: '완성',
   'Go Back': '돌아가기',
-  'Choose a village': '마을 고르기',
+  'move in': '이사하기',
 
   // moods (names + the little words walkers say)
   Silent: '고요한',
