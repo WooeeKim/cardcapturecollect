@@ -22,6 +22,7 @@ import groundIpadSvg from '../assets/proto/ground/ground-ipad.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
+import { SQUARE_ID } from '../lib/square'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
 
@@ -66,6 +67,16 @@ const TUFTS: [keyof typeof TUFT_KIND, number, number][] = (
     ['leaf', 930, 1453], ['leaf', 1042, 1359], ['leaf', 1154.63, 1220], ['leaf', 780.63, 1331], ['leaf', 1314.63, 1553], ['leaf', 1367.63, 1352],
   ] as const
 ).map(([k, x, y]) => [k, x - 477.34, y - 1163.08])
+
+// Sharing Plaza is a city, not a field (UX › 앱 확정, grid beside 02 메인 마을, Vector 547 · 566–577): the same
+// ground shape paved with a perspective grid, no grass. Lines in the ground box (1109.76 × 474.39):
+// [x top, y top, x bottom, y bottom]; streets run toward the horizon, crossings get closer together far away.
+const CITY_LINES: [number, number, number, number][] = [
+  [562, 5, 562, 474], [491.8, 8.5, 445.8, 471.5], [686, 8.5, 731, 472.5], [421.4, 7.5, 302.4, 467.5],
+  [832.5, 7.5, 953.5, 472.5], [345.6, 2.3, 160.6, 464.3], [975.2, 2.3, 1163.2, 471.3],
+  [239, 61, 898, 61], [192.5, 131, 937.5, 131], [134.5, 226, 1003.5, 226], [54, 351.5, 1195, 351.5],
+]
+const CITY_BOX = { w: 1109.76, h: 474.39 }
 
 // ---- pick up & throw (long-press a resident) ----
 const HOLD_MS = 350 // press this long on a character to pick it up
@@ -146,7 +157,8 @@ export default function MainScreen({
   // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
   const [side, setSide] = useState<1 | -1 | 0>(0)
   const sideRef = useRef<1 | -1 | 0>(0)
-  const groundEl = useRef<SVGPathElement>(null)
+  const groundEl = useRef<SVGGElement>(null)
+  const city = town.id === SQUARE_ID
   const hintEl = useRef<HTMLDivElement>(null)
   const target = openId ?? follow
   const targetRef = useRef(target)
@@ -775,10 +787,27 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <path ref={groundEl} d={wide ? GRASS_D : GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <g ref={groundEl}>
+            <path d={wide ? GRASS_D : GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {city && (
+              <>
+                <clipPath id="city-ground">
+                  <path d={wide ? GRASS_D : GROUND_D} />
+                </clipPath>
+                {/* iPad ground is a bigger drawing: the same grid stretched over its box */}
+                <g clipPath="url(#city-ground)">
+                  <g transform={wide ? `scale(${GRASS_W / CITY_BOX.w} ${573 / CITY_BOX.h})` : undefined}>
+                    {CITY_LINES.map(([x1, y1, x2, y2], i) => (
+                      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth={1.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    ))}
+                  </g>
+                </g>
+              </>
+            )}
+          </g>
         </svg>
         <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
-          {tufts.map((t, i) => (
+          {!city && tufts.map((t, i) => (
             <img
               key={i}
               src={TUFT_KIND[t.kind].src}

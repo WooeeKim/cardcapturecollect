@@ -48,7 +48,7 @@ export function tr(en: string, vars?: Record<string, string | number>) {
 
 // town names the app made itself ("Town 1", "New Town 3") follow the language; names people typed don't
 export function townName(name: string) {
-  if (name === 'Last Stop') return tr(name) // the shared town (lib/square.ts)
+  if (name === 'Sharing Plaza') return tr(name) // the shared town (lib/square.ts)
   const m = /^(New )?Town (\d+)$/.exec(name)
   return m ? tr(m[1] ? 'New Town {n}' : 'Town {n}', { n: m[2] }) : name
 }
@@ -56,10 +56,9 @@ export function townName(name: string) {
 // English key → 한국어
 const DICT: Record<string, string> = {
   // shared town (lib/square.ts)
-  'Last Stop': '종점',
-  "Everyone's town": '모두의 마을',
-  "Everyone's town. Anyone can visit the people who live here.": '모두의 마을이에요. 누구나 여기 사는 사람들을 구경할 수 있어요.',
-  'Residents {n} · Yours {k}/{max}': '주민 {n}명 · 내 주민 {k}/{max}',
+  'Sharing Plaza': '공유 플라자',
+  'Residents {n}/no limits': '주민 {n}/제한 없음',
+  'You can send your character only {n}!': '내 주민은 {n}명까지만 보낼 수 있어요!',
   '{name} details': '{name} 자세히',
   'Log in to move someone to {name}.': '{name}에 이주시키려면 로그인해 주세요.',
   "Couldn't reach {name}. Try again in a moment.": '{name}에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.',
@@ -161,6 +160,8 @@ const DICT: Record<string, string> = {
   Finish: '완성',
   'Go Back': '돌아가기',
   'Choose a village': '마을 고르기',
+  'move in': '입주하기',
+  Share: '공유하기',
 
   // moods (names + the little words walkers say)
   Silent: '고요한',
