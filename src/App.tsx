@@ -14,7 +14,7 @@ import { checkAdmin, currentUser, flushRemote, loadRemote, logOut, saveRemote, s
 import { viewAsId } from './lib/viewAs'
 import { setScreen, startTracking } from './lib/events'
 import { GUEST_KEY, hasContent, initial, keyFor, load, makePending, mergeGuest, placeCard, profileCard, save, savedAt, sendPending, swapCards, townOf, unplaceCard, type Card, type State } from './lib/store'
-import { SQUARE_ID, SQUARE_PER_USER, loadSquare, moveIn, moveOut, withSquare, type SquareRow } from './lib/square'
+import { SQUARE_ID, SQUARE_NAME, SQUARE_PER_USER, loadSquare, moveIn, moveOut, withSquare, type SquareRow } from './lib/square'
 import CollectionScreen from './screens/CollectionScreen'
 import DrawScreen, { TadaScreen } from './screens/DrawScreen'
 import GilbtiScreen from './screens/GilbtiScreen'
@@ -107,7 +107,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   }, [])
   // what the screens draw: your towns + the shared town at the end, your cards + everyone's there
   const view = useMemo(() => withSquare(state, square.rows), [state, square.rows])
-  // Collection is your people only: Last Stop shows just the ones you moved there
+  // Collection is your people only: the plaza shows just the ones you moved there
   const collectionView = useMemo(() => withSquare(state, square.rows.filter((r) => r.userId === user?.id)), [state, square.rows, user?.id])
   const mineInSquare = (id: string) => square.rows.some((r) => r.card.id === id && r.userId === user?.id)
 
@@ -349,15 +349,15 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setRoute({ name: 'main', townId, enter, focus })
   }
 
-  // Last Stop is a town like any other; only its residents live on the server (lib/square.ts).
-  // Every move of one of your people goes through here: into / out of Last Stop, or between your own towns.
-  const squareFull = () => tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr('Last Stop') })
+  // Sharing Plaza is a town like any other; only its residents live on the server (lib/square.ts).
+  // Every move of one of your people goes through here: into / out of the plaza, or between your own towns.
+  const squareFull = () => tr('You can have up to {n} people in {name}.', { n: SQUARE_PER_USER, name: tr(SQUARE_NAME) })
   const moveFailed = () => tr("Couldn't move this person. Try again in a moment.")
-  // `swap`: someone of yours just left Last Stop for this one, so the count isn't growing (the server still checks)
+  // `swap`: someone of yours just left the plaza for this one, so the count isn't growing (the server still checks)
   async function toSquare(card: Card, swap = false): Promise<boolean> {
     const u = userRef.current
     if (viewAsId) return setError(READ_ONLY), false
-    if (!u) return setError(tr('Log in to move someone to {name}.', { name: tr('Last Stop') })), false
+    if (!u) return setError(tr('Log in to move someone to {name}.', { name: tr(SQUARE_NAME) })), false
     if (!swap && squareInfo.mine >= SQUARE_PER_USER) return setError(squareFull()), false
     const res = await waiting(moveIn(u, card))
     if (!res.ok) return setError(res.why === 'cap' ? squareFull() : moveFailed()), false
@@ -374,7 +374,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     const card = view.cards[cardId]
     if (!card) return false
     const from = townOf(view, cardId)?.id
-    if (from === townId && townId === SQUARE_ID) return true // order inside Last Stop is by move-in time
+    if (from === townId && townId === SQUARE_ID) return true // order inside the plaza is by move-in time
     if (townId === SQUARE_ID) {
       if (!(await toSquare(card))) return false
       commit((s) => unplaceCard(s, cardId))
@@ -389,7 +389,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
     commit((s) => placeCard(s, cardId, townId, at))
     return true
   }
-  // Collection drag onto someone in another town: the two trade places, Last Stop included
+  // Collection drag onto someone in another town: the two trade places, the plaza included
   async function swapCard(a: string, b: string) {
     const ta = townOf(view, a)?.id
     const tb = townOf(view, b)?.id
@@ -405,9 +405,9 @@ export default function App({ onReady }: { onReady?: () => void }) {
       const t = unplaceCard({ ...s, cards: { ...s.cards, [inSq]: s.cards[inSq] ?? inCard } }, out)
       return placeCard(t, inSq, home, at)
     })
-    if (!(await toSquare(outCard, true))) commit((s) => placeCard(s, out, home)) // Last Stop said no: back home
+    if (!(await toSquare(outCard, true))) commit((s) => placeCard(s, out, home)) // the plaza said no: back home
   }
-  // a person let go while living in Last Stop leaves it too
+  // a person let go while living in the plaza leaves it too
   const forget = (cardId: string) => {
     if (mineInSquare(cardId)) fromSquare(cardId)
   }
@@ -488,7 +488,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
             const pending = state.pending!
             const id = pending.id
             if (townId === SQUARE_ID) {
-              // a fresh drawing straight to Last Stop: it joins your people, living there instead of in one of your towns
+              // a fresh drawing straight to the plaza: it joins your people, living there instead of in one of your towns
               if (!(await toSquare(pending))) return
               commit((s) => (s.pending?.id === id ? { ...s, cards: { ...s.cards, [id]: pending }, pending: null } : s))
             } else commit((s) => sendPending(s, townId))
