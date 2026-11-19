@@ -256,6 +256,8 @@ img {
 /* walkers bob only while moving */
 .walker .bob { animation: walk-bob 1s ease-in-out infinite paused; transform-origin: bottom center; }
 .walker.walking .bob { animation-play-state: running; }
+/* picked up: legs kick fast (바둥바둥) */
+.walker.held .bob { animation-play-state: running; animation-duration: 0.22s !important; }
 
 /* Town List: a town opens smoothly — box grows out of the grey line, thumbnail swells, text fades in */
 @keyframes tl-box {

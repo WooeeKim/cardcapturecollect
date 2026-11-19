@@ -65,8 +65,41 @@ const TUFTS: [keyof typeof TUFT_KIND, number, number][] = (
   ] as const
 ).map(([k, x, y]) => [k, x - 477.34, y - 1163.08])
 
+// ---- pick up & throw (long-press a resident) ----
+const HOLD_MS = 350 // press this long on a character to pick it up
+const GRAV = 2400 // world px/s², pulls the dangling body back under the grip
+const HEAVY = 1.8 // >1 = slower, heavier swing (acts like a longer body)
+const HAND_PULL = 0.7 // how much a hand jerk swings the body (lower = heavier)
+const SWING_DAMP = 2.6 // how fast the dangling swing settles
+const MAX_SWING = 1.05 // rad (~60°) past hanging straight down; beyond this it's pushed back, never spins over
+const KICK = 36 // 바둥바둥 kick strength
+const LIFT = 46 // a held character floats this high above its shadow
+const THROW_GRAV = 3400 // world px/s², heavier fall than the swing
+const THROW_SPEED = 0.6 // share of the hand speed the throw keeps
+const MAX_THROW = 1900 // world px/s
+
 type View = { s: number; x: number; y: number }
-type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1 }
+// gu/gv: the gripped point in the character's own box (px, feet = 0,0, head = 0,-charH). While held or flying the
+// character turns by `a` around that point, which sits at (px, py); sx/sy = the spot on the ground under it.
+type Grab = {
+  phase: 'held' | 'air' | 'land'
+  gu: number
+  gv: number
+  px: number
+  py: number
+  fx: number // finger, world px (held)
+  fy: number
+  vx: number // smoothed grip velocity (held) / flight velocity (air), world px/s
+  vy: number
+  a: number
+  w: number
+  sx: number
+  sy: number
+  z: number
+  vz: number
+  kick: number // time to the next struggle kick
+}
+type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1; g?: Grab }
 
 export default function MainScreen({
   state,
@@ -225,11 +258,17 @@ export default function MainScreen({
   useEffect(() => {
     if (!size.w) return
     let raf = 0
+    let t = 0
     let last = performance.now()
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
+      t += dt
       for (const w of walkers.current) {
+        if (w.g) {
+          stepGrab(w, w.g, dt, t)
+          continue
+        }
         const card = state.cards[w.id]
         const speed = 600 / moodOf(card?.mood ?? '').pace
         if (w.wait > 0) w.wait -= dt
@@ -276,6 +315,155 @@ export default function MainScreen({
     return () => cancelAnimationFrame(raf)
   }, [size.w, size.h, state.cards])
 
+  // ---- picked-up / thrown character: a pendulum hanging from the gripped point ----
+  // lowest point of the hanging body below the grip (head grip → feet hang down, feet grip → head hangs down)
+  const hang = (g: Grab, k: number) => Math.max(-g.gv, charH + g.gv) * k
+  const groundClamp = (y: number) => Math.min(H - 12, Math.max(groundTop + 12, y))
+
+  function stepGrab(w: Walker, g: Grab, dt: number, t: number) {
+    const k = depth(g.sy)
+    if (g.phase === 'held') {
+      // grip velocity from the finger, smoothed; its change = how hard the hand jerks the grip
+      const nvx = (g.fx - g.px) / dt
+      const nvy = (g.fy - g.py) / dt
+      const ovx = g.vx
+      const ovy = g.vy
+      g.vx += (nvx - g.vx) * 0.35
+      g.vy += (nvy - g.vy) * 0.35
+      const ax = HAND_PULL * Math.max(-8000, Math.min(8000, (g.vx - ovx) / dt))
+      const ay = HAND_PULL * Math.max(-8000, Math.min(8000, (g.vy - ovy) / dt))
+      g.px = g.fx
+      g.py = g.fy
+      // pendulum with a moving pivot: the body's middle lags behind the hand and swings back
+      const rx = -g.gu * k
+      const ry = (-charH * 0.5 - g.gv) * k
+      const L = Math.max(40, Math.hypot(rx, ry)) * HEAVY
+      const th = Math.atan2(ry, rx) + g.a
+      let alpha = (ax * Math.sin(th) + (GRAV - ay) * Math.cos(th)) / L - SWING_DAMP * g.w
+      // never swings over the top: past MAX_SWING from hanging straight down, a stiff push back
+      const rest = Math.PI / 2 - Math.atan2(ry, rx)
+      const off = Math.atan2(Math.sin(g.a - rest), Math.cos(g.a - rest))
+      if (Math.abs(off) > MAX_SWING) alpha -= Math.sign(off) * (Math.abs(off) - MAX_SWING) * 120 + g.w * 6
+      // 바둥바둥: little random kicks
+      g.kick -= dt
+      if (g.kick <= 0) {
+        g.kick = 0.15 + Math.random() * 0.3
+        alpha += (Math.random() - 0.5) * 2 * KICK
+      }
+      g.w += alpha * dt
+      g.a += g.w * dt
+      g.sy = groundClamp(g.py + hang(g, k) + LIFT)
+      g.sx = g.px
+      g.z = g.sy - g.py - hang(g, k)
+    } else if (g.phase === 'air') {
+      g.sx += g.vx * dt
+      g.vz -= THROW_GRAV * dt
+      g.z += g.vz * dt
+      g.a += g.w * dt
+      g.w *= Math.exp(-3 * dt) // keeps the swing it had, no tumbling
+      const lo = edge(g.sy) + 30
+      const hi = W - edge(g.sy) - 30
+      if (g.sx < lo || g.sx > hi) {
+        g.sx = Math.min(hi, Math.max(lo, g.sx))
+        g.vx *= -0.5
+      }
+      if (g.z <= 0 && g.vz < 0) {
+        g.z = 0
+        if (g.vz < -520) {
+          // bounce
+          g.vz *= -0.35
+          g.vx *= 0.6
+          g.w = g.w * 0.4 + (Math.random() - 0.5) * 1.2
+          vibrate(15)
+        } else {
+          // land: keep the pose, but turn around the feet from now on, then stand back up
+          const c = Math.cos(g.a)
+          const s = Math.sin(g.a)
+          const ux = -g.gu * k
+          const uy = -g.gv * k
+          g.px += ux * c - uy * s
+          g.py += ux * s + uy * c
+          g.gu = 0
+          g.gv = 0
+          // stand up where the feet came down (a tilted body's feet aren't under the grip): no sideways slide
+          g.sx = Math.min(hi, Math.max(lo, g.px))
+          g.a = Math.atan2(Math.sin(g.a), Math.cos(g.a))
+          g.w = 0
+          g.phase = 'land'
+          vibrate(20)
+        }
+      }
+      // the body flies with its shadow: grip stays right above the spot on the ground
+      if (g.phase === 'air') {
+        g.px = g.sx
+        g.py = g.sy - hang(g, k) - g.z
+      }
+    } else {
+      // land: feet slide onto the shadow, body springs upright
+      const ease = 1 - Math.exp(-14 * dt) // same speed at any frame rate
+      g.px += (g.sx - g.px) * ease
+      g.py += (g.sy - g.py) * ease
+      g.w += (-g.a * 140 - g.w * 13) * dt
+      g.a += g.w * dt
+      if (Math.abs(g.a) < 0.02 && Math.abs(g.w) < 0.3 && Math.hypot(g.sx - g.px, g.sy - g.py) < 1) {
+        w.x = g.sx
+        w.y = g.sy
+        w.g = undefined
+        w.wait = 0.8 + Math.random() * 1.5
+        const el = els.current.get(w.id)
+        if (el) {
+          el.classList.remove('held')
+          ;(el.firstElementChild as HTMLElement).style.rotate = ''
+        }
+        shadows.current.get(w.id)?.style.setProperty('opacity', '0')
+        return
+      }
+    }
+    w.x = g.sx
+    w.y = g.sy
+    const el = els.current.get(w.id)
+    if (el) {
+      el.style.transform = `translate(${g.px}px, ${g.py}px) rotate(${g.a}rad) scale(${k}) translate(${-g.gu}px, ${-g.gv}px)`
+      el.style.zIndex = g.phase === 'held' ? '100000' : String(Math.round(g.sy) + 1)
+      // legs / body wiggle while held (the bob runs fast via .held in CSS)
+      ;(el.firstElementChild as HTMLElement).style.rotate = g.phase === 'held' ? `${Math.sin(t * 23) * 5}deg` : ''
+    }
+    const sh = shadows.current.get(w.id)
+    if (sh) {
+      // under the body's middle, not the grip (they differ when the body hangs tilted)
+      const mu = -g.gu * k
+      const mv = (-charH * 0.5 - g.gv) * k
+      const mx = g.px + mu * Math.cos(g.a) - mv * Math.sin(g.a)
+      sh.style.transform = `translate(${mx}px, ${g.sy}px) scale(${k * Math.max(0.45, 1 - g.z / 400)})`
+      sh.style.opacity = String(Math.max(0.15, 0.5 - g.z / 600))
+      sh.style.zIndex = String(Math.round(g.sy))
+    }
+  }
+
+  // long-press grabbed a character at world point (wx, wy)
+  function pickUp(id: string, wx: number, wy: number) {
+    const w = walkers.current.find((x) => x.id === id)
+    if (!w || w.g) return false
+    const k = depth(w.y)
+    const gu = Math.max(-charH * 0.4, Math.min(charH * 0.4, (wx - w.x) / k))
+    const gv = Math.max(-charH, Math.min(0, (wy - w.y) / k))
+    w.g = { phase: 'held', gu, gv, px: wx, py: wy, fx: wx, fy: wy, vx: 0, vy: 0, a: 0, w: 0, sx: w.x, sy: w.y, z: 0, vz: 0, kick: 0.05 }
+    els.current.get(id)?.classList.add('held')
+    vibrate(30)
+    return true
+  }
+  function throwHeld(id: string) {
+    const g = walkers.current.find((x) => x.id === id)?.g
+    if (!g || g.phase !== 'held') return
+    const cap = (v: number) => Math.max(-MAX_THROW, Math.min(MAX_THROW, v))
+    // sideways hand speed carries it along the ground, up/down hand speed tosses it up / slams it down
+    g.vx = cap(g.vx * THROW_SPEED)
+    g.vz = cap(-g.vy * THROW_SPEED)
+    g.vy = 0
+    g.phase = 'air'
+    els.current.get(id)?.classList.remove('held')
+  }
+
   // farther (near horizon) = smaller
   function depth(y: number) {
     return 0.7 + 0.5 * Math.max(0, Math.min(1, (y - groundTop) / Math.max(1, H - groundTop)))
@@ -283,8 +471,19 @@ export default function MainScreen({
 
   // ---- gestures: drag = pan (pull past the edge = next town), pinch = zoom, tap = open ----
   const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const gesture = useRef<{ start: { x: number; y: number }; view: View; moved: boolean; walker?: string; pinch?: { d: number; mid: { x: number; y: number }; view: View } } | null>(null)
+  const gesture = useRef<{ start: { x: number; y: number }; view: View; moved: boolean; walker?: string; grab?: string; pinch?: { d: number; mid: { x: number; y: number }; view: View } } | null>(null)
   const pullRef = useRef(0)
+  const holdTimer = useRef<number | null>(null)
+  const shadows = useRef(new Map<string, HTMLDivElement>())
+  function cancelHold() {
+    if (holdTimer.current !== null) clearTimeout(holdTimer.current)
+    holdTimer.current = null
+  }
+  useEffect(() => cancelHold, [])
+  function toWorld(p: { x: number; y: number }) {
+    const v = view.current
+    return { x: (p.x - v.x) / v.s, y: (p.y - v.y) / v.s }
+  }
 
   function local(e: React.PointerEvent) {
     return toLocal(e.clientX, e.clientY, box.current!)
@@ -325,6 +524,7 @@ export default function MainScreen({
   useEffect(() => () => setZone(null), [])
 
   function onDown(e: React.PointerEvent) {
+    if (gesture.current?.grab) return // holding someone: other fingers are ignored
     pointers.current.set(e.pointerId, local(e))
     try {
       e.currentTarget.setPointerCapture(e.pointerId)
@@ -335,7 +535,24 @@ export default function MainScreen({
       // remember who was touched now: with pointer capture, pointerup's target is the box, not the character
       const walker = (e.target as HTMLElement).closest<HTMLElement>('[data-walker]')?.dataset.walker
       gesture.current = { start: local(e), view: { ...view.current }, moved: false, walker }
+      // press and hold on a character = pick it up
+      cancelHold()
+      if (walker) {
+        const pid = e.pointerId
+        holdTimer.current = window.setTimeout(() => {
+          holdTimer.current = null
+          const g = gesture.current
+          const p = pointers.current.get(pid)
+          if (!g || g.moved || pointers.current.size !== 1 || !p) return
+          const at = toWorld(p)
+          if (!pickUp(walker, at.x, at.y)) return
+          g.grab = walker
+          setOpenId(null)
+          setFollow(null)
+        }, HOLD_MS)
+      }
     } else if (pointers.current.size === 2 && gesture.current) {
+      cancelHold()
       gesture.current.moved = true
       gesture.current.pinch = { ...pinchOf(), view: { ...view.current } }
       setPullBoth(0)
@@ -349,6 +566,16 @@ export default function MainScreen({
     const p = local(e)
     pointers.current.set(e.pointerId, p)
     const g = gesture.current
+    if (g.grab) {
+      // carrying: the grip follows the finger (the loop turns hand speed into swing)
+      const hw = walkers.current.find((x) => x.id === g.grab)?.g
+      if (hw) {
+        const at = toWorld(p)
+        hw.fx = at.x
+        hw.fy = at.y
+      }
+      return
+    }
     if (g.pinch && pointers.current.size === 2) {
       const { d, mid } = pinchOf()
       const b = g.pinch.view
@@ -364,6 +591,7 @@ export default function MainScreen({
     const dy = p.y - g.start.y
     if (!g.moved && Math.hypot(dx, dy) > TAP) {
       g.moved = true
+      cancelHold()
       // dragging the map lets go of the followed character / closes the card
       setFollow(null)
       setOpenId(null)
@@ -383,8 +611,15 @@ export default function MainScreen({
   }
 
   function onUp(e: React.PointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return
     pointers.current.delete(e.pointerId)
+    cancelHold()
     const g = gesture.current
+    if (g?.grab) {
+      throwHeld(g.grab)
+      gesture.current = null
+      return
+    }
     if (pointers.current.size > 0) {
       if (g) g.pinch = undefined
       if (g && pointers.current.size === 1) {
@@ -463,6 +698,18 @@ export default function MainScreen({
               draggable={false}
               className="pointer-events-none absolute top-0 left-0 max-w-none origin-bottom"
               style={{ width: t.w, height: t.h, marginLeft: -t.w / 2, marginTop: -t.h, transform: `translate(${t.x}px, ${t.y}px) scale(${depth(t.y)})`, zIndex: Math.round(t.y) }}
+            />
+          ))}
+          {/* shadows, only shown while someone is lifted off the ground */}
+          {cards.map((c) => (
+            <div
+              key={`sh-${c.id}`}
+              ref={(el) => {
+                if (el) shadows.current.set(c.id, el)
+                else shadows.current.delete(c.id)
+              }}
+              className="pointer-events-none absolute top-0 left-0 h-[18px] w-[90px] -mt-[9px] -ml-[45px] rounded-[50%] bg-black"
+              style={{ opacity: 0 }}
             />
           ))}
           {cards.map((c) => {
