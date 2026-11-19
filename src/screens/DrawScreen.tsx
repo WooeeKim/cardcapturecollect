@@ -14,6 +14,12 @@ import fitIcon from '../assets/proto/v2/fit.svg'
 import moodBox from '../assets/proto/v2/mood-box.svg'
 import chipW1 from '../assets/proto/v2/chip-w1.svg'
 import chipW2 from '../assets/proto/v2/chip-w2.svg'
+import { APP_NAME } from '../components/Splash'
+import pillMoveIn from '../assets/proto/v2/pill-move-in.svg'
+import saveStem from '../assets/proto/v2/save-stem.svg'
+import saveHead from '../assets/proto/v2/save-head.svg'
+import saveBase from '../assets/proto/v2/save-base.svg'
+import shareIcon from '../assets/proto/v2/share.svg'
 import spark391 from '../assets/proto/v2/spark-391.svg'
 import spark392 from '../assets/proto/v2/spark-392.svg'
 import spark393 from '../assets/proto/v2/spark-393.svg'
@@ -24,7 +30,7 @@ import spark397 from '../assets/proto/v2/spark-397.svg'
 import spark398 from '../assets/proto/v2/spark-398.svg'
 import { Bottom, CardView, Popup, shrink, type PopupAction } from '../components/ui'
 import { ToggleIcon } from '../components/drawIcons'
-import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, PillVillage, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
+import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
 import { MOODS } from '../lib/moods'
 import { framePoint, toLocal } from '../lib/frame'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
@@ -829,8 +835,32 @@ function hslHex(h: number, s: number, l: number) {
   return `#${hex2(f(0) * 255)}${hex2(f(8) * 255)}${hex2(f(4) * 255)}`
 }
 
-// Finished card lands with a little burst, then goes to a village (Figma 719:11320).
-export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => void }) {
+// the drawing as a PNG file (data URL from the canvas) — for Save and for Share's fallback
+async function cardFile(card: Card) {
+  const blob = await (await fetch(card.image)).blob()
+  return new File([blob], `${card.serial || 'card'}.png`, { type: blob.type || 'image/png' })
+}
+function download(file: File) {
+  const url = URL.createObjectURL(file)
+  const a = Object.assign(document.createElement('a'), { href: url, download: file.name })
+  a.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// Finished card lands with a little burst, then moves in to a town (Figma 1134:3838; was 719:11320).
+// Back leaves it waiting (Draw → back here); Save downloads the drawing; Share opens the phone's share sheet.
+export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: () => void; onBack: () => void }) {
+  const save = async () => download(await cardFile(card))
+  const share = async () => {
+    const file = await cardFile(card)
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: card.nickname || APP_NAME })
+      } catch {
+        /* closed the sheet */
+      }
+    } else download(file)
+  }
   // Figma spark strokes (Vector 391–398), positioned as in the frame
   const sparks = [
     { src: spark391, x: 274.2, y: 135.3, w: 2, h: 21.2 },
@@ -844,6 +874,9 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
   ]
   return (
     <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[75px] left-[24px] z-10 size-[50px]">
+        <img src={backIcon} alt="" className="size-full" />
+      </button>
       {sparks.map((s, i) => (
         <img key={i} src={s.src} alt="" className="pointer-events-none absolute" style={{ left: s.x, top: s.y, width: s.w, height: s.h, animation: `spark 1.4s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
       ))}
@@ -854,13 +887,20 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
             <CardView card={card} />
           </div>
         </div>
+        {/* under the card's lower right, frame px minus the box's top-left (50.7, 203.6) */}
+        <button aria-label={tr('Save')} onClick={save} className="absolute top-[422px] left-[252px] h-[38px] w-[34px]">
+          <img src={saveStem} alt="" className="absolute top-[4.95px] left-[11.27px] max-w-none" />
+          <img src={saveHead} alt="" className="absolute top-[20px] left-[7.65px] max-w-none" />
+          <img src={saveBase} alt="" className="absolute top-[32.4px] left-[1.85px] max-w-none" />
+        </button>
+        <button aria-label={tr('Share')} onClick={share} className="absolute top-[420px] left-[291px] size-[34px]">
+          <img src={shareIcon} alt="" className="absolute top-[1.25px] left-[1.15px] max-w-none" />
+        </button>
       </div>
       <Bottom>
-        <button onClick={onChoose} className="absolute top-[774px] left-[88px] flex h-[45px] w-[227px] items-center justify-center">
-          <span className="absolute inset-[-2.22%_-0.44%]">
-            <PillVillage />
-          </span>
-          <span className="relative text-[21px] leading-[1.1]">{tr('Choose a village')}</span>
+        <button onClick={onChoose} className="absolute top-[753px] left-[134.7px] flex h-[51px] w-[132.6px] items-center justify-center">
+          <img src={pillMoveIn} alt="" className="absolute top-[-1px] left-[-1px] max-w-none" />
+          <span className="relative text-[23px] leading-[1.1] tracking-[-0.23px]">{tr('move in')}</span>
         </button>
       </Bottom>
     </div>

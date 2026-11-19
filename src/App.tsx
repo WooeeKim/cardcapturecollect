@@ -436,7 +436,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           canMigrate={(cardId) => !shared || (!viewAsId && mineInSquare(cardId))}
           canOpen={(cardId) => !shared || (!viewAsId && mineInSquare(cardId))}
           onMyPage={() => setRoute({ name: 'mypage' })}
-          onDraw={() => setRoute({ name: 'draw' })}
+          onDraw={() => setRoute(state.pending ? { name: 'tada' } : { name: 'draw' })} // a finished card left waiting comes first
           onSwitch={(id) => goMain(id)}
           onMigrate={(cardId) => setRoute({ name: 'migrate', cardId, back: route, to: 'main' })}
         />
@@ -546,7 +546,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       // iPad sideways: no landscape frame for this one; the phone screen in the middle column
       screen = state.pending && (
         <WideCol bg="#f0f0f0">
-          <TadaScreen card={state.pending} onChoose={() => setRoute({ name: 'send' })} />
+          <TadaScreen card={state.pending} onChoose={() => setRoute({ name: 'send' })} onBack={() => goMain(existingMain(homeId))} />
         </WideCol>
       )
       break
