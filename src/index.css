@@ -274,21 +274,68 @@ img {
 /* picked up: legs kick fast (바둥바둥) */
 .walker.held .bob { animation-play-state: running; animation-duration: 0.22s !important; }
 .walker.held .walk-word { display: none; }
-/* held: sweat drops (땀 삐질삐질) squeeze out beside the head and slide off, over and over */
-.walker .sweat { display: none; }
-.walker.held .sweat { display: block; }
-.walker.held .sweat-l { animation: sweat-l 0.7s ease-out infinite; transform-origin: 100% 0; }
-.walker.held .sweat-r { animation: sweat-r 0.7s ease-out 0.35s infinite both; transform-origin: 0 0; }
-@keyframes sweat-l {
+/* held: hand-drawn bits around the head, one set per mood (MainScreen FX): sweat, notes, sparkles, anger mark,
+   blush, Zzz, dizzy stars, hearts, shock lines, rain cloud. Each part is centred on its spot, then animated. */
+.walker .fx { display: none; }
+.walker.held .fx { display: block; }
+.fx-part { position: absolute; max-width: none; transform: translate(-50%, -50%); animation-fill-mode: both; }
+.fx-sweat-l { animation: fx-sweat-l 0.7s ease-out infinite; }
+.fx-sweat-r { animation: fx-sweat-r 0.7s ease-out infinite; }
+.fx-float { animation: fx-float 1.6s ease-out infinite; }
+.fx-zzz { animation: fx-zzz 1.8s ease-out infinite; }
+.fx-pop { animation: fx-pop 0.9s ease-in-out infinite; }
+.fx-pulse { animation: fx-pulse 0.9s ease-in-out infinite; }
+.fx-blink { animation: fx-blink 1.2s ease-in-out infinite; }
+.fx-shake { animation: fx-shake 0.35s linear infinite; }
+.fx-cloud { animation: fx-cloud 2s ease-in-out infinite; }
+/* stars circling above the head: a flat ellipse path */
+.fx-orbit { offset-path: path("M -26 0 A 26 8 0 1 0 26 0 A 26 8 0 1 0 -26 0"); offset-rotate: 0deg; animation: fx-orbit 1.4s linear infinite; }
+@keyframes fx-sweat-l {
   0% { translate: 8px -2px; scale: 0.5; opacity: 0; }
   25% { opacity: 1; scale: 1; }
   100% { translate: -6px 10px; scale: 0.9; opacity: 0; }
 }
-@keyframes sweat-r {
+@keyframes fx-sweat-r {
   0% { translate: -8px -2px; scale: 0.5; opacity: 0; }
   25% { opacity: 1; scale: 1; }
   100% { translate: 6px 10px; scale: 0.9; opacity: 0; }
 }
+@keyframes fx-float {
+  0% { translate: 0 8px; scale: 0.6; opacity: 0; }
+  20% { scale: 1; opacity: 1; }
+  60% { translate: 5px -12px; }
+  100% { translate: -3px -28px; opacity: 0; }
+}
+@keyframes fx-zzz {
+  0% { translate: -5px 10px; scale: 0.5; opacity: 0; }
+  25% { opacity: 1; }
+  100% { translate: 12px -26px; scale: 1.1; opacity: 0; }
+}
+@keyframes fx-pop {
+  0%, 100% { scale: 0; rotate: -20deg; }
+  50% { scale: 1; rotate: 15deg; }
+}
+@keyframes fx-pulse {
+  0%, 100% { scale: 0.82; }
+  50% { scale: 1.12; }
+}
+@keyframes fx-blink {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@keyframes fx-shake {
+  0%, 100% { translate: 0; }
+  25% { translate: -1.5px; }
+  75% { translate: 1.5px; }
+}
+@keyframes fx-cloud {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+@keyframes fx-orbit {
+  to { offset-distance: 100%; }
+}
+
 
 /* Town List: a town opens smoothly — box grows out of the grey line, thumbnail swells, text fades in */
 @keyframes tl-box {

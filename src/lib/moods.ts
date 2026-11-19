@@ -57,3 +57,24 @@ const HELD_DEFAULT = ['Put me down!', 'Aaah!']
 export function heldLines(name: string): string[] {
   return HELD_LINES[name] ?? HELD_DEFAULT
 }
+
+// what shows around the head while being carried, matching the lines above (MainScreen FX)
+export type HeldFx = 'notes' | 'sparkle' | 'sweat' | 'anger' | 'blush' | 'zzz' | 'dizzy' | 'hearts' | 'shock' | 'cloud'
+const HELD_FX: Record<string, HeldFx> = {
+  Joyful: 'notes',
+  Lively: 'sparkle',
+  Busy: 'sweat',
+  Elegant: 'anger',
+  Chic: 'anger',
+  Shy: 'blush',
+  Sleepy: 'zzz',
+  Scattered: 'dizzy',
+  Dreamy: 'dizzy',
+  Gentle: 'hearts',
+  Calm: 'hearts',
+  Silent: 'shock',
+  Gloomy: 'cloud',
+}
+export function heldFx(name: string): HeldFx {
+  return HELD_FX[name] ?? 'sweat'
+}

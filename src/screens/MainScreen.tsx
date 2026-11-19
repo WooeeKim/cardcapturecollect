@@ -7,9 +7,19 @@ import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
 import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
-import { heldLines, moodOf } from '../lib/moods'
+import { heldFx, heldLines, moodOf, type HeldFx } from '../lib/moods'
 import sweatLeft from '../assets/proto/sweat-left.svg'
 import sweatRight from '../assets/proto/sweat-right.svg'
+import fxNote1 from '../assets/proto/fx/note-1.svg'
+import fxNote2 from '../assets/proto/fx/note-2.svg'
+import fxSparkle from '../assets/proto/fx/sparkle.svg'
+import fxAnger from '../assets/proto/fx/anger.svg'
+import fxBlush from '../assets/proto/fx/blush.svg'
+import fxZ from '../assets/proto/fx/z.svg'
+import fxStar from '../assets/proto/fx/star.svg'
+import fxHeart from '../assets/proto/fx/heart.svg'
+import fxShock from '../assets/proto/fx/shock.svg'
+import fxCloud from '../assets/proto/fx/cloud.svg'
 import { TONES, type Card, type State, type Town } from '../lib/store'
 import { Bottom } from '../components/ui'
 import cardPanel from '../assets/proto/v2/card-panel.svg'
@@ -79,6 +89,52 @@ const LIFT = 46 // a held character floats this high above its shadow
 const THROW_GRAV = 3400 // world px/s², heavier fall than the swing
 const THROW_SPEED = 0.6 // share of the hand speed the throw keeps
 const MAX_THROW = 1900 // world px/s
+
+// held: hand-drawn bits around the head, one set per mood (moods.ts heldFx). x, y = part centre, box px from the
+// top of the head; cls = its animation (index.css), d = animation delay (s)
+type FxPart = { src: string; cls: string; x: number; y: number; w: number; d?: number }
+const FX: Record<HeldFx, FxPart[]> = {
+  sweat: [
+    { src: sweatLeft, cls: 'fx-sweat-l', x: -31, y: 30, w: 30 },
+    { src: sweatRight, cls: 'fx-sweat-r', x: 30, y: 34, w: 32, d: -0.35 },
+  ],
+  notes: [
+    { src: fxNote1, cls: 'fx-float', x: 28, y: 4, w: 20 },
+    { src: fxNote2, cls: 'fx-float', x: -32, y: 10, w: 28, d: -0.8 },
+  ],
+  sparkle: [
+    { src: fxSparkle, cls: 'fx-pop', x: -34, y: 8, w: 24 },
+    { src: fxSparkle, cls: 'fx-pop', x: 32, y: 18, w: 18, d: -0.45 },
+    { src: fxSparkle, cls: 'fx-pop', x: 8, y: -18, w: 14, d: -0.2 },
+  ],
+  anger: [{ src: fxAnger, cls: 'fx-pulse', x: 26, y: 18, w: 26 }],
+  blush: [
+    { src: fxBlush, cls: 'fx-blink', x: -24, y: 58, w: 24 },
+    { src: fxBlush, cls: 'fx-blink', x: 24, y: 58, w: 24, d: -0.3 },
+  ],
+  zzz: [
+    { src: fxZ, cls: 'fx-zzz', x: 26, y: 0, w: 12 },
+    { src: fxZ, cls: 'fx-zzz', x: 26, y: 0, w: 16, d: -0.6 },
+    { src: fxZ, cls: 'fx-zzz', x: 26, y: 0, w: 20, d: -1.2 },
+  ],
+  dizzy: [
+    { src: fxStar, cls: 'fx-orbit', x: 0, y: -6, w: 15 },
+    { src: fxStar, cls: 'fx-orbit', x: 0, y: -6, w: 12, d: -0.47 },
+    { src: fxStar, cls: 'fx-orbit', x: 0, y: -6, w: 14, d: -0.93 },
+  ],
+  hearts: [
+    { src: fxHeart, cls: 'fx-float', x: 26, y: 6, w: 18 },
+    { src: fxHeart, cls: 'fx-float', x: -28, y: 14, w: 14, d: -0.8 },
+  ],
+  shock: [
+    { src: fxShock, cls: 'fx-shake', x: -32, y: 22, w: 14 },
+    { src: fxShock, cls: 'fx-shake', x: 32, y: 22, w: 14, d: -0.17 },
+  ],
+  cloud: [{ src: fxCloud, cls: 'fx-cloud', x: 0, y: -24, w: 52 }],
+}
+
+// speech bubble clears the bits above the head (box px above the head top)
+const fxLift = (kind: HeldFx) => Math.max(12, 10 - Math.min(...FX[kind].map((p) => p.y - p.w / 2 - (p.cls === 'fx-orbit' ? 8 : 0))))
 
 type View = { s: number; x: number; y: number }
 // gu/gv: the gripped point in the character's own box (px, feet = 0,0, head = 0,-charH). While held or flying the
@@ -471,7 +527,7 @@ export default function MainScreen({
       } else if (moving) g.say = Math.max(g.say, 0.5)
       else g.say -= dt
       say.style.display = g.say > 0 ? '' : 'none'
-      if (g.say > 0) say.style.transform = `translate(${g.px}px, ${g.py - 12 * k}px) scale(${k})`
+      if (g.say > 0) say.style.transform = `translate(${g.px}px, ${g.py - fxLift(heldFx(state.cards[w.id]?.mood ?? '')) * k}px) scale(${k})`
     }
   }
 
@@ -526,14 +582,12 @@ export default function MainScreen({
     w.g = { phase: 'held', gu, gv, px: hx, py: hy, fx: wx, fy: wy, vx: 0, vy: 0, a: 0, w: 0, sx: w.x, sy: w.y, z: 0, vz: 0, kick: 0.05, say: 0, line: 0 }
     const el = els.current.get(id)
     if (el) {
-      // sweat drops on both sides of the head (box px: left edge = -0.4·charH, top = -charH)
-      const hx = gu + charH * 0.4
-      const hy = gv + charH
-      const [l, r] = el.querySelectorAll<HTMLElement>('.sweat')
-      l.style.left = `${hx - 46}px`
-      l.style.top = `${hy + 14}px`
-      r.style.left = `${hx + 14}px`
-      r.style.top = `${hy + 18}px`
+      // mood bits sit around the top of the head (box px: left edge = -0.4·charH, top = -charH)
+      const fx = el.querySelector<HTMLElement>('.fx')
+      if (fx) {
+        fx.style.left = `${gu + charH * 0.4}px`
+        fx.style.top = `${gv + charH}px`
+      }
       el.classList.add('held')
     }
     vibrate(30)
@@ -830,9 +884,12 @@ export default function MainScreen({
                 <div className="size-full">
                   <img src={c.image} alt={c.nickname || 'resident'} draggable={false} className="bob size-full object-contain object-bottom" style={{ animationDuration: `${m.step}s` }} />
                 </div>
-                {/* 땀 삐질삐질 beside the head while held (Figma UX 858:804); placed at the head in pickUp */}
-                <img src={sweatLeft} alt="" draggable={false} className="sweat sweat-l pointer-events-none absolute w-[30px] max-w-none" />
-                <img src={sweatRight} alt="" draggable={false} className="sweat sweat-r pointer-events-none absolute w-[32px] max-w-none" />
+                {/* held: mood bits around the head (sweat = Figma UX 858:804, the rest hand-drawn to match); placed in pickUp */}
+                <div className="fx pointer-events-none absolute size-0">
+                  {FX[heldFx(c.mood)].map((p, i) => (
+                    <img key={i} src={p.src} alt="" draggable={false} className={`fx-part ${p.cls}`} style={{ left: p.x, top: p.y, width: p.w, animationDelay: `${p.d ?? 0}s` }} />
+                  ))}
+                </div>
                 {m.word && openId !== c.id && (
                   <span
                     className="walk-word pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
