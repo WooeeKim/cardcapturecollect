@@ -3,7 +3,7 @@ import { logEvent } from '../lib/events'
 import { MIN_PASSWORD, changePassword, logIn, signUp, type User } from '../lib/auth'
 import { OverFrame, TextButton } from './ui'
 import { tr } from '../lib/i18n'
-import { waiting } from './Loading'
+import { INTRO_MS, waiting } from './Loading'
 
 const field = 'h-[44px] w-full rounded-[6px] border-[2px] border-dashed border-[#555] bg-white px-[10px] text-[19px] outline-none placeholder:text-[#999]'
 
@@ -21,7 +21,8 @@ export function Sheet({ children, onClose }: { children: React.ReactNode; onClos
 }
 
 // Email + password (Supabase rules): the fields + Log in / Sign up. Used by the sheet and the onboarding first screen.
-export function LoginForm({ onDone }: { onDone: (user: User) => unknown }) {
+// `intro` (onboarding): the wait shows the app name word by word, held long enough to see all three words.
+export function LoginForm({ onDone, intro = false }: { onDone: (user: User) => unknown; intro?: boolean }) {
   const [id, setId] = useState('')
   const [pw, setPw] = useState('')
   const [error, setError] = useState('')
@@ -34,11 +35,14 @@ export function LoginForm({ onDone }: { onDone: (user: User) => unknown }) {
     // one cover for the log-in and the account load after it (onDone may return a promise)
     await waiting(
       (async () => {
+        const start = Date.now()
         const res = kind === 'login' ? await logIn(id, pw) : await signUp(id, pw)
         setBusy(false)
-        if (res.ok) await onDone(res.user)
-        else setError(res.error)
+        if (!res.ok) return setError(res.error)
+        await onDone(res.user)
+        if (intro) await new Promise((r) => setTimeout(r, INTRO_MS - (Date.now() - start)))
       })(),
+      { intro },
     )
   }
 

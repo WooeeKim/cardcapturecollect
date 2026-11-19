@@ -213,6 +213,21 @@ img {
   to { rotate: 360deg; }
 }
 
+/* first log-in (Loading.tsx IntroLoading): card / capture / collect come in one by one, then the set fades to loop */
+.intro-word { animation: intro-word 0.55s var(--ease-spring) both; }
+@keyframes intro-word {
+  0% { opacity: 0; transform: translateY(10px) scale(0.92); filter: blur(4px); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+.intro-round { animation: intro-round 3.2s ease-in both; }
+@keyframes intro-round {
+  0%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-word { animation: fade-in 0.3s ease-out both; }
+}
+
 @keyframes pop-in {
   0% { transform: scale(0.6); opacity: 0; }
   60% { transform: scale(1.04); opacity: 1; }
