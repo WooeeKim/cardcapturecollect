@@ -1,7 +1,7 @@
 import { currentUser, supabase } from './auth'
 import { renderCardPng } from './cardImage'
 import { track } from './events'
-import type { Card } from './store'
+import { serialLabel, type Card } from './store'
 
 // Save a card as an image, or share it as a link (<site>/c/<id>, served by api/card.js).
 // iPhone only opens the share sheet straight from a tap, so the image is made ahead (prepareCard on screen open)
@@ -19,7 +19,7 @@ export function prepareCard(card: Card) {
   return p
 }
 
-const fileName = (card: Card) => `${card.serial || 'card'}.png`
+const fileName = (card: Card) => `${serialLabel(card) || 'card'}.png`
 
 export type SaveResult = 'shared' | 'downloaded' | 'cancelled' | 'failed'
 
@@ -92,8 +92,7 @@ export async function makeCardLink(card: Card): Promise<LinkResult> {
       memo: card.memo || null,
       mood: card.mood || null,
       place: card.place || null,
-      serial: card.serial || null,
-      by_name: card.by || null,
+      serial: serialLabel(card) || null,
       image_path: path,
     })
     if (ins.error) throw ins.error

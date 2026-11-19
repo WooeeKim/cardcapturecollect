@@ -11,7 +11,6 @@ create table if not exists public.card_shares (
   mood text,
   place text,
   serial text,
-  by_name text, -- who collected it (app nickname)
   image_path text not null, -- "<user_id>/<id>.png" in bucket card-shares
   created_at timestamptz not null default now()
 );

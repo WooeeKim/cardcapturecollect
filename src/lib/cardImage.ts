@@ -1,7 +1,7 @@
 import { APP_NAME } from '../components/Splash'
 import { tr } from './i18n'
 import { moodOf } from './moods'
-import type { Card } from './store'
+import { serialLabel, type Card } from './store'
 
 // One finished card as a PNG for saving / sharing: the same layout as CardView (components/ui.tsx, sizes in
 // container units of the card width), drawn on a canvas so the handwriting font always comes out right
@@ -140,14 +140,13 @@ export async function renderCardPng(card: Card): Promise<Blob> {
   }
 
   // name + memo box (above the serial)
-  if (card.nickname || card.memo || card.by) {
+  if (card.nickname || card.memo) {
     const inner = CARD_W - 2 * 2.8 * u - 2 * 2.8 * u
     ctx.font = `${4.7 * u}px ${FONT}`
     const memo = card.memo ? clamp(ctx, wrap(ctx, card.memo, inner), 4, inner) : []
-    const byH = card.by ? 3.9 * u * 1.1 + 0.6 * u : 0
     const nameH = card.nickname ? 5.9 * u * 1.1 : 0
     const memoH = memo.length ? (card.nickname ? 2 * u : 0) + memo.length * 4.7 * u * 1.2 : 0
-    const boxH = 2.8 * u * 2 + byH + nameH + memoH
+    const boxH = 2.8 * u * 2 + nameH + memoH
     const bx = x0 + 2.8 * u
     const by = y0 + CARD_H - 8.9 * u - boxH
     roundRect(ctx, bx, by, CARD_W - 5.6 * u, boxH, 2.8 * u)
@@ -155,15 +154,6 @@ export async function renderCardPng(card: Card): Promise<Blob> {
     ctx.fill()
     ctx.fillStyle = '#000'
     let ty = by + 2.8 * u
-    if (card.by) {
-      ctx.font = `${3.9 * u}px ${FONT}`
-      ctx.fillStyle = '#8e8e8e'
-      ctx.textAlign = 'right'
-      ctx.fillText(`by ${card.by}`, bx + CARD_W - 5.6 * u - 2.8 * u, ty + 0.05 * 3.9 * u, inner)
-      ctx.textAlign = 'left'
-      ctx.fillStyle = '#000'
-      ty += byH
-    }
     if (card.nickname) {
       ctx.font = `${5.9 * u}px ${FONT}`
       ctx.fillText(card.nickname, bx + 2.8 * u, ty + 0.05 * 5.9 * u, inner)
@@ -182,7 +172,7 @@ export async function renderCardPng(card: Card): Promise<Blob> {
     ctx.fillStyle = '#000'
     ctx.textAlign = 'right'
     ctx.textBaseline = 'bottom'
-    ctx.fillText(card.serial, x0 + CARD_W - 4 * u, y0 + CARD_H - 2.5 * u)
+    ctx.fillText(serialLabel(card), x0 + CARD_W - 4 * u, y0 + CARD_H - 2.5 * u)
     ctx.textAlign = 'left'
     ctx.textBaseline = 'top'
   }

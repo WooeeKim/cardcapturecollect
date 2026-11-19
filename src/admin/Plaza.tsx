@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { serialLabel } from '../lib/store'
 import { CardView } from '../components/ui'
 import { moodOf } from '../lib/moods'
 import { when, who, type Item } from './data'
@@ -120,7 +121,7 @@ export function Plaza({ items, onViewAs }: { items: Item[]; onViewAs: (userId: s
               <dt className="text-neutral-500">Made</dt>
               <dd>{when(open.card.createdAt)}</dd>
               <dt className="text-neutral-500">Serial</dt>
-              <dd>{open.card.serial}</dd>
+              <dd>{serialLabel(open.card)}</dd>
               <dt className="text-neutral-500">Mood</dt>
               <dd>{open.card.mood || '—'}</dd>
               <dt className="text-neutral-500">Place</dt>

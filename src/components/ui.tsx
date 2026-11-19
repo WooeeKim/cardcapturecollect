@@ -11,7 +11,7 @@ import { type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { COL_X, useWide } from '../lib/wide'
 import { moodOf } from '../lib/moods'
-import type { Card } from '../lib/store'
+import { serialLabel, type Card } from '../lib/store'
 import { cycleLang, tr } from '../lib/i18n'
 import globe from '../assets/proto/v2/globe.svg'
 
@@ -215,15 +215,13 @@ export function CardView({ card, plain = false, onImage }: { card: Card; plain?:
             </span>
           )}
           {card.place && <span className="absolute top-[5.5cqw] right-[4.2cqw] text-[5.5cqw] leading-[1.1] tracking-[-0.02em]">{card.place}</span>}
-          {(card.nickname || card.memo || card.by) && (
+          {(card.nickname || card.memo) && (
             <div className="absolute inset-x-[2.8cqw] bottom-[8.9cqw] rounded-[2.8cqw] bg-white/30 p-[2.8cqw] backdrop-blur-[2px]">
-              {/* who collected it */}
-              {card.by && <p className="mb-[0.6cqw] truncate text-right text-[3.9cqw] leading-[1.1] text-[#8e8e8e]">by {card.by}</p>}
               {card.nickname && <p className="text-[5.9cqw] leading-[1.1]">{card.nickname}</p>}
               {card.memo && <p className="mt-[2cqw] line-clamp-4 text-[4.7cqw] leading-[1.2] break-words">{card.memo}</p>}
             </div>
           )}
-          <span className="absolute right-[4cqw] bottom-[2.5cqw] text-[3.9cqw] leading-[1.1]">{card.serial}</span>
+          <span className="absolute right-[4cqw] bottom-[2.5cqw] text-[3.9cqw] leading-[1.1]">{serialLabel(card)}</span>
         </>
       )}
     </div>

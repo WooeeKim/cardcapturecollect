@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
   if (!/^[A-Za-z0-9]{10,32}$/.test(id) || !env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_ANON_KEY) return missing(404)
 
-  const r = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/card_shares?id=eq.${id}&select=nickname,memo,mood,place,serial,by_name,image_path`, {
+  const r = await fetch(`${env.VITE_SUPABASE_URL}/rest/v1/card_shares?id=eq.${id}&select=nickname,memo,mood,place,serial,image_path`, {
     headers: { apikey: env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${env.VITE_SUPABASE_ANON_KEY}` },
   }).catch(() => null)
   const row = r && r.ok ? (await r.json())[0] : null
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
 
   const image = `${env.VITE_SUPABASE_URL}/storage/v1/object/public/card-shares/${row.image_path}`
   const name = row.nickname || '이름 없는 주민'
-  const title = row.by_name ? `${name} by ${row.by_name} · card capture collect` : `${name} · card capture collect`
+  const title = `${name} · card capture collect`
   const description = row.memo || (row.place ? `${row.place}에서 수집한 카드` : '지하철에서 수집한 카드')
 
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400')
