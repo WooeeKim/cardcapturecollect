@@ -464,6 +464,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
           openCard={route.card}
           onTown={(id) => setRoute({ name: 'collection', townId: id })}
           onBack={() => goMain(existingMain(homeId))}
+          onMigrate={(cardId) => setRoute({ name: 'migrate', cardId, back: { ...route, card: cardId }, to: 'collection' })}
         />
       )
       break

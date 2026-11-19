@@ -29,6 +29,7 @@ export default function CollectionScreen({
   openCard,
   onTown,
   onBack,
+  onMigrate,
 }: {
   state: State
   commit: (fn: (s: State) => State) => void
@@ -36,6 +37,7 @@ export default function CollectionScreen({
   openCard?: string // open this card's big view on arrival
   onTown: (id: string) => void
   onBack: () => void
+  onMigrate: (cardId: string) => void // Town List in move mode — any of your towns or Last Stop
 }) {
   const wide = useWide()
   const G = wide ? WIDE : PHONE
@@ -292,7 +294,7 @@ export default function CollectionScreen({
         </div>
       )}
 
-      {open && <Detail wide={wide} card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} />}
+      {open && <Detail wide={wide} card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} onMigrate={() => onMigrate(open.id)} />}
 
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
@@ -301,7 +303,7 @@ export default function CollectionScreen({
 
 // card overlay (Figma 725:13761): tap the drawing to hide the card text, drag to tilt it around
 // iPad sideways: the card in the middle of the screen, town name and close above it, Let go at its lower right
-function Detail({ wide, card, townName, onClose, onDelete }: { wide: boolean; card: Card; townName: string; onClose: () => void; onDelete: () => void }) {
+function Detail({ wide, card, townName, onClose, onDelete, onMigrate }: { wide: boolean; card: Card; townName: string; onClose: () => void; onDelete: () => void; onMigrate: () => void }) {
   const [plain, setPlain] = useState(false)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const start = useRef<{ x: number; y: number; moved: boolean } | null>(null)
@@ -359,7 +361,24 @@ function Detail({ wide, card, townName, onClose, onDelete }: { wide: boolean; ca
             <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
           </button>
         )
-        return wide ? letGo : <Bottom>{letGo}</Bottom>
+        // Migration left of Let go: the way into Last Stop (dragging only moves people between your own towns)
+        const migrate = (
+          <button onClick={onMigrate} className={`absolute flex h-[43px] w-[124px] items-center justify-center ${wide ? 'top-[652px] left-[539px]' : 'top-[735px] left-[144px]'}`}>
+            <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
+            <span className="relative text-[23px] leading-[1.1] text-black">{tr('Migration')}</span>
+          </button>
+        )
+        return wide ? (
+          <>
+            {migrate}
+            {letGo}
+          </>
+        ) : (
+          <Bottom>
+            {migrate}
+            {letGo}
+          </Bottom>
+        )
       })()}
     </div>
   )
