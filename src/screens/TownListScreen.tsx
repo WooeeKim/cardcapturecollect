@@ -296,9 +296,11 @@ export default function TownListScreen({
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <Header title={tr('Town List')} onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label={tr('Add town')} onClick={startAdd} />} />
-      {/* the list slides up under a cover with a wavy bottom edge (Figma 261119 수정 › 울퉁불퉁), not a gradient */}
-      <svg aria-hidden viewBox={`0 0 ${BUMPY_TOP.w} ${BUMPY_TOP.h}`} preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 top-0 z-10 w-full" style={{ height: listTop }}>
-        <path d={BUMPY_TOP.d} fill="#F9F9F9" />
+      {/* the list slides up under a cover with a wavy bottom edge (Figma 261119 수정 › 울퉁불퉁), not a gradient.
+          Same colour as the header was (#f0f0f0) and the app's usual 2px black hand-drawn line along the edge. */}
+      <svg aria-hidden viewBox={`0 0 ${BUMPY_TOP.w} ${BUMPY_TOP.h}`} preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 top-0 z-10 w-full overflow-visible" style={{ height: listTop }}>
+        <path d={BUMPY_TOP.d} fill="#F0F0F0" />
+        <path d={BUMPY_TOP.edge} fill="none" stroke="#000" strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       </svg>
 
       <div ref={listEl} className="absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none]" style={{ top: listTop - UNDER }}>
