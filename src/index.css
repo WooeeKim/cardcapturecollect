@@ -60,6 +60,9 @@ body {
   /* the transform also keeps position: fixed children inside the frame */
   transform-origin: 0 0;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  /* desktop phone bezel, drawn OUTSIDE the 402×874 screen like the Figma frames (13px), so nothing near the
+     screen edge hides under it; main.tsx leaves room for it when fitting the frame to the window */
+  outline: 13px solid #000;
 }
 
 /* phone: full screen, real status bar instead of the fake one */
@@ -69,6 +72,7 @@ body {
 .phone #root {
   border-radius: 0;
   box-shadow: none;
+  outline: none;
 }
 .phone .fake-chrome {
   display: none;
@@ -77,6 +81,7 @@ body {
 /* iPad sideways (lib/wide.ts): 1194×834 landscape frame, no fake phone around it; on the iPad it fills the screen */
 .wide #root {
   border-radius: 24px;
+  outline: none;
 }
 .wide .fake-chrome {
   display: none;

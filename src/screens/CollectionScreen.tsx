@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import backIcon from '../assets/proto/v2/back40.svg'
 import closeRing from '../assets/proto/v2/detail-close-ring.svg'
 import closeX from '../assets/proto/v2/detail-close-x.svg'
-import deckBox from '../assets/proto/v2/deck-box.svg'
+import deckBoxSvg from '../assets/proto/v2/deck-box.svg?raw'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import bandImg from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
@@ -20,6 +20,8 @@ const HOLD_MS = 350
 // deck geometry (frame px). Phone: 3×2 pages. iPad sideways (Figma iPad · collection 1033:10907): one 9×2 page
 // (every slot of a town) in a box across the screen, the other towns' people 9 to a row under it.
 const PHONE = { perPage: 6, cols: 3, tile: 90, col: 125, row: 116, tileX: 31, tileY: 20, clipL: 13, clipW: 376, top: 243, h: 257, boxL: 10, boxW: 382, boxH: 256 }
+// deck box outline (Figma Vector 413), drawn inline so its 2px line stays 2px when the plaza's box is shorter
+const DECK_D = deckBoxSvg.match(/ d="([^"]+)"/)![1]
 const WIDE = { perPage: 18, cols: 9, tile: 88, col: 117.8, row: 111.8, tileX: 82, tileY: 27, clipL: 33, clipW: 1128, top: 235, h: 254, boxL: 30, boxW: 1134, boxH: 254 }
 
 type Drag = { id: string; from: 'deck' | 'rest'; x: number; y: number }
@@ -247,7 +249,9 @@ export default function CollectionScreen({
       {/* selected town's deck */}
       <div data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h - CUT }}>
         {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
-        <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }} />
+        <svg aria-hidden viewBox="0 0 382 256" preserveAspectRatio="none" className={`pointer-events-none absolute top-[1px] overflow-visible transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }}>
+          <path d={DECK_D} fill="#E0E0E0" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
         <div
           className="absolute top-[4px] bottom-[4px] flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[18px] [scrollbar-width:none]"
           // clip-path as well: iPhone Safari can paint a scrolling box's children outside its rounded overflow clip

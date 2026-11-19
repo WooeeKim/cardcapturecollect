@@ -48,7 +48,8 @@ function fit() {
     m = m.translate((innerWidth - WIDE_W * k) / 2, (innerHeight - WIDE_H * k) / 2).scale(k)
     if (kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
   } else if (!phone) {
-    const k = Math.max(0.3, Math.min(tablet ? Infinity : 1, (innerWidth - 24) / 402, (innerHeight - 24) / 874))
+    // + the 13px bezel drawn outside the screen on each side (index.css #root outline)
+    const k = Math.max(0.3, Math.min(tablet ? Infinity : 1, (innerWidth - 24 - 26) / 402, (innerHeight - 24 - 26) / 874))
     m = m.translate((innerWidth - 402 * k) / 2, (innerHeight - 874 * k) / 2).scale(k)
     if (tablet && kbLift) m = new DOMMatrix().translate(0, kbLift).multiply(m)
   } else {
