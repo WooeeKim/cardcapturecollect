@@ -9,7 +9,7 @@ import type { Card } from './store'
 
 const cache = new Map<string, Promise<Blob>>()
 export function prepareCard(card: Card) {
-  const key = `${card.id}:${card.image.length}:${card.nickname}:${card.memo}:${card.mood}:${card.place}`
+  const key = `${card.id}:${card.image.length}:${card.nickname}:${card.memo}:${card.mood}:${card.place}:${card.by}`
   let p = cache.get(key)
   if (!p) {
     p = renderCardPng(card)
@@ -93,6 +93,7 @@ export async function makeCardLink(card: Card): Promise<LinkResult> {
       mood: card.mood || null,
       place: card.place || null,
       serial: card.serial || null,
+      by_name: card.by || null,
       image_path: path,
     })
     if (ins.error) throw ins.error

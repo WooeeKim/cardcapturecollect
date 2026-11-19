@@ -190,7 +190,7 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
   )
 }
 
-export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
+export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean; by?: string }) {
   const wide = useWide()
   const [tip, setTip] = useState(tutorial ? 0 : -1)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -291,7 +291,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     onExit()
   }
 
-  const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim() })
+  const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim(), by: by || undefined })
 
   function back() {
     if (preview) return setPreview(null)
@@ -856,14 +856,14 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
           </div>
         </div>
         {/* save / share just under the card's lower-right corner (moves and shrinks with the card) */}
-        <CardActions card={card} className="absolute top-full right-[-8px] mt-[14px]" />
+        <CardActions card={card} size={26} gap={6} className="absolute top-full right-[-10px] mt-[10px]" />
       </div>
       <Bottom>
-        <button onClick={onChoose} className="absolute top-[732px] left-[121px] flex h-[54px] w-[160px] items-center justify-center">
+        <button onClick={onChoose} className="absolute top-[712px] left-[113px] flex h-[48px] w-[176px] items-center justify-center">
           <span className="absolute inset-[-2.22%_-0.44%]">
             <PillVillage />
           </span>
-          <span className="relative text-[25px] leading-[1.1]">{tr('move in')}</span>
+          <span className="relative text-[27px] leading-[1.1]">{tr('move in')}</span>
         </button>
       </Bottom>
     </div>

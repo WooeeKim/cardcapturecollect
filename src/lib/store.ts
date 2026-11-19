@@ -12,6 +12,7 @@ export type Card = {
   memo: string
   createdAt: string // ISO
   serial: string // SN261126-07
+  by?: string // who collected it (the collector's app nickname), shown on the card as "by …"
 }
 
 export type Town = {
@@ -275,7 +276,7 @@ export function makePending(state: State, input: Omit<Card, 'id' | 'createdAt' |
   const now = new Date()
   const day = ymd(now)
   const n = state.seq.day === day ? state.seq.n + 1 : 1
-  const card: Card = { ...input, id: uid(), createdAt: now.toISOString(), serial: `SN${day}-${String(n).padStart(2, '0')}` }
+  const card: Card = { ...input, by: input.by || state.nickname || undefined, id: uid(), createdAt: now.toISOString(), serial: `SN${day}-${String(n).padStart(2, '0')}` }
   return { ...state, pending: card, seq: { day, n } }
 }
 

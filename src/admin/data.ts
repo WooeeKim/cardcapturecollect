@@ -14,8 +14,10 @@ export function flatten(rows: Row[]): Item[] {
   const out: Item[] = []
   for (const owner of rows) {
     const s = owner.state
-    for (const card of Object.values(s.cards)) out.push({ card, owner, town: s.towns.find((t) => t.residents.includes(card.id)) ?? null, pending: false })
-    if (s.pending) out.push({ card: s.pending, owner, town: null, pending: true })
+    // cards made before "by" existed: the owner's nickname
+    const by = (c: Card) => (c.by || !s.nickname ? c : { ...c, by: s.nickname })
+    for (const card of Object.values(s.cards)) out.push({ card: by(card), owner, town: s.towns.find((t) => t.residents.includes(card.id)) ?? null, pending: false })
+    if (s.pending) out.push({ card: by(s.pending), owner, town: null, pending: true })
   }
   return out.sort((a, b) => b.card.createdAt.localeCompare(a.card.createdAt))
 }

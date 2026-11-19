@@ -308,6 +308,18 @@ export default function App({ onReady }: { onReady?: () => void }) {
     setScreen(screenName, { town: screenName === 'main' || screenName === 'collection' ? screenTown : undefined, tutorial: screenName === 'draw' ? tutorialDraw : undefined, retake: screenName === 'gilbti' ? retake : undefined })
   }, [screenName, screenTown, tutorialDraw, retake])
 
+  // cards made before "by" existed get the account's nickname once (needs a nickname; not in admin "view as")
+  useEffect(() => {
+    if (!ready || viewAsId || !state.nickname) return
+    const missing = Object.values(state.cards).some((c) => !c.by) || (state.pending && !state.pending.by)
+    if (!missing) return
+    commit((s) => {
+      if (!s.nickname) return s
+      const cards = Object.fromEntries(Object.entries(s.cards).map(([id, c]) => [id, c.by ? c : { ...c, by: s.nickname }]))
+      return { ...s, cards, pending: s.pending && !s.pending.by ? { ...s.pending, by: s.nickname } : s.pending }
+    })
+  }, [ready, state.cards, state.pending, state.nickname, commit])
+
   const existing = (id: string) => (state.towns.some((t) => t.id === id) ? id : state.towns[0].id)
   const goMain = (townId: string, enter: 'left' | 'right' | 'center' = 'center', focus?: string) => {
     setHomeId(townId)
@@ -403,6 +415,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
         <DrawScreen
           onExit={() => goMain(existing(homeId))}
           tutorial={route.tutorial}
+          by={state.nickname}
           onFinish={(draft) => {
             // save first: if storage is full, stay here so the drawing isn't lost
             let next = makePending(state, draft)
