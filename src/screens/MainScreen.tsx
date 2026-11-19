@@ -7,6 +7,7 @@ import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
 import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
+import bubbleRaw from '../assets/proto/bubble.svg?raw'
 import { heldFx, heldLines, moodOf, type HeldFx } from '../lib/moods'
 import sweatLeft from '../assets/proto/sweat-left.svg'
 import sweatRight from '../assets/proto/sweat-right.svg'
@@ -146,6 +147,23 @@ const FX: Record<HeldFx, FxPart[]> = {
 
 // speech bubble clears the bits above the head (box px above the head top)
 const fxLift = (kind: HeldFx) => Math.max(12, 10 - Math.min(...FX[kind].map((p) => p.y - p.w / 2 - (p.cls === 'fx-orbit' ? 8 : 0))))
+
+// residents' speech bubble = the hand-drawn tutorial bubble (bubble.svg), inlined so it stretches to the words while
+// its line stays 1.4px. Tail tip ≈ 23% from the left at the bottom; the oval body is the top ~71%.
+const BUBBLE_SVG = bubbleRaw
+  .replace(/ width="[^"]*" height="[^"]*"/, '')
+  .replace(/ style="[^"]*"/, '')
+  .replace('<svg ', '<svg class="absolute inset-0 size-full" aria-hidden="true" ')
+  .replace(/<path /g, '<path vector-effect="non-scaling-stroke" ')
+  .replace(/stroke-width="[^"]*"/g, 'stroke-width="1.4"') // 70% of the tutorial bubble's 2px line
+function SpeechBubble({ text, className = '', style }: { text?: string; className?: string; style?: CSSProperties }) {
+  return (
+    <span className={`pointer-events-none absolute -translate-x-[23%] px-[13px] pt-[5px] pb-[15px] font-hand text-[16px] leading-[1.2] whitespace-nowrap ${className}`} style={style}>
+      <span dangerouslySetInnerHTML={{ __html: BUBBLE_SVG }} />
+      <span className="say-text relative">{text}</span>
+    </span>
+  )
+}
 
 type View = { s: number; x: number; y: number }
 // gu/gv: the gripped point in the character's own box (px, feet = 0,0, head = 0,-charH). While held or flying the
@@ -528,9 +546,10 @@ export default function MainScreen({
       if (moving && g.line <= 0) {
         const lines = heldLines(state.cards[w.id]?.mood ?? '')
         const bub = say.firstElementChild as HTMLElement
-        const was = bub.textContent
+        const words = bub.querySelector('.say-text')!
+        const was = words.textContent
         const pick = lines.filter((l) => tr(l) !== was)
-        bub.textContent = tr(pick[Math.floor(Math.random() * pick.length)] ?? lines[0])
+        words.textContent = tr(pick[Math.floor(Math.random() * pick.length)] ?? lines[0])
         bub.classList.remove('animate-pop-in')
         void bub.offsetWidth // restart the pop
         bub.classList.add('animate-pop-in')
@@ -894,7 +913,7 @@ export default function MainScreen({
               className="pointer-events-none absolute top-0 left-0 z-[100001] origin-bottom"
               style={{ display: 'none' }}
             >
-              <span className="absolute bottom-0 left-0 -translate-x-1/2 rounded-full border-2 border-[#222] bg-white px-[10px] py-[2px] font-hand text-[17px] whitespace-nowrap" />
+              <SpeechBubble className="bottom-0 left-0" />
             </div>
           ))}
           {cards.map((c) => {
@@ -920,12 +939,11 @@ export default function MainScreen({
                   ))}
                 </div>
                 {m.word && openId !== c.id && (
-                  <span
-                    className="walk-word pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
+                  <SpeechBubble
+                    text={tr(m.word)}
+                    className="walk-word bottom-[calc(100%-14px)] left-[56%]"
                     style={{ animation: `bubble-blink 9s ease-in-out ${-(c.serial.charCodeAt(c.serial.length - 1) % 9)}s infinite`, opacity: 0 }}
-                  >
-                    {tr(m.word)}
-                  </span>
+                  />
                 )}
               </div>
             )
