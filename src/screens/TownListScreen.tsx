@@ -8,7 +8,7 @@ import tlPill from '../assets/proto/v2/tl-edit.svg'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
-import { SQUARE_ID, SQUARE_NAME, SQUARE_PER_USER } from '../lib/square'
+import { SQUARE_ID, SQUARE_NAME, SQUARE_PER_USER, SQUARE_THUMB } from '../lib/square'
 
 // Figma prototyping: townList · townList-detail · townList for migration · 마을 추가
 // browse  = Go / Edit
@@ -22,9 +22,8 @@ const ROW = 130
 const WIDE_LIST_X = 251
 const WIDE_HANDLE_X = 588
 const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
-const LAST_GAP = 36 // the shared town sits a little apart at the end of the line, like a last stop
 
-// the shared town (lib/square.ts), drawn as the last stop of the list: no Edit, no reorder, the grey line ends at it
+// the shared town (lib/square.ts, Figma 1133:7217): one more row at the end of the list, Uncle Sam in a dark ring; no Edit, no reorder
 export type SquareInfo = { town: Town; chief?: Card; mine: number; ok: boolean }
 
 export default function TownListScreen({
@@ -64,9 +63,9 @@ export default function TownListScreen({
   const listEl = useRef<HTMLDivElement>(null)
 
   const openIndex = state.towns.findIndex((t) => t.id === openId)
-  const chiefOf = (t: Town) => (isSquare(t) ? square?.chief : state.cards[t.residents[0] ?? ''])
-  const chiefImage = (t: Town) => chiefOf(t)?.image
-  const chiefThumb = (t: Town) => chiefOf(t)?.thumb
+  const chiefOf = (t: Town) => state.cards[t.residents[0] ?? '']
+  const chiefImage = (t: Town) => (isSquare(t) ? SQUARE_THUMB : chiefOf(t)?.image)
+  const chiefThumb = (t: Town) => (isSquare(t) ? undefined : chiefOf(t)?.thumb)
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const open = state.towns.find((t) => t.id === openId)
   const isSquare = (t: Town) => t.id === SQUARE_ID
@@ -185,8 +184,8 @@ export default function TownListScreen({
 
   // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
   const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
-  const squareTop = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0) + LAST_GAP
-  const listHeight = square ? squareTop + ROW + (openId === SQUARE_ID ? OPEN_EXTRA : 0) + 120 : rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0) + 120
+  const squareTop = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0)
+  const listHeight = (square ? squareTop + ROW + (openId === SQUARE_ID ? OPEN_EXTRA : 0) : squareTop) + 120
 
   // hand-drawn pill button (Figma Vector 406); grey label for the "leave it" side
   const pill = (label: string, onClick: () => void, left: number, grey = false) => (
@@ -226,7 +225,7 @@ export default function TownListScreen({
           <img src={tlClose} alt="" className="h-[14.8px] w-[12.3px]" />
         </button>
         <p className="absolute top-[54px] left-[135px] text-[14px] leading-[normal] text-[#8e8e8e]">
-          {sq ? tr('Residents {n} · Yours {k}/{max}', { n: t!.residents.length, k: square?.mine ?? 0, max: SQUARE_PER_USER }) : `Residents ${t ? t.residents.length : 0}/${MAX_RESIDENTS}`}
+          {sq ? tr('Residents {n}/no limits', { n: t!.residents.length }) : `Residents ${t ? t.residents.length : 0}/${MAX_RESIDENTS}`}
         </p>
         {editable ? (
           <textarea
@@ -239,9 +238,9 @@ export default function TownListScreen({
             className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-black"
           />
         ) : (
-          <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{sq ? tr("Everyone's town. Anyone can visit the people who live here.") : t!.bio}</p>
+          <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{sq ? tr('You can send your character only {n}!', { n: SQUARE_PER_USER }) : t!.bio}</p>
         )}
-        {!sq && <p className="absolute top-[127px] left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>}
+        <p className="absolute top-[127px] left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
         {isNew ? (
           <>
             {pill(tr('Discard'), () => setAdding(null), 133, true)}
@@ -262,7 +261,7 @@ export default function TownListScreen({
         )}
         </div>
         <span data-thumb className="animate-tl-thumb pointer-events-none absolute top-0 left-[24px]">
-          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong />
+          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong ring={sq ? 11 : undefined} />
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
@@ -282,7 +281,7 @@ export default function TownListScreen({
       <div ref={listEl} className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[121px]' : 'top-[149px]'}`}>
         <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
           {/* the grey line every town hangs on; it runs past the end and is clipped, so its bottom end never shows */}
-          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: square ? squareTop + (openId === SQUARE_ID ? 162 : 35) - 37 : `calc(100% - 37px + 160px)` }} />
+          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: 'calc(100% - 37px + 160px)' }} />
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id
@@ -345,11 +344,10 @@ export default function TownListScreen({
               ) : (
                 <>
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
-                    <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
+                    <Thumb image={chiefImage(square.town)} size={70} strong ring={10} grey={(!!openId && openId !== SQUARE_ID) || !!adding} />
                   </button>
-                  <button onClick={() => toggle(square.town)} className="absolute top-[14px] left-[136px] max-w-[205px] text-left">
-                    <span className="block truncate text-[21px] leading-[1.1]">{tr(SQUARE_NAME)}</span>
-                    <span className="mt-[4px] block text-[14px] leading-[1.1] text-[#8e8e8e]">{tr("Everyone's town")}</span>
+                  <button onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
+                    {tr(SQUARE_NAME)}
                   </button>
                 </>
               )}
