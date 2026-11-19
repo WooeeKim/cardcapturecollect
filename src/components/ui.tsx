@@ -258,7 +258,6 @@ export function PhoneChrome() {
         </div>
       </div>
       <span className="absolute top-[861px] left-[129px] h-[5px] w-[144px] rounded-full bg-[#1a1a1a]" />
-      <span className="absolute inset-0 rounded-[62px] border-[13px] border-black" />
     </div>
   )
 }
