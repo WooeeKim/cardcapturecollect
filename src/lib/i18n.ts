@@ -48,7 +48,7 @@ export function tr(en: string, vars?: Record<string, string | number>) {
 
 // town names the app made itself ("Town 1", "New Town 3") follow the language; names people typed don't
 export function townName(name: string) {
-  if (name === 'Sharing Plaza') return tr(name) // the shared town (lib/square.ts)
+  if (name === 'Transfer' || name === 'Sharing Plaza') return tr(name) // the shared town (lib/square.ts)
   const m = /^(New )?Town (\d+)$/.exec(name)
   return m ? tr(m[1] ? 'New Town {n}' : 'Town {n}', { n: m[2] }) : name
 }
@@ -57,6 +57,7 @@ export function townName(name: string) {
 const DICT: Record<string, string> = {
   // shared town (lib/square.ts)
   'Sharing Plaza': '공유 플라자',
+  Transfer: '공유 플라자',
   'Residents {n}/no limits': '주민 {n}/제한 없음',
   'You can send your character only {n}!': '내 주민은 {n}명까지만 보낼 수 있어요!',
   '{name} details': '{name} 자세히',
@@ -130,6 +131,7 @@ const DICT: Record<string, string> = {
   ', head': ', 이장',
   'People in other towns show up here.': '다른 마을 사람들이 여기 보여요.',
   'This town is full. Drop them on someone to swap places.': '이 마을은 꽉 찼어요. 다른 사람 위에 놓으면 자리를 바꿔요.',
+  "It's been already full.": '이미 꽉 찼어요.',
 
   // drawing
   'Discard this drawing?': '이 그림을 버릴까요?',

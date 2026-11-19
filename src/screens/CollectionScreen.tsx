@@ -7,6 +7,7 @@ import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import bandImg from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
 import CardActions from '../components/CardActions'
+import { PillVillage } from '../components/v2'
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, townOf, type Card, type State } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
@@ -58,6 +59,38 @@ export default function CollectionScreen({
   const [openId, setOpenId] = useState<string | null>(openCard ?? null)
   const [drag, setDrag] = useState<Drag | null>(null)
   const [overDeck, setOverDeck] = useState(false)
+  // full town / Transfer refused one more (Figma Section 1, Collection_Transfer_isFull 1145:8184): the grey box
+  // shakes and darkens with an "It's been already full." bubble on it. The number restarts the animation.
+  const [full, setFull] = useState(0)
+  useEffect(() => {
+    if (!full) return
+    const t = setTimeout(() => setFull(0), 1700)
+    return () => clearTimeout(t)
+  }, [full])
+  const deckEl = useRef<HTMLDivElement>(null)
+  const refuseFull = () => {
+    setFull(Date.now())
+    // restarts on every refusal without remounting the deck (its pages keep their scroll)
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+      deckEl.current?.animate(
+        [
+          { transform: 'none' },
+          { transform: 'translateX(-6px) rotate(-3deg)', offset: 0.12 },
+          { transform: 'translateX(5px) rotate(2.5deg)', offset: 0.26 },
+          { transform: 'translateX(-4px) rotate(-2deg)', offset: 0.4 },
+          { transform: 'translateX(3px) rotate(1.2deg)', offset: 0.54 },
+          { transform: 'translateX(-1.5px) rotate(-0.6deg)', offset: 0.68 },
+          { transform: 'none', offset: 0.82 },
+          { transform: 'none' },
+        ],
+        { duration: 600, easing: 'ease-in-out' },
+      )
+    try {
+      navigator.vibrate?.([40, 30, 40])
+    } catch {
+      /* unsupported */
+    }
+  }
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const root = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
@@ -147,9 +180,7 @@ export default function CollectionScreen({
     const inDeck = slot || hit?.closest('[data-deck]')
     if (!inDeck) return // cards can't be taken out of a town by dragging
     const at = slot ? Number(slot.dataset.slot) : deck.length
-    if (from === 'rest' && deck.length >= SLOTS) {
-      return setPopup({ message: tr('This town is full. Drop them on someone to swap places.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
-    }
+    if (from === 'rest' && deck.length >= SLOTS) return refuseFull()
     onMoveCard(id, town.id, at)
   }
 
@@ -228,10 +259,10 @@ export default function CollectionScreen({
             const size = on ? 64 : 52
             return (
               <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: START + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
-                {/* same ring as every town (outline, dark ring when picked); the plaza only shows Uncle Sam instead of its chief */}
+                {/* same ring as every town (outline, dark ring when picked); the plaza shows the grey swirl instead of its chief */}
                 <Thumb
-                  image={t.id === SQUARE_ID ? SQUARE_THUMB : state.cards[t.residents[0] ?? '']?.image}
-                  thumb={t.id === SQUARE_ID ? undefined : state.cards[t.residents[0] ?? '']?.thumb}
+                  image={t.id === SQUARE_ID ? undefined : state.cards[t.residents[0] ?? '']?.image}
+                  thumb={t.id === SQUARE_ID ? SQUARE_THUMB : state.cards[t.residents[0] ?? '']?.thumb}
                   size={size}
                   strong={on}
                   ring={on ? 7 : 6.6}
@@ -247,9 +278,9 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <div data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h - CUT }}>
-        {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
-        <svg aria-hidden viewBox="0 0 382 256" preserveAspectRatio="none" className={`pointer-events-none absolute top-[1px] overflow-visible transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }}>
+      <div ref={deckEl} data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h - CUT, transformOrigin: `${G.boxL + G.boxW / 2}px ${(G.boxH - CUT) / 2}px` }}>
+        {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it or it's refusing one */}
+        <svg aria-hidden viewBox="0 0 382 256" preserveAspectRatio="none" className={`pointer-events-none absolute top-[1px] overflow-visible transition-[filter] ${overDeck ? 'brightness-[0.62]' : full ? 'brightness-[0.78]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }}>
           <path d={DECK_D} fill="#E0E0E0" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
         <div
@@ -287,6 +318,14 @@ export default function CollectionScreen({
             <span key={p} className={`size-[5px] rounded-full ${p === page ? 'bg-black' : 'bg-[#ccc]'}`} />
           ))}
         </div>
+        {full > 0 && (
+          <div role="status" className="animate-pop-in pointer-events-none absolute z-10 flex h-[45px] w-[227px] items-center justify-center" style={{ left: G.boxL + G.boxW / 2 - 113.5, top: (G.boxH - CUT) / 2 - 22 }}>
+            <span className="absolute inset-[-2.22%_-0.44%]">
+              <PillVillage />
+            </span>
+            <span className="relative text-[21px] leading-[1.1]">{tr("It's been already full.")}</span>
+          </div>
+        )}
       </div>
 
       {/* everyone else (only this part scrolls) */}
