@@ -22,8 +22,15 @@ const ROW = 130
 const WIDE_LIST_X = 251
 const WIDE_HANDLE_X = 588
 const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
+// the shared town's open box has no Edit pill under it, so it's this much shorter (Figma Section 1, 1133:8068 Vector 405)
+const SQ_SHORT = 28
+// the grey line ends this far below the last row's thumbnail, rounded like its top (Figma Section 1, 1133:7217 Vector 537)
+const RAIL_TOP = 37
+const RAIL_PAD = 9
+const RAIL_CAP = 60 // bottom end = the line's own rounded top end, flipped
 
-// the shared town (lib/square.ts, Figma 1133:7217): one more row at the end of the list, Uncle Sam as its thumbnail (same ring as other towns); no Edit, no reorder
+// the shared town (lib/square.ts, Figma Section 1 1133:7217 "Transfer"): one more row at the end of the list, the grey swirl
+// as its thumbnail (same ring as other towns); no Edit, no reorder
 export type SquareInfo = { town: Town; chief?: Card; mine: number; ok: boolean }
 
 export default function TownListScreen({
@@ -64,8 +71,9 @@ export default function TownListScreen({
 
   const openIndex = state.towns.findIndex((t) => t.id === openId)
   const chiefOf = (t: Town) => state.cards[t.residents[0] ?? '']
-  const chiefImage = (t: Town) => (isSquare(t) ? SQUARE_THUMB : chiefOf(t)?.image)
-  const chiefThumb = (t: Town) => (isSquare(t) ? undefined : chiefOf(t)?.thumb)
+  // the swirl fills the circle (thumb), it isn't a drawing to crop to the upper body (image)
+  const chiefImage = (t: Town) => (isSquare(t) ? undefined : chiefOf(t)?.image)
+  const chiefThumb = (t: Town) => (isSquare(t) ? SQUARE_THUMB : chiefOf(t)?.thumb)
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const open = state.towns.find((t) => t.id === openId)
   const isSquare = (t: Town) => t.id === SQUARE_ID
@@ -185,7 +193,13 @@ export default function TownListScreen({
   // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
   const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
   const squareTop = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0)
-  const listHeight = (square ? squareTop + ROW + (openId === SQUARE_ID ? OPEN_EXTRA : 0) : squareTop) + 120
+  // open shared town: shorter box, unless a Migration / Send pill hangs under it
+  const squareExtra = action ? OPEN_EXTRA : OPEN_EXTRA - SQ_SHORT
+  const listHeight = (square ? squareTop + ROW + (openId === SQUARE_ID ? squareExtra : 0) : squareTop) + 120
+  // the grey line runs from the first row to just under the last one (open rows have the bigger 84px thumbnail)
+  const n = state.towns.length
+  const last = square ? { top: squareTop, open: openId === SQUARE_ID } : adding ? { top: rowTop(n), open: true } : { top: rowTop(n - 1), open: openIndex === n - 1 }
+  const railH = last.top + (last.open ? 84 : 70) + RAIL_PAD - RAIL_TOP
 
   // hand-drawn pill button (Figma Vector 406); grey label for the "leave it" side
   const pill = (label: string, onClick: () => void, left: number, grey = false) => (
@@ -201,12 +215,13 @@ export default function TownListScreen({
     const isNew = !t
     const sq = !!t && isSquare(t)
     const editable = isNew || (editing && !sq)
+    const short = sq && !action && !editing
     return (
       <>
         {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
             behind it (-z), so the line's wavy edge covers the box's left end with no gap.
             Its top lines up with the thumbnail circle; the Edit/Done pill hangs over its bottom edge. */}
-        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute top-0 left-[64px] -z-10 h-[162px] w-[329px] max-w-none origin-left" />
+        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute top-0 left-[64px] -z-10 w-[329px] max-w-none origin-left" style={{ height: short ? 162 - SQ_SHORT : 162 }} />
         <div className="animate-tl-content absolute inset-0">
         {editable ? (
           <input
@@ -240,7 +255,7 @@ export default function TownListScreen({
         ) : (
           <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{sq ? tr('You can send your character only {n}!', { n: SQUARE_PER_USER }) : t!.bio}</p>
         )}
-        <p className="absolute top-[127px] left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
+        <p className="absolute left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]" style={{ top: short ? 127 - SQ_SHORT : 127 }}>since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
         {isNew ? (
           <>
             {pill(tr('Discard'), () => setAdding(null), 133, true)}
@@ -280,8 +295,17 @@ export default function TownListScreen({
 
       <div ref={listEl} className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[121px]' : 'top-[149px]'}`}>
         <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
-          {/* the grey line every town hangs on; it runs past the end and is clipped, so its bottom end never shows */}
-          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: 'calc(100% - 37px + 160px)' }} />
+          {/* the grey line every town hangs on: it ends just under the last row with a rounded end like its top
+              (Figma Section 1). The line is stretched to length; its bottom end is the drawing's own top end, flipped,
+              so the curve keeps its shape however long the list is. */}
+          <div className="pointer-events-none absolute left-[20px] w-[96px] transition-[height] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ top: RAIL_TOP, height: railH }}>
+            <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ bottom: RAIL_CAP }}>
+              <img src={tlBar} alt="" className="absolute top-0 left-0 w-[96px] max-w-none" style={{ height: Math.max(railH, 712) }} />
+            </div>
+            <div className="absolute inset-x-0 bottom-0 overflow-hidden" style={{ height: RAIL_CAP }}>
+              <img src={tlBar} alt="" className="absolute bottom-0 left-0 h-[712px] w-[96px] max-w-none -scale-y-100" />
+            </div>
+          </div>
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id
@@ -333,7 +357,7 @@ export default function TownListScreen({
           {square && (
             <div
               className="absolute inset-x-0 transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              style={{ top: squareTop, height: openId === SQUARE_ID ? ROW + OPEN_EXTRA : ROW }}
+              style={{ top: squareTop, height: openId === SQUARE_ID ? ROW + squareExtra : ROW }}
               ref={(el) => {
                 if (el) thumbs.current.set(SQUARE_ID, el)
                 else thumbs.current.delete(SQUARE_ID)
@@ -344,7 +368,7 @@ export default function TownListScreen({
               ) : (
                 <>
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
-                    <Thumb image={chiefImage(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
+                    <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
                   </button>
                   <button onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                     {tr(SQUARE_NAME)}
