@@ -341,4 +341,16 @@ const DICT: Record<string, string> = {
   Bored: '지루했어요',
   Indifferent: '그저 그랬어요',
   'Anything else to tell us? (thoughts, ideas to improve)': '또 해줄 말이 있나요? (느낀 점, 개선 점)',
+  // save / share a card (components/CardActions.tsx)
+  'Save image': '이미지 저장',
+  'Share link': '링크 공유',
+  'Your card link is ready!': '카드 링크가 준비됐어요!',
+  Copy: '링크 복사',
+  Share: '공유하기',
+  'Link copied.': '링크를 복사했어요.',
+  'Log in to share a link.': '링크로 공유하려면 로그인해 주세요.',
+  'Link sharing needs the server. Save the image instead.': '링크 공유는 서버 연결이 필요해요. 대신 이미지로 저장해 보세요.',
+  "Couldn't make the link. Try again in a moment.": '링크를 만들지 못했어요. 잠시 후 다시 해 주세요.',
+  "Couldn't make the image. Try again in a moment.": '이미지를 만들지 못했어요. 잠시 후 다시 해 주세요.',
+  'Admin view: read-only.': '어드민 보기: 읽기 전용이에요.',
 }

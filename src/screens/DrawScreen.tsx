@@ -23,6 +23,7 @@ import spark396 from '../assets/proto/v2/spark-396.svg'
 import spark397 from '../assets/proto/v2/spark-397.svg'
 import spark398 from '../assets/proto/v2/spark-398.svg'
 import { Bottom, CardView, Popup, shrink, type PopupAction } from '../components/ui'
+import CardActions from '../components/CardActions'
 import { ToggleIcon } from '../components/drawIcons'
 import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, PillVillage, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
 import { MOODS } from '../lib/moods'
@@ -856,6 +857,8 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
         </div>
       </div>
       <Bottom>
+        {/* save the card as an image / share it as a link */}
+        <CardActions card={card} className="absolute top-[706px] left-1/2 -translate-x-1/2" />
         <button onClick={onChoose} className="absolute top-[774px] left-[88px] flex h-[45px] w-[227px] items-center justify-center">
           <span className="absolute inset-[-2.22%_-0.44%]">
             <PillVillage />

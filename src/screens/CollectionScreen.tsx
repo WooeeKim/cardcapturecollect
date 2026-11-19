@@ -6,6 +6,7 @@ import deckBox from '../assets/proto/v2/deck-box.svg'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import bandImg from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
+import CardActions from '../components/CardActions'
 import { framePoint, toLocal } from '../lib/frame'
 import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
@@ -359,7 +360,18 @@ function Detail({ wide, card, townName, onClose, onDelete }: { wide: boolean; ca
             <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
           </button>
         )
-        return wide ? letGo : <Bottom>{letGo}</Bottom>
+        const actions = <CardActions card={card} light className={`absolute ${wide ? 'top-[652px] left-[410px]' : 'top-[734px] left-[14px]'}`} />
+        return wide ? (
+          <>
+            {actions}
+            {letGo}
+          </>
+        ) : (
+          <Bottom>
+            {actions}
+            {letGo}
+          </Bottom>
+        )
       })()}
     </div>
   )
