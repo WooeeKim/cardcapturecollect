@@ -826,7 +826,8 @@ export default function MainScreen({
 
   // shown as soon as the camera reaches that end of the town, before any pull
   const hint = open || follow ? undefined : side > 0 ? prev : side < 0 ? next : undefined
-  const empty = cards.length === 0
+  // the empty-town tutorial (Uncle Sam inviting you to draw) is for your own towns, never the shared plaza
+  const empty = cards.length === 0 && !city
   const charH = 170
 
   return (
