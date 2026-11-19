@@ -857,9 +857,9 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
         </div>
       </div>
       <Bottom>
-        {/* one row under the card: save / share on the left, "move in" on the right */}
-        <CardActions card={card} className="absolute top-[774px] left-[40px]" />
-        <button onClick={onChoose} className="absolute top-[774px] left-[240px] flex h-[45px] w-[118px] items-center justify-center">
+        {/* centred under the card: "move in", then save / share below it */}
+        <CardActions card={card} className="absolute top-[792px] left-1/2 -translate-x-1/2" />
+        <button onClick={onChoose} className="absolute top-[738px] left-[142px] flex h-[45px] w-[118px] items-center justify-center">
           <span className="absolute inset-[-2.22%_-0.44%]">
             <PillVillage />
           </span>
