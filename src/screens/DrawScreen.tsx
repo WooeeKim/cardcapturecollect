@@ -830,8 +830,9 @@ function hslHex(h: number, s: number, l: number) {
   return `#${hex2(f(0) * 255)}${hex2(f(8) * 255)}${hex2(f(4) * 255)}`
 }
 
-// Finished card lands with a little burst, then goes to a village (Figma 719:11320).
-export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => void }) {
+// Finished card lands with a little burst (sparks stay), then moves in to a town (Figma drawing-finish 1138:2642;
+// was 1134:3838, 719:11320). Back leaves it waiting (Draw → back here); Save / Share: components/CardActions.tsx.
+export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: () => void; onBack: () => void }) {
   // Figma spark strokes (Vector 391–398), positioned as in the frame
   const sparks = [
     { src: spark391, x: 274.2, y: 135.3, w: 2, h: 21.2 },
@@ -845,6 +846,9 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
   ]
   return (
     <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[75px] left-[24px] z-10 size-[50px]">
+        <img src={backIcon} alt="" className="size-full" />
+      </button>
       {sparks.map((s, i) => (
         <img key={i} src={s.src} alt="" className="pointer-events-none absolute" style={{ left: s.x, top: s.y, width: s.w, height: s.h, animation: `spark-stay 0.7s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
       ))}
@@ -855,8 +859,9 @@ export function TadaScreen({ card, onChoose }: { card: Card; onChoose: () => voi
             <CardView card={card} />
           </div>
         </div>
-        {/* save / share just under the card's lower-right corner (moves and shrinks with the card) */}
-        <CardActions card={card} className="absolute top-full right-[-14px] mt-[6px]" />
+        {/* save / share under the card's lower right — Figma drawing-finish (1138:2642): save (314.2, 656.5), share (347, 657.7),
+            minus this box's top-left (50.7, 203.6) and the icons' 5px tap padding; moves and shrinks with the card */}
+        <CardActions card={card} gap={0} className="absolute top-[447.9px] left-[258.5px]" />
       </div>
       <Bottom>
         <button onClick={onChoose} className="absolute top-[751px] left-[104.3px] flex h-[53px] w-[185px] items-center justify-center">

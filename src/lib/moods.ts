@@ -35,3 +35,46 @@ const FALLBACK: Mood = { name: '', color: '#8e8e8e', ink: '#ffffff', pace: 22, s
 export function moodOf(name: string): Mood {
   return MOODS.find((m) => m.name === name) ?? OLD.find((m) => m.name === name) ?? FALLBACK
 }
+
+// what each mood says while being carried around (picked up in the town); English keys, Korean in i18n.ts
+const HELD_LINES: Record<string, string[]> = {
+  Silent: ['…!', '……', '(gulp)'],
+  Joyful: ['Wheee~!', 'Higher!', 'Hehehe'],
+  Lively: ['Whoa, fun!', 'Again!', "So high!"],
+  Elegant: ['How rude.', 'Put me down, please.', "You'll crease my outfit."],
+  Chic: ['How rude.', 'Put me down, please.', "You'll crease my outfit."],
+  Shy: ['Um, excuse me…', "Don't look…", 'So embarrassing…'],
+  Sleepy: ['Mm… five more minutes…', "I'm dizzy… zzz", '…snore'],
+  Busy: ["I'm busy, put me down!", "I'm late!", "I'll miss my train!"],
+  Scattered: ['Huh? Where am I?', 'What? What?', 'Where are we going?'],
+  Dreamy: ['Huh? Where am I?', "I'm flying~", 'Where are we going?'],
+  Gentle: ['Gently, please~', "It's okay~", 'Slowly~'],
+  Calm: ['Gently, please~', "It's okay~", 'Slowly~'],
+  Gloomy: ['…why me', 'Sigh…', 'Just put me down'],
+}
+const HELD_DEFAULT = ['Put me down!', 'Aaah!']
+
+export function heldLines(name: string): string[] {
+  return HELD_LINES[name] ?? HELD_DEFAULT
+}
+
+// what shows around the head while being carried, matching the lines above (MainScreen FX)
+export type HeldFx = 'notes' | 'sparkle' | 'sweat' | 'anger' | 'blush' | 'zzz' | 'dizzy' | 'hearts' | 'shock' | 'cloud'
+const HELD_FX: Record<string, HeldFx> = {
+  Joyful: 'notes',
+  Lively: 'sparkle',
+  Busy: 'sweat',
+  Elegant: 'anger',
+  Chic: 'anger',
+  Shy: 'blush',
+  Sleepy: 'zzz',
+  Scattered: 'dizzy',
+  Dreamy: 'dizzy',
+  Gentle: 'hearts',
+  Calm: 'hearts',
+  Silent: 'shock',
+  Gloomy: 'cloud',
+}
+export function heldFx(name: string): HeldFx {
+  return HELD_FX[name] ?? 'sweat'
+}

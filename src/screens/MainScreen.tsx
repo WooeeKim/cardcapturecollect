@@ -7,7 +7,19 @@ import menuCollection from '../assets/proto/menu-collection.svg'
 import personIcon from '../assets/proto/person.svg'
 import uncle from '../assets/proto/uncle.png'
 import bubble from '../assets/proto/bubble.svg'
-import { moodOf } from '../lib/moods'
+import { heldFx, heldLines, moodOf, type HeldFx } from '../lib/moods'
+import sweatLeft from '../assets/proto/sweat-left.svg'
+import sweatRight from '../assets/proto/sweat-right.svg'
+import fxNote1 from '../assets/proto/fx/note-1.svg'
+import fxNote2 from '../assets/proto/fx/note-2.svg'
+import fxSparkle from '../assets/proto/fx/sparkle.svg'
+import fxAnger from '../assets/proto/fx/anger.svg'
+import fxBlush from '../assets/proto/fx/blush.svg'
+import fxZ from '../assets/proto/fx/z.svg'
+import fxStar from '../assets/proto/fx/star.svg'
+import fxHeart from '../assets/proto/fx/heart.svg'
+import fxShock from '../assets/proto/fx/shock.svg'
+import fxCloud from '../assets/proto/fx/cloud.svg'
 import { TONES, serialLabel, type Card, type State, type Town } from '../lib/store'
 import { Bottom } from '../components/ui'
 import cardPanel from '../assets/proto/v2/card-panel.svg'
@@ -20,6 +32,7 @@ import groundIpadSvg from '../assets/proto/ground/ground-ipad.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
+import { SQUARE_ID } from '../lib/square'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
 
@@ -65,8 +78,99 @@ const TUFTS: [keyof typeof TUFT_KIND, number, number][] = (
   ] as const
 ).map(([k, x, y]) => [k, x - 477.34, y - 1163.08])
 
+// Sharing Plaza is a city, not a field (UX › 앱 확정, grid beside 02 메인 마을, Vector 547 · 566–577): the same
+// ground shape paved with a perspective grid, no grass. Lines in the ground box (1109.76 × 474.39):
+// [x top, y top, x bottom, y bottom]; streets run toward the horizon, crossings get closer together far away.
+const CITY_LINES: [number, number, number, number][] = [
+  [562, 5, 562, 474], [491.8, 8.5, 445.8, 471.5], [686, 8.5, 731, 472.5], [421.4, 7.5, 302.4, 467.5],
+  [832.5, 7.5, 953.5, 472.5], [345.6, 2.3, 160.6, 464.3], [975.2, 2.3, 1163.2, 471.3],
+  [239, 61, 898, 61], [192.5, 131, 937.5, 131], [134.5, 226, 1003.5, 226], [54, 351.5, 1195, 351.5],
+]
+const CITY_BOX = { w: 1109.76, h: 474.39 }
+
+// ---- pick up & throw (long-press a resident) ----
+const HOLD_MS = 350 // press this long on a character to pick it up
+const GRAV = 2400 // world px/s², pulls the dangling body back under the grip
+const HEAVY = 1.8 // >1 = slower, heavier swing (acts like a longer body)
+const HAND_PULL = 0.7 // how much a hand jerk swings the body (lower = heavier)
+const SWING_DAMP = 2.6 // how fast the dangling swing settles
+const MAX_SWING = 1.05 // rad (~60°) past hanging straight down; beyond this it's pushed back, never spins over
+const KICK = 36 // 바둥바둥 kick strength
+const LIFT = 46 // a held character floats this high above its shadow
+const THROW_GRAV = 3400 // world px/s², heavier fall than the swing
+const THROW_SPEED = 0.6 // share of the hand speed the throw keeps
+const MAX_THROW = 1900 // world px/s
+
+// held: hand-drawn bits around the head, one set per mood (moods.ts heldFx). x, y = part centre, box px from the
+// top of the head; cls = its animation (index.css), d = animation delay (s)
+type FxPart = { src: string; cls: string; x: number; y: number; w: number; d?: number }
+const FX: Record<HeldFx, FxPart[]> = {
+  sweat: [
+    { src: sweatLeft, cls: 'fx-sweat-l', x: -31, y: 30, w: 30 },
+    { src: sweatRight, cls: 'fx-sweat-r', x: 30, y: 34, w: 32, d: -0.35 },
+  ],
+  notes: [
+    { src: fxNote1, cls: 'fx-float', x: 28, y: 4, w: 20 },
+    { src: fxNote2, cls: 'fx-float', x: -32, y: 10, w: 28, d: -0.8 },
+  ],
+  sparkle: [
+    { src: fxSparkle, cls: 'fx-pop', x: -34, y: 8, w: 24 },
+    { src: fxSparkle, cls: 'fx-pop', x: 32, y: 18, w: 18, d: -0.45 },
+    { src: fxSparkle, cls: 'fx-pop', x: 8, y: -18, w: 14, d: -0.2 },
+  ],
+  anger: [{ src: fxAnger, cls: 'fx-pulse', x: 26, y: 18, w: 26 }],
+  blush: [
+    { src: fxBlush, cls: 'fx-blink', x: -24, y: 58, w: 24 },
+    { src: fxBlush, cls: 'fx-blink', x: 24, y: 58, w: 24, d: -0.3 },
+  ],
+  zzz: [
+    { src: fxZ, cls: 'fx-zzz', x: 26, y: 0, w: 12 },
+    { src: fxZ, cls: 'fx-zzz', x: 26, y: 0, w: 16, d: -0.6 },
+    { src: fxZ, cls: 'fx-zzz', x: 26, y: 0, w: 20, d: -1.2 },
+  ],
+  dizzy: [
+    { src: fxStar, cls: 'fx-orbit', x: 0, y: -6, w: 15 },
+    { src: fxStar, cls: 'fx-orbit', x: 0, y: -6, w: 12, d: -0.47 },
+    { src: fxStar, cls: 'fx-orbit', x: 0, y: -6, w: 14, d: -0.93 },
+  ],
+  hearts: [
+    { src: fxHeart, cls: 'fx-float', x: 26, y: 6, w: 18 },
+    { src: fxHeart, cls: 'fx-float', x: -28, y: 14, w: 14, d: -0.8 },
+  ],
+  shock: [
+    { src: fxShock, cls: 'fx-shake', x: -32, y: 22, w: 14 },
+    { src: fxShock, cls: 'fx-shake', x: 32, y: 22, w: 14, d: -0.17 },
+  ],
+  cloud: [{ src: fxCloud, cls: 'fx-cloud', x: 0, y: -24, w: 52 }],
+}
+
+// speech bubble clears the bits above the head (box px above the head top)
+const fxLift = (kind: HeldFx) => Math.max(12, 10 - Math.min(...FX[kind].map((p) => p.y - p.w / 2 - (p.cls === 'fx-orbit' ? 8 : 0))))
+
 type View = { s: number; x: number; y: number }
-type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1 }
+// gu/gv: the gripped point in the character's own box (px, feet = 0,0, head = 0,-charH). While held or flying the
+// character turns by `a` around that point, which sits at (px, py); sx/sy = the spot on the ground under it.
+type Grab = {
+  phase: 'held' | 'air' | 'land'
+  gu: number
+  gv: number
+  px: number
+  py: number
+  fx: number // finger, world px (held)
+  fy: number
+  vx: number // smoothed grip velocity (held) / flight velocity (air), world px/s
+  vy: number
+  a: number
+  w: number
+  sx: number
+  sy: number
+  z: number
+  vz: number
+  kick: number // time to the next struggle kick
+  say: number // seconds the current speech line still shows (0 = no bubble)
+  line: number // seconds until a new line may replace it
+}
+type Walker = { id: string; x: number; y: number; tx: number; ty: number; wait: number; dir: 1 | -1; g?: Grab }
 
 export default function MainScreen({
   state,
@@ -80,6 +184,8 @@ export default function MainScreen({
   onDraw,
   onSwitch,
   onMigrate,
+  canMigrate = () => true,
+  canOpen = () => true,
 }: {
   state: State
   town: Town
@@ -92,6 +198,9 @@ export default function MainScreen({
   onDraw: () => void
   onSwitch: (townId: string) => void // swiped to the next / previous town: it opens at its center
   onMigrate: (cardId: string) => void
+  // shared town (lib/square.ts): other people's cards there can't be moved or opened in your Collection
+  canMigrate?: (cardId: string) => boolean
+  canOpen?: (cardId: string) => boolean
 }) {
   const wide = useWide()
   const box = useRef<HTMLDivElement>(null)
@@ -104,7 +213,8 @@ export default function MainScreen({
   // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
   const [side, setSide] = useState<1 | -1 | 0>(0)
   const sideRef = useRef<1 | -1 | 0>(0)
-  const groundEl = useRef<SVGPathElement>(null)
+  const groundEl = useRef<SVGGElement>(null)
+  const city = town.id === SQUARE_ID
   const hintEl = useRef<HTMLDivElement>(null)
   const target = openId ?? follow
   const targetRef = useRef(target)
@@ -225,11 +335,17 @@ export default function MainScreen({
   useEffect(() => {
     if (!size.w) return
     let raf = 0
+    let t = 0
     let last = performance.now()
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
+      t += dt
       for (const w of walkers.current) {
+        if (w.g) {
+          stepGrab(w, w.g, dt, t)
+          continue
+        }
         const card = state.cards[w.id]
         const speed = 600 / moodOf(card?.mood ?? '').pace
         if (w.wait > 0) w.wait -= dt
@@ -276,6 +392,231 @@ export default function MainScreen({
     return () => cancelAnimationFrame(raf)
   }, [size.w, size.h, state.cards])
 
+  // ---- picked-up / thrown character: a pendulum hanging from the gripped point ----
+  // lowest point of the hanging body below the grip (head grip → feet hang down, feet grip → head hangs down)
+  const hang = (g: Grab, k: number) => Math.max(-g.gv, charH + g.gv) * k
+  const groundClamp = (y: number) => Math.min(H - 12, Math.max(groundTop + 12, y))
+
+  function stepGrab(w: Walker, g: Grab, dt: number, t: number) {
+    const k = depth(g.sy)
+    if (g.phase === 'held') {
+      // grip eases onto the finger (no jump when grabbed lower than the head); its velocity, smoothed,
+      // and that velocity's change = how hard the hand jerks the grip
+      const ease = 1 - Math.exp(-30 * dt)
+      const nx = g.px + (g.fx - g.px) * ease
+      const ny = g.py + (g.fy - g.py) * ease
+      const nvx = (nx - g.px) / dt
+      const nvy = (ny - g.py) / dt
+      const ovx = g.vx
+      const ovy = g.vy
+      g.vx += (nvx - g.vx) * 0.35
+      g.vy += (nvy - g.vy) * 0.35
+      const ax = HAND_PULL * Math.max(-8000, Math.min(8000, (g.vx - ovx) / dt))
+      const ay = HAND_PULL * Math.max(-8000, Math.min(8000, (g.vy - ovy) / dt))
+      g.px = nx
+      g.py = ny
+      // pendulum with a moving pivot: the body's middle lags behind the hand and swings back
+      const rx = -g.gu * k
+      const ry = (-charH * 0.5 - g.gv) * k
+      const L = Math.max(40, Math.hypot(rx, ry)) * HEAVY
+      const th = Math.atan2(ry, rx) + g.a
+      let alpha = (ax * Math.sin(th) + (GRAV - ay) * Math.cos(th)) / L - SWING_DAMP * g.w
+      // never swings over the top: past MAX_SWING from hanging straight down, a stiff push back
+      const rest = Math.PI / 2 - Math.atan2(ry, rx)
+      const off = Math.atan2(Math.sin(g.a - rest), Math.cos(g.a - rest))
+      if (Math.abs(off) > MAX_SWING) alpha -= Math.sign(off) * (Math.abs(off) - MAX_SWING) * 120 + g.w * 6
+      // 바둥바둥: little random kicks
+      g.kick -= dt
+      if (g.kick <= 0) {
+        g.kick = 0.15 + Math.random() * 0.3
+        alpha += (Math.random() - 0.5) * 2 * KICK
+      }
+      g.w += alpha * dt
+      g.a += g.w * dt
+      g.sy = groundClamp(g.py + hang(g, k) + LIFT)
+      g.sx = g.px
+      g.z = g.sy - g.py - hang(g, k)
+    } else if (g.phase === 'air') {
+      g.sx += g.vx * dt
+      g.vz -= THROW_GRAV * dt
+      g.z += g.vz * dt
+      g.a += g.w * dt
+      g.w *= Math.exp(-3 * dt) // keeps the swing it had, no tumbling
+      const lo = edge(g.sy) + 30
+      const hi = W - edge(g.sy) - 30
+      if (g.sx < lo || g.sx > hi) {
+        g.sx = Math.min(hi, Math.max(lo, g.sx))
+        g.vx *= -0.5
+      }
+      if (g.z <= 0 && g.vz < 0) {
+        g.z = 0
+        if (g.vz < -520) {
+          // bounce
+          g.vz *= -0.35
+          g.vx *= 0.6
+          g.w = g.w * 0.4 + (Math.random() - 0.5) * 1.2
+          vibrate(15)
+        } else {
+          // land: keep the pose, but turn around the feet from now on, then stand back up
+          const c = Math.cos(g.a)
+          const s = Math.sin(g.a)
+          const ux = -g.gu * k
+          const uy = -g.gv * k
+          g.px += ux * c - uy * s
+          g.py += ux * s + uy * c
+          g.gu = 0
+          g.gv = 0
+          // stand up where the feet came down (a tilted body's feet aren't under the grip): no sideways slide
+          g.sx = Math.min(hi, Math.max(lo, g.px))
+          g.a = Math.atan2(Math.sin(g.a), Math.cos(g.a))
+          g.w = 0
+          g.phase = 'land'
+          vibrate(20)
+        }
+      }
+      // the body flies with its shadow: grip stays right above the spot on the ground
+      if (g.phase === 'air') {
+        g.px = g.sx
+        g.py = g.sy - hang(g, k) - g.z
+      }
+    } else {
+      // land: feet slide onto the shadow, body springs upright
+      const ease = 1 - Math.exp(-14 * dt) // same speed at any frame rate
+      g.px += (g.sx - g.px) * ease
+      g.py += (g.sy - g.py) * ease
+      g.w += (-g.a * 140 - g.w * 13) * dt
+      g.a += g.w * dt
+      if (Math.abs(g.a) < 0.02 && Math.abs(g.w) < 0.3 && Math.hypot(g.sx - g.px, g.sy - g.py) < 1) {
+        w.x = g.sx
+        w.y = g.sy
+        w.g = undefined
+        w.wait = 0.8 + Math.random() * 1.5
+        const el = els.current.get(w.id)
+        if (el) {
+          el.classList.remove('held')
+          ;(el.firstElementChild as HTMLElement).style.rotate = ''
+        }
+        shadows.current.get(w.id)?.style.setProperty('opacity', '0')
+        says.current.get(w.id)?.style.setProperty('display', 'none')
+        return
+      }
+    }
+    w.x = g.sx
+    w.y = g.sy
+    const el = els.current.get(w.id)
+    if (el) {
+      el.style.transform = `translate(${g.px}px, ${g.py}px) rotate(${g.a}rad) scale(${k}) translate(${-g.gu}px, ${-g.gv}px)`
+      el.style.zIndex = g.phase === 'held' ? '100000' : String(Math.round(g.sy) + 1)
+      // legs / body wiggle while held (the bob runs fast via .held in CSS)
+      ;(el.firstElementChild as HTMLElement).style.rotate = g.phase === 'held' ? `${Math.sin(t * 23) * 5}deg` : ''
+    }
+    const sh = shadows.current.get(w.id)
+    if (sh) {
+      // under the body's middle, not the grip (they differ when the body hangs tilted)
+      const mu = -g.gu * k
+      const mv = (-charH * 0.5 - g.gv) * k
+      const mx = g.px + mu * Math.cos(g.a) - mv * Math.sin(g.a)
+      sh.style.transform = `translate(${mx}px, ${g.sy}px) scale(${k * Math.max(0.45, 1 - g.z / 400)})`
+      sh.style.opacity = String(Math.max(0.15, 0.5 - g.z / 600))
+      sh.style.zIndex = String(Math.round(g.sy))
+    }
+    // speech: a mood line pops up while the hand moves it around, changes now and then, fades after it stops
+    const say = says.current.get(w.id)
+    if (say) {
+      g.line -= dt
+      const moving = g.phase === 'held' && Math.hypot(g.vx, g.vy) > 260
+      if (moving && g.line <= 0) {
+        const lines = heldLines(state.cards[w.id]?.mood ?? '')
+        const bub = say.firstElementChild as HTMLElement
+        const was = bub.textContent
+        const pick = lines.filter((l) => tr(l) !== was)
+        bub.textContent = tr(pick[Math.floor(Math.random() * pick.length)] ?? lines[0])
+        bub.classList.remove('animate-pop-in')
+        void bub.offsetWidth // restart the pop
+        bub.classList.add('animate-pop-in')
+        g.line = 1.8 + Math.random() * 1.2
+        g.say = 1.6
+      } else if (moving) g.say = Math.max(g.say, 0.5)
+      else g.say -= dt
+      say.style.display = g.say > 0 ? '' : 'none'
+      if (g.say > 0) say.style.transform = `translate(${g.px}px, ${g.py - fxLift(heldFx(state.cards[w.id]?.mood ?? '')) * k}px) scale(${k})`
+    }
+  }
+
+  // long-press grabbed a character at world point (wx, wy)
+  // top of the head in the character's box (feet = 0,0): the drawing is trimmed to its lines and sits
+  // object-contain at the bottom, so the head is its top edge; x = middle of the topmost drawn pixels
+  const heads = useRef(new Map<string, { u: number; v: number }>())
+  function headOf(id: string, dir: 1 | -1) {
+    let h = heads.current.get(id)
+    const img = els.current.get(id)?.querySelector('img')
+    if (!h && img?.naturalWidth) {
+      const bw = charH * 0.8
+      const sc = Math.min(bw / img.naturalWidth, charH / img.naturalHeight)
+      const dw = img.naturalWidth * sc
+      const dh = img.naturalHeight * sc
+      h = { u: 0, v: -dh }
+      try {
+        const cw = 48
+        const ch = Math.max(1, Math.round((cw * img.naturalHeight) / img.naturalWidth))
+        const c = document.createElement('canvas')
+        c.width = cw
+        c.height = ch
+        const ctx = c.getContext('2d')!
+        ctx.drawImage(img, 0, 0, cw, ch)
+        const { data } = ctx.getImageData(0, 0, cw, ch)
+        for (let y = 0; y < ch; y++) {
+          let sum = 0
+          let n = 0
+          for (let x = 0; x < cw; x++) if (data[(y * cw + x) * 4 + 3] > 40) (sum += x), n++
+          if (n) {
+            h = { u: -dw / 2 + ((sum / n + 0.5) / cw) * dw, v: -dh + (y / ch) * dh }
+            break
+          }
+        }
+      } catch {
+        /* unreadable image: middle of the top edge */
+      }
+      heads.current.set(id, h)
+    }
+    h ??= { u: 0, v: -charH }
+    return { u: h.u * dir, v: h.v } // the drawing is mirrored when walking left
+  }
+
+  function pickUp(id: string, wx: number, wy: number) {
+    const w = walkers.current.find((x) => x.id === id)
+    if (!w || w.g) return false
+    const k = depth(w.y)
+    // always held by the top of the head, wherever it was pressed; the head then rises to the finger
+    const { u: gu, v: gv } = headOf(id, w.dir)
+    const hx = w.x + gu * k
+    const hy = w.y + gv * k
+    w.g = { phase: 'held', gu, gv, px: hx, py: hy, fx: wx, fy: wy, vx: 0, vy: 0, a: 0, w: 0, sx: w.x, sy: w.y, z: 0, vz: 0, kick: 0.05, say: 0, line: 0 }
+    const el = els.current.get(id)
+    if (el) {
+      // mood bits sit around the top of the head (box px: left edge = -0.4·charH, top = -charH)
+      const fx = el.querySelector<HTMLElement>('.fx')
+      if (fx) {
+        fx.style.left = `${gu + charH * 0.4}px`
+        fx.style.top = `${gv + charH}px`
+      }
+      el.classList.add('held')
+    }
+    vibrate(30)
+    return true
+  }
+  function throwHeld(id: string) {
+    const g = walkers.current.find((x) => x.id === id)?.g
+    if (!g || g.phase !== 'held') return
+    const cap = (v: number) => Math.max(-MAX_THROW, Math.min(MAX_THROW, v))
+    // sideways hand speed carries it along the ground, up/down hand speed tosses it up / slams it down
+    g.vx = cap(g.vx * THROW_SPEED)
+    g.vz = cap(-g.vy * THROW_SPEED)
+    g.vy = 0
+    g.phase = 'air'
+    els.current.get(id)?.classList.remove('held')
+  }
+
   // farther (near horizon) = smaller
   function depth(y: number) {
     return 0.7 + 0.5 * Math.max(0, Math.min(1, (y - groundTop) / Math.max(1, H - groundTop)))
@@ -283,8 +624,20 @@ export default function MainScreen({
 
   // ---- gestures: drag = pan (pull past the edge = next town), pinch = zoom, tap = open ----
   const pointers = useRef(new Map<number, { x: number; y: number }>())
-  const gesture = useRef<{ start: { x: number; y: number }; view: View; moved: boolean; walker?: string; pinch?: { d: number; mid: { x: number; y: number }; view: View } } | null>(null)
+  const gesture = useRef<{ start: { x: number; y: number }; view: View; moved: boolean; walker?: string; grab?: string; pinch?: { d: number; mid: { x: number; y: number }; view: View } } | null>(null)
   const pullRef = useRef(0)
+  const holdTimer = useRef<number | null>(null)
+  const shadows = useRef(new Map<string, HTMLDivElement>())
+  const says = useRef(new Map<string, HTMLDivElement>())
+  function cancelHold() {
+    if (holdTimer.current !== null) clearTimeout(holdTimer.current)
+    holdTimer.current = null
+  }
+  useEffect(() => cancelHold, [])
+  function toWorld(p: { x: number; y: number }) {
+    const v = view.current
+    return { x: (p.x - v.x) / v.s, y: (p.y - v.y) / v.s }
+  }
 
   function local(e: React.PointerEvent) {
     return toLocal(e.clientX, e.clientY, box.current!)
@@ -325,6 +678,7 @@ export default function MainScreen({
   useEffect(() => () => setZone(null), [])
 
   function onDown(e: React.PointerEvent) {
+    if (gesture.current?.grab) return // holding someone: other fingers are ignored
     pointers.current.set(e.pointerId, local(e))
     try {
       e.currentTarget.setPointerCapture(e.pointerId)
@@ -335,7 +689,24 @@ export default function MainScreen({
       // remember who was touched now: with pointer capture, pointerup's target is the box, not the character
       const walker = (e.target as HTMLElement).closest<HTMLElement>('[data-walker]')?.dataset.walker
       gesture.current = { start: local(e), view: { ...view.current }, moved: false, walker }
+      // press and hold on a character = pick it up
+      cancelHold()
+      if (walker) {
+        const pid = e.pointerId
+        holdTimer.current = window.setTimeout(() => {
+          holdTimer.current = null
+          const g = gesture.current
+          const p = pointers.current.get(pid)
+          if (!g || g.moved || pointers.current.size !== 1 || !p) return
+          const at = toWorld(p)
+          if (!pickUp(walker, at.x, at.y)) return
+          g.grab = walker
+          setOpenId(null)
+          setFollow(null)
+        }, HOLD_MS)
+      }
     } else if (pointers.current.size === 2 && gesture.current) {
+      cancelHold()
       gesture.current.moved = true
       gesture.current.pinch = { ...pinchOf(), view: { ...view.current } }
       setPullBoth(0)
@@ -349,6 +720,16 @@ export default function MainScreen({
     const p = local(e)
     pointers.current.set(e.pointerId, p)
     const g = gesture.current
+    if (g.grab) {
+      // carrying: the grip follows the finger (the loop turns hand speed into swing)
+      const hw = walkers.current.find((x) => x.id === g.grab)?.g
+      if (hw) {
+        const at = toWorld(p)
+        hw.fx = at.x
+        hw.fy = at.y
+      }
+      return
+    }
     if (g.pinch && pointers.current.size === 2) {
       const { d, mid } = pinchOf()
       const b = g.pinch.view
@@ -364,6 +745,7 @@ export default function MainScreen({
     const dy = p.y - g.start.y
     if (!g.moved && Math.hypot(dx, dy) > TAP) {
       g.moved = true
+      cancelHold()
       // dragging the map lets go of the followed character / closes the card
       setFollow(null)
       setOpenId(null)
@@ -383,8 +765,15 @@ export default function MainScreen({
   }
 
   function onUp(e: React.PointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return
     pointers.current.delete(e.pointerId)
+    cancelHold()
     const g = gesture.current
+    if (g?.grab) {
+      throwHeld(g.grab)
+      gesture.current = null
+      return
+    }
     if (pointers.current.size > 0) {
       if (g) g.pinch = undefined
       if (g && pointers.current.size === 1) {
@@ -437,7 +826,8 @@ export default function MainScreen({
 
   // shown as soon as the camera reaches that end of the town, before any pull
   const hint = open || follow ? undefined : side > 0 ? prev : side < 0 ? next : undefined
-  const empty = cards.length === 0
+  // the empty-town tutorial (Uncle Sam inviting you to draw) is for your own towns, never the shared plaza
+  const empty = cards.length === 0 && !city
   const charH = 170
 
   return (
@@ -452,10 +842,27 @@ export default function MainScreen({
         onPointerCancel={onUp}
       >
         <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden>
-          <path ref={groundEl} d={wide ? GRASS_D : GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <g ref={groundEl}>
+            <path d={wide ? GRASS_D : GROUND_D} fill="#C9C9C9" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+            {city && (
+              <>
+                <clipPath id="city-ground">
+                  <path d={wide ? GRASS_D : GROUND_D} />
+                </clipPath>
+                {/* iPad ground is a bigger drawing: the same grid stretched over its box */}
+                <g clipPath="url(#city-ground)">
+                  <g transform={wide ? `scale(${GRASS_W / CITY_BOX.w} ${573 / CITY_BOX.h})` : undefined}>
+                    {CITY_LINES.map(([x1, y1, x2, y2], i) => (
+                      <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth={1.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+                    ))}
+                  </g>
+                </g>
+              </>
+            )}
+          </g>
         </svg>
         <div ref={world} className="absolute isolate top-0 left-0 origin-top-left" style={{ width: W, height: H }}>
-          {tufts.map((t, i) => (
+          {!city && tufts.map((t, i) => (
             <img
               key={i}
               src={TUFT_KIND[t.kind].src}
@@ -464,6 +871,32 @@ export default function MainScreen({
               className="pointer-events-none absolute top-0 left-0 max-w-none origin-bottom"
               style={{ width: t.w, height: t.h, marginLeft: -t.w / 2, marginTop: -t.h, transform: `translate(${t.x}px, ${t.y}px) scale(${depth(t.y)})`, zIndex: Math.round(t.y) }}
             />
+          ))}
+          {/* shadows, only shown while someone is lifted off the ground */}
+          {cards.map((c) => (
+            <div
+              key={`sh-${c.id}`}
+              ref={(el) => {
+                if (el) shadows.current.set(c.id, el)
+                else shadows.current.delete(c.id)
+              }}
+              className="pointer-events-none absolute top-0 left-0 h-[18px] w-[90px] -mt-[9px] -ml-[45px] rounded-[50%] bg-black"
+              style={{ opacity: 0 }}
+            />
+          ))}
+          {/* what a carried character says, above its head and kept upright (lines per mood: moods.ts) */}
+          {cards.map((c) => (
+            <div
+              key={`say-${c.id}`}
+              ref={(el) => {
+                if (el) says.current.set(c.id, el)
+                else says.current.delete(c.id)
+              }}
+              className="pointer-events-none absolute top-0 left-0 z-[100001] origin-bottom"
+              style={{ display: 'none' }}
+            >
+              <span className="absolute bottom-0 left-0 -translate-x-1/2 rounded-full border-2 border-[#222] bg-white px-[10px] py-[2px] font-hand text-[17px] whitespace-nowrap" />
+            </div>
           ))}
           {cards.map((c) => {
             const m = moodOf(c.mood)
@@ -481,9 +914,15 @@ export default function MainScreen({
                 <div className="size-full">
                   <img src={c.image} alt={c.nickname || 'resident'} draggable={false} className="bob size-full object-contain object-bottom" style={{ animationDuration: `${m.step}s` }} />
                 </div>
+                {/* held: mood bits around the head (sweat = Figma UX 858:804, the rest hand-drawn to match); placed in pickUp */}
+                <div className="fx pointer-events-none absolute size-0">
+                  {FX[heldFx(c.mood)].map((p, i) => (
+                    <img key={i} src={p.src} alt="" draggable={false} className={`fx-part ${p.cls}`} style={{ left: p.x, top: p.y, width: p.w, animationDelay: `${p.d ?? 0}s` }} />
+                  ))}
+                </div>
                 {m.word && openId !== c.id && (
                   <span
-                    className="pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
+                    className="walk-word pointer-events-none absolute -top-[6px] left-[60%] rounded-full bg-white px-[8px] py-[1px] font-hand text-[15px] whitespace-nowrap"
                     style={{ animation: `bubble-blink 9s ease-in-out ${-(c.serial.charCodeAt(c.serial.length - 1) % 9)}s infinite`, opacity: 0 }}
                   >
                     {tr(m.word)}
@@ -573,14 +1012,14 @@ export default function MainScreen({
         </button>
       )}
 
-      {open && <Detail wide={wide} card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={() => onMigrate(open.id)} onOpen={() => onOpenCard(open.id)} />}
+      {open && <Detail wide={wide} card={open} onClose={() => setOpenId(null)} onFollow={() => { setFollow(open.id); setOpenId(null) }} onMigrate={canMigrate(open.id) ? () => onMigrate(open.id) : undefined} onOpen={canOpen(open.id) ? () => onOpenCard(open.id) : undefined} />}
     </div>
   )
 }
 
 // card info under the zoomed character (Figma main-carddeatail 787:759: hand-drawn panel + Follow / Migration pills)
 // iPad sideways: the same panel, centred at the bottom
-function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: boolean; card: Card; onClose: () => void; onFollow: () => void; onMigrate: () => void; onOpen: () => void }) {
+function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: boolean; card: Card; onClose: () => void; onFollow: () => void; onMigrate?: () => void; onOpen?: () => void }) {
   const [drag, setDrag] = useState(0)
   const start = useRef<number | null>(null)
   return (
@@ -590,7 +1029,7 @@ function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: bo
         style={{ transform: drag ? `translateY(${drag}px)` : undefined, transition: start.current === null ? 'transform 0.25s' : 'none' }}
         // tapping the card area (not a button, not the pull strip) opens this card in Collection
         onClick={(e) => {
-          if (!(e.target as HTMLElement).closest('button, [data-pull]')) onOpen()
+          if (!(e.target as HTMLElement).closest('button, [data-pull]')) onOpen?.()
         }}
       >
         <img src={cardPanel} alt="" className="pointer-events-none absolute top-[-1px] left-[-1px] h-[256px] w-[382px] max-w-none" />
@@ -623,10 +1062,12 @@ function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: bo
           <img src={pillFollow} alt="" className="absolute inset-0 size-full" />
           <span className="relative text-[24.3px] leading-[1.1]">{tr('Follow')}</span>
         </button>
-        <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
-          <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
-          <span className="relative text-[24.3px] leading-[1.1]">{tr('Migration')}</span>
-        </button>
+        {onMigrate && (
+          <button onClick={onMigrate} className="absolute top-[225px] left-[207px] flex h-[56px] w-[142px] items-center justify-center">
+            <img src={pillMigration} alt="" className="absolute inset-0 size-full rotate-[-177.79deg]" />
+            <span className="relative text-[24.3px] leading-[1.1]">{tr('Migration')}</span>
+          </button>
+        )}
       </div>
     </Bottom>
   )

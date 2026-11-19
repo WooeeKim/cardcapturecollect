@@ -257,6 +257,11 @@ export function placeCard(state: State, cardId: string, townId: string, index?: 
   return { ...state, towns }
 }
 
+// Take a card out of every town but keep it in `cards` (it moved to the shared town, lib/square.ts).
+export function unplaceCard(state: State, cardId: string): State {
+  return { ...state, towns: state.towns.map((t) => (t.residents.includes(cardId) ? { ...t, residents: t.residents.filter((id) => id !== cardId) } : t)) }
+}
+
 // Two cards trade places (each takes the other's town and slot). Used by Collection drag.
 export function swapCards(state: State, a: string, b: string): State {
   if (a === b) return state

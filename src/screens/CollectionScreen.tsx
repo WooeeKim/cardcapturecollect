@@ -8,9 +8,10 @@ import bandImg from '../assets/proto/v2/tl-bar.svg'
 import { Bottom, CardView, Popup, TextButton, Thumb, shrink, type PopupAction, SketchyBox } from '../components/ui'
 import CardActions from '../components/CardActions'
 import { framePoint, toLocal } from '../lib/frame'
-import { MAX_RESIDENTS, deleteCard, placeCard, swapCards, townOf, type Card, type State } from '../lib/store'
+import { MAX_RESIDENTS, deleteCard, townOf, type Card, type State } from '../lib/store'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
+import { SQUARE_ID, SQUARE_PER_USER, SQUARE_THUMB } from '../lib/square'
 
 // New Figma GUI (prototyping › 콜렉션 725:*): town strip → selected town's deck (3×2 pages, slot 1 = Head)
 // → other towns' cards. Long-press to drag: into the deck (moves in), onto a card (the two swap), or
@@ -30,6 +31,10 @@ export default function CollectionScreen({
   openCard,
   onTown,
   onBack,
+  onMigrate,
+  onMoveCard,
+  onSwap,
+  onForget,
 }: {
   state: State
   commit: (fn: (s: State) => State) => void
@@ -37,6 +42,11 @@ export default function CollectionScreen({
   openCard?: string // open this card's big view on arrival
   onTown: (id: string) => void
   onBack: () => void
+  onMigrate: (cardId: string) => void // Town List in move mode — any of your towns or the plaza
+  // moves go through App so the plaza (on the server) works like any other town
+  onMoveCard: (cardId: string, townId: string, at?: number) => unknown
+  onSwap: (a: string, b: string) => unknown
+  onForget: (cardId: string) => void // let go: also leaves the plaza
 }) {
   const wide = useWide()
   const G = wide ? WIDE : PHONE
@@ -57,7 +67,11 @@ export default function CollectionScreen({
     .flatMap((t) => t.residents.map((id) => state.cards[id]).filter(Boolean) as Card[])
     .sort((a, b) => (newest ? b.createdAt.localeCompare(a.createdAt) : a.createdAt.localeCompare(b.createdAt)))
   const open = openId ? state.cards[openId] : null
-  const pages = Math.ceil(MAX_RESIDENTS / PER_PAGE)
+  // the plaza holds only your SQUARE_PER_USER: one row of slots in a shorter box (Figma 1133:7479)
+  const plaza = town.id === SQUARE_ID
+  const SLOTS = plaza ? SQUARE_PER_USER : MAX_RESIDENTS
+  const CUT = plaza ? G.row : 0
+  const pages = Math.ceil(SLOTS / PER_PAGE)
 
   // while dragging a card, stop the browser from scrolling underneath
   useEffect(() => {
@@ -126,22 +140,22 @@ export default function CollectionScreen({
     // dropped on another card in the other area → the two trade places (no card ever loses its town)
     const other = hit?.closest<HTMLElement>('[data-card]')?.dataset.card
     const otherFrom = hit?.closest<HTMLElement>('[data-from]')?.dataset.from
-    if (other && other !== id && otherFrom !== from) return commit((s) => swapCards(s, id, other))
+    if (other && other !== id && otherFrom !== from) return void onSwap(id, other)
     const slot = hit?.closest<HTMLElement>('[data-slot]')
     const inDeck = slot || hit?.closest('[data-deck]')
     if (!inDeck) return // cards can't be taken out of a town by dragging
     const at = slot ? Number(slot.dataset.slot) : deck.length
-    if (from === 'rest' && deck.length >= MAX_RESIDENTS) {
+    if (from === 'rest' && deck.length >= SLOTS) {
       return setPopup({ message: tr('This town is full. Drop them on someone to swap places.'), actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
     }
-    commit((s) => placeCard(s, id, town.id, at))
+    onMoveCard(id, town.id, at)
   }
 
   function askDelete(card: Card) {
     setPopup({
       message: tr('Let this person go?'),
       actions: [
-        { label: tr('Let go'), onClick: () => { commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
+        { label: tr('Let go'), onClick: () => { onForget(card.id); commit((s) => deleteCard(s, card.id)); setPopup(null); setOpenId(null) } },
         { label: tr('Cancel'), onClick: () => setPopup(null) },
       ],
     })
@@ -212,7 +226,12 @@ export default function CollectionScreen({
             const size = on ? 64 : 52
             return (
               <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: START + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
-                <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} outline={!on} />
+                {t.id === SQUARE_ID ? (
+                  // the plaza: Uncle Sam in a dark grey ring, picked or not (Figma 1133:7670)
+                  <Thumb image={SQUARE_THUMB} size={size} strong ring={on ? 9 : 8} />
+                ) : (
+                  <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} outline={!on} />
+                )}
                 <span className="absolute left-1/2 w-[100px] -translate-x-1/2 truncate text-center text-[16px] leading-[normal]" style={{ top: on ? 72 : 66 }}>
                   {townName(t.name)}
                 </span>
@@ -223,9 +242,9 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <div data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h }}>
+      <div data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h - CUT }}>
         {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it */}
-        <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH }} />
+        <img src={deckBox} alt="" className={`pointer-events-none absolute top-[1px] max-w-none transition-[filter] ${overDeck ? 'brightness-[0.62]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }} />
         <div
           className="absolute top-[4px] bottom-[4px] flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-[18px] [scrollbar-width:none]"
           // clip-path as well: iPhone Safari can paint a scrolling box's children outside its rounded overflow clip
@@ -236,14 +255,14 @@ export default function CollectionScreen({
             <div key={p} className="relative h-full shrink-0 snap-start" style={{ width: CLIP_W, marginTop: -4 }}>
               {Array.from({ length: PER_PAGE }, (_, k) => {
                 const at = p * PER_PAGE + k
-                if (at >= MAX_RESIDENTS) return null
+                if (at >= SLOTS) return null
                 const c = deck[at]
                 return (
                   <div key={k} data-slot={Math.min(at, deck.length)} className="absolute" style={{ left: G.tileX - CLIP_L + (k % G.cols) * COL, top: G.tileY + Math.floor(k / G.cols) * G.row, width: TILE, height: TILE }}>
                     {c ? (
                       <>
-                        {tile(c, 'deck', `${c.nickname || tr('Someone')}${at === 0 ? tr(', head') : ''}`)}
-                        {at === 0 && (
+                        {tile(c, 'deck', `${c.nickname || tr('Someone')}${at === 0 && !plaza ? tr(', head') : ''}`)}
+                        {at === 0 && !plaza && (
                           <span className="pointer-events-none absolute inset-x-[2px] h-[21px] bg-white/70 text-center text-[15px] leading-[22px]" style={{ top: TILE - 23 }}>{tr('Head')}</span>
                         )}
                       </>
@@ -264,7 +283,7 @@ export default function CollectionScreen({
       </div>
 
       {/* everyone else (only this part scrolls) */}
-      <div className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[505px]' : 'top-[500px]'}`}>
+      <div className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] `} style={{ top: (wide ? 505 : 500) - CUT }}>
         {rest.length === 0 ? (
           <p className="pt-[40px] text-center text-[17px] text-[#8e8e8e]">{tr('People in other towns show up here.')}</p>
         ) : (
@@ -293,7 +312,7 @@ export default function CollectionScreen({
         </div>
       )}
 
-      {open && <Detail wide={wide} card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} />}
+      {open && <Detail wide={wide} card={open} townName={townOf(state, open.id)?.name ?? ''} onClose={() => setOpenId(null)} onDelete={() => askDelete(open)} onMigrate={() => onMigrate(open.id)} />}
 
       {popup && <Popup message={popup.message} actions={popup.actions} />}
     </div>
@@ -302,7 +321,7 @@ export default function CollectionScreen({
 
 // card overlay (Figma 725:13761): tap the drawing to hide the card text, drag to tilt it around
 // iPad sideways: the card in the middle of the screen, town name and close above it, Let go at its lower right
-function Detail({ wide, card, townName, onClose, onDelete }: { wide: boolean; card: Card; townName: string; onClose: () => void; onDelete: () => void }) {
+function Detail({ wide, card, townName, onClose, onDelete, onMigrate }: { wide: boolean; card: Card; townName: string; onClose: () => void; onDelete: () => void; onMigrate: () => void }) {
   const [plain, setPlain] = useState(false)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const start = useRef<{ x: number; y: number; moved: boolean } | null>(null)
@@ -361,14 +380,23 @@ function Detail({ wide, card, townName, onClose, onDelete }: { wide: boolean; ca
           </button>
         )
         const actions = <CardActions card={card} light className={`absolute ${wide ? 'top-[652px] left-[410px]' : 'top-[734px] left-[14px]'}`} />
+        // Migration left of Let go: opens Town List to pick any town, the plaza included
+        const migrate = (
+          <button onClick={onMigrate} className={`absolute flex h-[43px] w-[124px] items-center justify-center ${wide ? 'top-[652px] left-[539px]' : 'top-[735px] left-[144px]'}`}>
+            <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
+            <span className="relative text-[23px] leading-[1.1] text-black">{tr('Migration')}</span>
+          </button>
+        )
         return wide ? (
           <>
             {actions}
+            {migrate}
             {letGo}
           </>
         ) : (
           <Bottom>
             {actions}
+            {migrate}
             {letGo}
           </Bottom>
         )

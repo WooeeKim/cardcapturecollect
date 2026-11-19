@@ -1,5 +1,5 @@
 // GET /c/<id> → this function (vercel.json rewrite): a shared card's public page.
-// Reads card_shares (supabase/migrations/015_card_shares.sql) with the public anon key, so only what the
+// Reads card_shares (supabase/migrations/016_card_shares.sql) with the public anon key, so only what the
 // owner chose to share is shown. Messengers (KakaoTalk, iMessage, Instagram…) show the og:image preview.
 // Env: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY (already set for the app).
 

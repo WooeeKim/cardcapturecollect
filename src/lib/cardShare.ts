@@ -71,7 +71,7 @@ export const linkFor = (id: string) => `${location.origin}/c/${id}`
 
 export type LinkResult = { ok: true; url: string } | { ok: false; error: 'no-server' | 'login' | 'failed' }
 
-// Upload the card image + its words and get a public link. Supabase: 015_card_shares.sql.
+// Upload the card image + its words and get a public link. Supabase: 016_card_shares.sql.
 export async function makeCardLink(card: Card): Promise<LinkResult> {
   if (!supabase) return { ok: false, error: 'no-server' }
   const user = await currentUser()
@@ -104,7 +104,7 @@ export async function makeCardLink(card: Card): Promise<LinkResult> {
     track('card_share', { result: 'link_made' })
     return { ok: true, url: linkFor(id) }
   } catch (e) {
-    console.warn('card share failed (run supabase/migrations/015_card_shares.sql?)', (e as Error).message)
+    console.warn('card share failed (run supabase/migrations/016_card_shares.sql?)', (e as Error).message)
     track('card_share', { result: 'failed' })
     return { ok: false, error: 'failed' }
   }

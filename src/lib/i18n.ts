@@ -1,17 +1,17 @@
 import { useSyncExternalStore } from 'react'
 
-// App language: English ↔ 한국어 (the globe button). Only words the app itself shows are
+// App language: 한국어 ↔ English (the globe button). 한국어 comes first and is the default. Only words the app itself shows are
 // translated; what people type (names, memos, town names) stays as written. Keys are the English text.
 export type Lang = 'en' | 'ko'
-const ORDER: Lang[] = ['en', 'ko']
+const ORDER: Lang[] = ['ko', 'en']
 const KEY = 'subwayseal.lang'
 
 let lang: Lang = (() => {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'ko' ? v : 'en' // a saved 'ja' (Japanese was removed) falls back to English
+    return v === 'en' ? v : 'ko' // nothing saved (or an old 'ja') starts in 한국어
   } catch {
-    return 'en'
+    return 'ko'
   }
 })()
 const listeners = new Set<() => void>()
@@ -48,12 +48,22 @@ export function tr(en: string, vars?: Record<string, string | number>) {
 
 // town names the app made itself ("Town 1", "New Town 3") follow the language; names people typed don't
 export function townName(name: string) {
+  if (name === 'Sharing Plaza') return tr(name) // the shared town (lib/square.ts)
   const m = /^(New )?Town (\d+)$/.exec(name)
   return m ? tr(m[1] ? 'New Town {n}' : 'Town {n}', { n: m[2] }) : name
 }
 
 // English key → 한국어
 const DICT: Record<string, string> = {
+  // shared town (lib/square.ts)
+  'Sharing Plaza': '공유 플라자',
+  'Residents {n}/no limits': '주민 {n}/제한 없음',
+  'You can send your character only {n}!': '내 주민은 {n}명까지만 보낼 수 있어요!',
+  '{name} details': '{name} 자세히',
+  'Log in to move someone to {name}.': '{name}에 이주시키려면 로그인해 주세요.',
+  "Couldn't reach {name}. Try again in a moment.": '{name}에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.',
+  'You can have up to {n} people in {name}.': '{name}에는 한 사람당 {n}명까지 살 수 있어요.',
+  "Couldn't move this person. Try again in a moment.": '이주하지 못했어요. 잠시 뒤 다시 해 주세요.',
   // common
   'Got it!': '알겠어요!',
   Cancel: '취소',
@@ -149,7 +159,9 @@ const DICT: Record<string, string> = {
   Opacity: '불투명도',
   Finish: '완성',
   'Go Back': '돌아가기',
-  'move in': '이사하기',
+  'Choose a village': '마을 고르기',
+  'move in': '입주하기',
+  Share: '공유하기',
 
   // moods (names + the little words walkers say)
   Silent: '고요한',
@@ -165,6 +177,40 @@ const DICT: Record<string, string> = {
   Gloomy: '우울한',
   Dreamy: '몽환적인',
   Chic: '시크한',
+  // carried around in the town (moods.ts HELD_LINES)
+  '…!': '…!',
+  '……': '……',
+  '(gulp)': '(꿀꺽)',
+  'Wheee~!': '꺄아~!',
+  'Higher!': '더 높이!',
+  'Hehehe': '히히히',
+  'Whoa, fun!': '우와 신난다!',
+  'Again!': '한 번 더!',
+  'So high!': '높다!',
+  'How rude.': '어머, 무례하시네요.',
+  'Put me down, please.': '내려주시겠어요?',
+  "You'll crease my outfit.": '옷 구겨져요.',
+  'Um, excuse me…': '저, 저기요…',
+  "Don't look…": '보지 마세요…',
+  'So embarrassing…': '부끄러워…',
+  'Mm… five more minutes…': '으음… 5분만…',
+  "I'm dizzy… zzz": '어지러워… zzz',
+  '…snore': '…쿨',
+  "I'm busy, put me down!": '바빠요, 내려줘요!',
+  "I'm late!": '늦었단 말이에요!',
+  "I'll miss my train!": '지하철 놓쳐요!',
+  'Huh? Where am I?': '어? 여기 어디?',
+  'What? What?': '뭐지 뭐지?',
+  'Where are we going?': '어디 가는 거예요?',
+  "I'm flying~": '날고 있어~',
+  'Gently, please~': '살살 부탁해요~',
+  "It's okay~": '괜찮아요~',
+  'Slowly~': '천천히요~',
+  '…why me': '…왜 나야',
+  'Sigh…': '하아…',
+  'Just put me down': '그냥 내려줘',
+  'Put me down!': '내려줘요!',
+  'Aaah!': '으아아!',
   'yay!': '야호!',
   'hey!': '안녕!',
   zzz: '쿨쿨',
@@ -346,7 +392,6 @@ const DICT: Record<string, string> = {
   'Share link': '링크 공유',
   'Your card link is ready!': '카드 링크가 준비됐어요!',
   Copy: '링크 복사',
-  Share: '공유하기',
   'Link copied.': '링크를 복사했어요.',
   'Log in to share a link.': '링크로 공유하려면 로그인해 주세요.',
   'Link sharing needs the server. Save the image instead.': '링크 공유는 서버 연결이 필요해요. 대신 이미지로 저장해 보세요.',
