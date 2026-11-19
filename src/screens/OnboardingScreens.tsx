@@ -25,7 +25,7 @@ export function WelcomeScreen({ onLogin }: { onLogin: (u: User) => unknown }) {
         <div className="absolute top-[286px] left-[680px] w-[330px]">
           <p className="h-[52px] w-[300px] text-[17px] leading-[1.35] text-[#6b6b6b]">{tr('New here? Sign up. Already have an account? Log in.')}</p>
           <div className="mt-[10px]">
-            <LoginForm onDone={onLogin} />
+            <LoginForm intro onDone={onLogin} />
           </div>
         </div>
       </div>
@@ -39,7 +39,7 @@ export function WelcomeScreen({ onLogin }: { onLogin: (u: User) => unknown }) {
         <p className="mt-[18px] text-[21px] leading-[1.35] text-[#3d3d3d]">{tr('Draw the people you notice on the subway, and invite them to your town.')}</p>
         <p className="mt-[28px] text-[17px] leading-[1.35] text-[#6b6b6b]">{tr('New here? Sign up. Already have an account? Log in.')}</p>
         <div className="mt-[12px]">
-          <LoginForm onDone={onLogin} />
+          <LoginForm intro onDone={onLogin} />
         </div>
       </div>
     </div>
