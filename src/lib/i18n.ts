@@ -399,4 +399,12 @@ const DICT: Record<string, string> = {
   "Couldn't make the link. Try again in a moment.": '링크를 만들지 못했어요. 잠시 후 다시 해 주세요.',
   "Couldn't make the image. Try again in a moment.": '이미지를 만들지 못했어요. 잠시 후 다시 해 주세요.',
   'Admin view: read-only.': '어드민 보기: 읽기 전용이에요.',
+  // day-7 interview (components/FinalInterviewOverlay.tsx)
+  'Last interview!': '마지막 인터뷰예요!',
+  'Let’s look back on 7 days.': '7일을 함께 돌아봐요.',
+  'Thank you for': '7일 동안',
+  'these 7 days!': '함께해 줘서 고마워요!',
+  optional: '선택',
+  'pick {n}': '{n}개 고르기',
+  'Other (write it here)': '기타 (직접 써주세요)',
 }

@@ -7,6 +7,8 @@ import { PhoneChrome, Popup, WideCol } from './components/ui'
 import { fillInsideImage } from './lib/fillInside'
 import { answeredByAccount, claim, resendUnsent } from './lib/gilbti'
 import InterviewOverlay from './components/InterviewOverlay'
+import FinalInterviewOverlay from './components/FinalInterviewOverlay'
+import { FINAL_DAY, finalAnswered, finalOpen, resendFinal, submitFinal } from './lib/finalInterview'
 import { answered as interviewAnswered, cardsIn, currentSlot, resendInterviews, submit as submitInterview, type Kind, type Slot } from './lib/interview'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
@@ -52,12 +54,11 @@ const setFlag = (k: string, v: string) => {
   }
 }
 
-// <site>/?interview=drew | didnt — shows the 8 p.m. interview right now, whatever the time, to check the screens.
-// Nothing is saved or sent; Done just closes it.
-const PREVIEW_INTERVIEW = (() => {
-  const v = new URLSearchParams(location.search).get('interview')
-  return v === 'drew' ? 'drew' : v === 'didnt' ? 'didnt_draw' : null
-})()
+// <site>/?interview=drew | didnt | final — shows the 10 p.m. interview (or the day-7 one) right now, whatever the time,
+// to check the screens. Nothing is saved or sent; Done just closes it.
+const PREVIEW_PARAM = new URLSearchParams(location.search).get('interview')
+const PREVIEW_INTERVIEW = PREVIEW_PARAM === 'drew' ? 'drew' : PREVIEW_PARAM === 'didnt' ? 'didnt_draw' : null
+const PREVIEW_FINAL = PREVIEW_PARAM === 'final'
 
 const READ_ONLY = 'Admin view: read-only. Nothing here is saved or sent.'
 
@@ -231,6 +232,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       const s = (u ? await enter(u) : undefined) ?? load(GUEST_KEY)
       resendUnsent(u)
       resendInterviews(u, s.nickname ?? '')
+      resendFinal(u, s.nickname ?? '')
       await advance(s)
       // the walkers' drawings are decoded before the first screen shows, so nobody pops in late
       await decodeAll(Object.values(s.cards).map((c) => c.image))
@@ -243,7 +245,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
   // Not during onboarding; while drawing it waits (see `interviewShown`).
   const checkedDay = useRef('')
   useEffect(() => {
-    if (!ready || viewAsId || gate || retake || interview || PREVIEW_INTERVIEW) return
+    if (!ready || viewAsId || gate || retake || interview || PREVIEW_INTERVIEW || PREVIEW_FINAL) return
     let live = true
     const check = async (force: boolean) => {
       const slot = currentSlot()
@@ -265,6 +267,30 @@ export default function App({ onReady }: { onReady?: () => void }) {
     }
   }, [ready, gate, retake, interview, user?.id])
   const interviewShown = !!interview && !gate && !retake && route.name !== 'draw' && route.name !== 'tada' && route.name !== 'send'
+
+  // Day-7 interview (lib/finalInterview.ts): from 11/22 22:00, right after that day's 10 p.m. interview; until answered.
+  const [final, setFinal] = useState(PREVIEW_FINAL)
+  useEffect(() => {
+    if (!ready || viewAsId || gate || retake || interview || final || PREVIEW_INTERVIEW || PREVIEW_FINAL) return
+    let live = true
+    const check = async () => {
+      if (!finalOpen()) return
+      const u = userRef.current
+      // the 11/22 10 p.m. interview comes first
+      if (currentSlot()?.day === FINAL_DAY && !(await interviewAnswered(u, FINAL_DAY))) return
+      if (!(await finalAnswered(u)) && live) setFinal(true)
+    }
+    check()
+    const timer = setInterval(check, 30_000)
+    const back = () => document.visibilityState === 'visible' && check()
+    document.addEventListener('visibilitychange', back)
+    return () => {
+      live = false
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', back)
+    }
+  }, [ready, gate, retake, interview, final, user?.id])
+  const finalShown = final && (PREVIEW_FINAL || (!interviewShown && !gate && !retake && route.name !== 'draw' && route.name !== 'tada' && route.name !== 'send'))
 
   // every change is saved (this device + the account); if storage is full the change is undone and the user is told
   const commit = useCallback((fn: (s: State) => State) => {
@@ -650,7 +676,13 @@ export default function App({ onReady }: { onReady?: () => void }) {
         />
       )}
       {ready && previewing && PREVIEW_INTERVIEW && <InterviewOverlay kind={PREVIEW_INTERVIEW} onDone={() => setPreviewing(false)} />}
-      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || interviewShown || previewing || (route.name === 'draw' && !!route.tutorial)} />
+      {ready && finalShown && (
+        <FinalInterviewOverlay
+          onSubmit={(answers) => (PREVIEW_FINAL ? undefined : submitFinal(userRef.current, state.nickname ?? '', answers))}
+          onClose={() => setFinal(false)}
+        />
+      )}
+      <NotifyPrompt user={ready && !viewAsId ? (user?.id ?? null) : null} blocked={loginPrompt || !!error || !!gate || retake || interviewShown || finalShown || previewing || (route.name === 'draw' && !!route.tutorial)} />
       <LoadingLayer />
       <PhoneChrome />
       {viewAsId && ready && (

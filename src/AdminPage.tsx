@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CardList } from './admin/CardList'
 import { feedbacks, flatten, loadEvents, type Ev, type Feedback, type Row } from './admin/data'
 import { Interview } from './admin/Interview'
+import { FinalInterview } from './admin/FinalInterview'
 import { Notify } from './admin/Notify'
 import { People } from './admin/People'
 import { Plaza } from './admin/Plaza'
@@ -18,8 +19,8 @@ import { QUESTIONS, TYPES, type Answers, type TypeId } from './lib/gilbti'
 // - Subway-TI: every 길BTI answer (gilbti_responses), guests included
 // - 10pm: the daily 10 p.m. interview answers (interview_responses), per day + CSV
 // - Notify: pick phones that allowed notifications and send them one (push_subscriptions, api/push.js)
-type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti' | 'interview' | 'notify'
-const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti', 'interview', 'notify']
+type Tab = 'plaza' | 'list' | 'people' | 'stats' | 'gilbti' | 'interview' | 'final' | 'notify'
+const TABS: Tab[] = ['plaza', 'list', 'people', 'stats', 'gilbti', 'interview', 'final', 'notify']
 const fromHash = (): { tab: Tab; person: string | null } => {
   const [t, person] = location.hash.slice(1).split('/')
   return (TABS as string[]).includes(t) ? { tab: t as Tab, person: (t === 'people' && person) || null } : { tab: 'plaza', person: null }
@@ -146,6 +147,7 @@ export default function AdminPage() {
               ['stats', 'Stats'],
               ['gilbti', `Subway-TI (${latest.length})`],
               ['interview', '10pm'],
+              ['final', 'Day 7'],
               ['notify', 'Notify'],
             ] as const
           ).map(([id, label]) => (
@@ -170,6 +172,7 @@ export default function AdminPage() {
       {tab === 'people' && <People rows={testers} selected={person} onSelect={viewAs} />}
       {tab === 'notify' && <Notify rows={rows ?? []} />}
       {tab === 'interview' && <Interview rows={rows ?? []} />}
+      {tab === 'final' && <FinalInterview rows={rows ?? []} />}
       {tab === 'stats' && <Stats rows={testers} items={items} gil={gil ? latest : null} events={events} feedback={feedback} eventsError={eventsError} admin={user.id} />}
 
       {tab === 'gilbti' && (
