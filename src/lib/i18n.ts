@@ -1,17 +1,17 @@
 import { useSyncExternalStore } from 'react'
 
-// App language: English ↔ 한국어 (the globe button). Only words the app itself shows are
+// App language: 한국어 ↔ English (the globe button). 한국어 comes first and is the default. Only words the app itself shows are
 // translated; what people type (names, memos, town names) stays as written. Keys are the English text.
 export type Lang = 'en' | 'ko'
-const ORDER: Lang[] = ['en', 'ko']
+const ORDER: Lang[] = ['ko', 'en']
 const KEY = 'subwayseal.lang'
 
 let lang: Lang = (() => {
   try {
     const v = localStorage.getItem(KEY)
-    return v === 'ko' ? v : 'en' // a saved 'ja' (Japanese was removed) falls back to English
+    return v === 'en' ? v : 'ko' // nothing saved (or an old 'ja') starts in 한국어
   } catch {
-    return 'en'
+    return 'ko'
   }
 })()
 const listeners = new Set<() => void>()
@@ -48,12 +48,23 @@ export function tr(en: string, vars?: Record<string, string | number>) {
 
 // town names the app made itself ("Town 1", "New Town 3") follow the language; names people typed don't
 export function townName(name: string) {
+  if (name === 'Last Stop') return tr(name) // the shared town (lib/square.ts)
   const m = /^(New )?Town (\d+)$/.exec(name)
   return m ? tr(m[1] ? 'New Town {n}' : 'Town {n}', { n: m[2] }) : name
 }
 
 // English key → 한국어
 const DICT: Record<string, string> = {
+  // shared town (lib/square.ts)
+  'Last Stop': '종점',
+  "Everyone's town": '모두의 마을',
+  "Everyone's town. Anyone can visit the people who live here.": '모두의 마을이에요. 누구나 여기 사는 사람들을 구경할 수 있어요.',
+  'Residents {n} · Yours {k}/{max}': '주민 {n}명 · 내 주민 {k}/{max}',
+  '{name} details': '{name} 자세히',
+  'Log in to move someone to {name}.': '{name}에 이주시키려면 로그인해 주세요.',
+  "Couldn't reach {name}. Try again in a moment.": '{name}에 연결하지 못했어요. 잠시 뒤 다시 해 주세요.',
+  'You can have up to {n} people in {name}.': '{name}에는 한 사람당 {n}명까지 살 수 있어요.',
+  "Couldn't move this person. Try again in a moment.": '이주하지 못했어요. 잠시 뒤 다시 해 주세요.',
   // common
   'Got it!': '알겠어요!',
   Cancel: '취소',
