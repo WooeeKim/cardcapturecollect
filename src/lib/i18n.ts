@@ -393,6 +393,7 @@ const DICT: Record<string, string> = {
   'Your card link is ready!': '카드 링크가 준비됐어요!',
   Copy: '링크 복사',
   'Link copied.': '링크를 복사했어요.',
+  'Link sharing is still being set up. Save the image for now.': '링크 공유는 아직 준비 중이에요. 지금은 이미지로 저장해 주세요.',
   'Log in to share a link.': '링크로 공유하려면 로그인해 주세요.',
   'Link sharing needs the server. Save the image instead.': '링크 공유는 서버 연결이 필요해요. 대신 이미지로 저장해 보세요.',
   "Couldn't make the link. Try again in a moment.": '링크를 만들지 못했어요. 잠시 후 다시 해 주세요.',

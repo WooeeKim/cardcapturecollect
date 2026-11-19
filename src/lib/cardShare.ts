@@ -69,7 +69,7 @@ const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) =
 
 export const linkFor = (id: string) => `${location.origin}/c/${id}`
 
-export type LinkResult = { ok: true; url: string } | { ok: false; error: 'no-server' | 'login' | 'failed' }
+export type LinkResult = { ok: true; url: string } | { ok: false; error: 'no-server' | 'login' | 'setup' | 'failed' }
 
 // Upload the card image + its words and get a public link. Supabase: 016_card_shares.sql.
 export async function makeCardLink(card: Card): Promise<LinkResult> {
@@ -104,9 +104,12 @@ export async function makeCardLink(card: Card): Promise<LinkResult> {
     track('card_share', { result: 'link_made' })
     return { ok: true, url: linkFor(id) }
   } catch (e) {
-    console.warn('card share failed (run supabase/migrations/016_card_shares.sql?)', (e as Error).message)
-    track('card_share', { result: 'failed' })
-    return { ok: false, error: 'failed' }
+    const msg = (e as { message?: string; code?: string }).message ?? ''
+    // bucket or table not created yet = 016_card_shares.sql not run in Supabase
+    const setup = /bucket not found|card_shares|PGRST205|does not exist/i.test(`${msg} ${(e as { code?: string }).code ?? ''}`)
+    console.warn('card share failed (run supabase/migrations/016_card_shares.sql?)', msg)
+    track('card_share', { result: setup ? 'setup' : 'failed', error: msg.slice(0, 120) })
+    return { ok: false, error: setup ? 'setup' : 'failed' }
   }
 }
 

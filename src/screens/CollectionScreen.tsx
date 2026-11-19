@@ -382,7 +382,8 @@ function Detail({ wide, card, townName, onClose, onDelete, onMigrate }: { wide: 
             <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
           </button>
         )
-        const actions = <CardActions card={card} light className={`absolute ${wide ? 'top-[652px] left-[410px]' : 'top-[734px] left-[14px]'}`} />
+        // inside the card's outline (card starts at x 21 / 417)
+        const actions = <CardActions card={card} light className={`absolute ${wide ? 'top-[652px] left-[426px]' : 'top-[734px] left-[30px]'}`} />
         // Migration left of Let go: opens Town List to pick any town, the plaza included
         const migrate = (
           <button onClick={onMigrate} className={`absolute flex h-[43px] w-[124px] items-center justify-center ${wide ? 'top-[652px] left-[539px]' : 'top-[735px] left-[144px]'}`}>

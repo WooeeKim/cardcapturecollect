@@ -16,7 +16,7 @@ import shareSvg from '../assets/proto/v2/icon-share.svg?raw'
 const fit = (svg: string) => svg.replace(/width="[\d.]+" height="[\d.]+"/, 'width="100%" height="100%"')
 export const SaveIcon = () => <span aria-hidden className="block size-full" dangerouslySetInnerHTML={{ __html: fit(saveSvg) }} />
 export const ShareIcon = () => <span aria-hidden className="block size-full" dangerouslySetInnerHTML={{ __html: fit(shareSvg) }} />
-const ICONS = { save: { w: 23.6, h: 29.1 }, share: { w: 29, h: 27.6 } }
+const ICONS = { save: { w: 24.1, h: 29.3 }, share: { w: 28.75, h: 27.93 } }
 
 type Pop = { message: string; actions: PopupAction[] } | null
 
@@ -47,7 +47,13 @@ export default function CardActions({ card, light = false, className = '', scale
     setBusy(null)
     if (!r.ok) {
       const message =
-        r.error === 'no-server' ? tr('Link sharing needs the server. Save the image instead.') : r.error === 'login' ? tr('Log in to share a link.') : tr("Couldn't make the link. Try again in a moment.")
+        r.error === 'no-server'
+          ? tr('Link sharing needs the server. Save the image instead.')
+          : r.error === 'login'
+            ? tr('Log in to share a link.')
+            : r.error === 'setup'
+              ? tr('Link sharing is still being set up. Save the image for now.')
+              : tr("Couldn't make the link. Try again in a moment.")
       return setPop({ message, actions: [{ label: tr('Got it!'), onClick: close }] })
     }
     const title = card.nickname || 'card capture collect'
