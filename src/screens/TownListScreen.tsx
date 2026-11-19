@@ -23,7 +23,7 @@ const WIDE_LIST_X = 251
 const WIDE_HANDLE_X = 588
 const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
 
-// the shared town (lib/square.ts, Figma 1133:7217): one more row at the end of the list, Uncle Sam in a dark ring; no Edit, no reorder
+// the shared town (lib/square.ts, Figma 1133:7217): one more row at the end of the list, Uncle Sam as its thumbnail (same ring as other towns); no Edit, no reorder
 export type SquareInfo = { town: Town; chief?: Card; mine: number; ok: boolean }
 
 export default function TownListScreen({
@@ -261,7 +261,7 @@ export default function TownListScreen({
         )}
         </div>
         <span data-thumb className="animate-tl-thumb pointer-events-none absolute top-0 left-[24px]">
-          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong ring={sq ? 11 : undefined} />
+          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong />
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
@@ -344,7 +344,7 @@ export default function TownListScreen({
               ) : (
                 <>
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
-                    <Thumb image={chiefImage(square.town)} size={70} strong ring={10} grey={(!!openId && openId !== SQUARE_ID) || !!adding} />
+                    <Thumb image={chiefImage(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
                   </button>
                   <button onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                     {tr(SQUARE_NAME)}

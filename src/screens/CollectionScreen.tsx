@@ -226,12 +226,15 @@ export default function CollectionScreen({
             const size = on ? 64 : 52
             return (
               <button key={t.id} onClick={() => { onTown(t.id); setPage(0) }} aria-pressed={on} className="absolute top-[4px]" style={{ left: START + i * PITCH - size / 2, marginTop: on ? 0 : 6, width: size }}>
-                {t.id === SQUARE_ID ? (
-                  // the plaza: Uncle Sam in a dark grey ring, picked or not (Figma 1133:7670)
-                  <Thumb image={SQUARE_THUMB} size={size} strong ring={on ? 9 : 8} />
-                ) : (
-                  <Thumb image={state.cards[t.residents[0] ?? '']?.image} thumb={state.cards[t.residents[0] ?? '']?.thumb} size={size} strong={on} ring={on ? 7 : 6.6} outline={!on} />
-                )}
+                {/* same ring as every town (outline, dark ring when picked); the plaza only shows Uncle Sam instead of its chief */}
+                <Thumb
+                  image={t.id === SQUARE_ID ? SQUARE_THUMB : state.cards[t.residents[0] ?? '']?.image}
+                  thumb={t.id === SQUARE_ID ? undefined : state.cards[t.residents[0] ?? '']?.thumb}
+                  size={size}
+                  strong={on}
+                  ring={on ? 7 : 6.6}
+                  outline={!on}
+                />
                 <span className="absolute left-1/2 w-[100px] -translate-x-1/2 truncate text-center text-[16px] leading-[normal]" style={{ top: on ? 72 : 66 }}>
                   {townName(t.name)}
                 </span>
