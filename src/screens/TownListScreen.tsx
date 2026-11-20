@@ -17,6 +17,10 @@ import { SQUARE_ID, SQUARE_NAME, SQUARE_PER_USER, SQUARE_THUMB } from '../lib/sq
 // send    = place a newly drawn card ("Send")
 export type ListMode = 'browse' | 'migrate' | 'send'
 
+// a town under the card being dragged: a little darker, its thumbnail pressed in (like a button under a finger)
+// (thumbnail + the open town's box only: a filter on the whole row would lift that box above the grey line)
+const DROP_OVER = '[&_[data-thumb]]:brightness-[0.85] [&_[data-thumb]]:scale-[0.94] [&>img]:brightness-[0.9] [&_[data-thumb]]:transition-[transform,filter] [&_[data-thumb]]:duration-150'
+
 const ROW = 130
 // iPad sideways (Figma iPad · townList 1033:10719): the same list moved right so the grey line sits at x 271,
 // starting a little higher (no status bar), with the reorder handle further out
@@ -384,14 +388,13 @@ export default function TownListScreen({
               <div
                 key={t.id}
                 data-town={t.id}
-                className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
+                className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'} ${over === t.id ? DROP_OVER : ''}`}
                 style={{ top: rowTop(i) + (lifted ? dragDy : 0), height: isOpen ? ROW + OPEN_EXTRA : ROW }}
                 ref={(el) => {
                   if (el) thumbs.current.set(t.id, el)
                   else thumbs.current.delete(t.id)
                 }}
               >
-                {over === t.id && <span aria-hidden className="pointer-events-none absolute inset-x-[12px] top-[-10px] h-[94px] rounded-[20px] border-[2.5px] border-dashed border-black/70 bg-black/5" />}
                 {isOpen ? (
                   detail(t)
                 ) : (
@@ -428,14 +431,13 @@ export default function TownListScreen({
           {square && (
             <div
               data-town={SQUARE_ID}
-              className="absolute inset-x-0 transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              className={`absolute inset-x-0 transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${over === SQUARE_ID ? DROP_OVER : ''}`}
               style={{ top: squareTop, height: openId === SQUARE_ID ? ROW + squareExtra : ROW }}
               ref={(el) => {
                 if (el) thumbs.current.set(SQUARE_ID, el)
                 else thumbs.current.delete(SQUARE_ID)
               }}
             >
-              {over === SQUARE_ID && <span aria-hidden className="pointer-events-none absolute inset-x-[12px] top-[-10px] h-[94px] rounded-[20px] border-[2.5px] border-dashed border-black/70 bg-black/5" />}
               {openId === SQUARE_ID ? (
                 detail(square.town)
               ) : (
