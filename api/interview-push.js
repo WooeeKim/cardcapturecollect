@@ -11,6 +11,9 @@ import webpush from 'web-push'
 const FIRST_DAY = '2026-11-16'
 const LAST_DAY = '2026-11-22'
 
+// 11/22 (last day): the 22:00 push also announces the day-7 interview that opens right after the daily one
+const LAST_DAY_INTERVIEW = { title: 'It’s 10p.m. Last Interview!', body: '밤 10시, 마지막 인터뷰예요! 오늘 이야기와 7일 동안의 이야기를 들려주세요.' }
+
 const MESSAGES = {
   interview: { title: 'It’s 10p.m. Interview Time!', body: '밤 10시, 인터뷰 시간이에요! 눌러서 오늘 이야기를 들려주세요.' },
   noon: { title: '점심시간, 눈에 띄는 사람이 있었나요?', body: '한 명 수집해 보세요.' },
@@ -28,7 +31,7 @@ export default async function handler(req, res) {
   if (today < FIRST_DAY || today > LAST_DAY) return res.json({ skipped: `outside ${FIRST_DAY}…${LAST_DAY} (today ${today})` })
 
   const kind = (req.body && req.body.kind) || 'interview'
-  const msg = MESSAGES[kind]
+  const msg = kind === 'interview' && today === LAST_DAY ? LAST_DAY_INTERVIEW : MESSAGES[kind]
   if (!msg) return res.status(400).json({ error: `Unknown kind: ${kind}` })
 
   const sb = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
