@@ -792,6 +792,7 @@ function ColorPanel({ wide, color, onChange, onClose, onEyedropper }: { wide: bo
           </button>
           <div
             ref={spectrum}
+            data-quiet // picking a color makes no sound (lib/sound.ts)
             className="absolute top-[57px] left-[13px] h-[296px] w-[354px] touch-none rounded-[10px]"
             style={{
               background:
@@ -809,6 +810,7 @@ function ColorPanel({ wide, color, onChange, onClose, onEyedropper }: { wide: bo
           <div className="absolute top-[396px] left-[15px] flex w-[350px] items-center gap-[11px]">
             <div
               ref={slider}
+              data-quiet
               className="relative h-[34px] flex-1 touch-none rounded-full"
               style={{ backgroundImage: `linear-gradient(90deg, ${base}00 12%, ${base} 88%), url(${checker})`, backgroundSize: 'auto, 23.2px 23.2px' }}
               onPointerDown={(e) => {

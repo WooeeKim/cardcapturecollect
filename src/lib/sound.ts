@@ -147,7 +147,7 @@ export const sfx = {
   tap() {
     clip('tap4', { rate: vary(1.1, 0.06), gain: 0.35 })
   },
-  // 뽁: a touch on a spot that does nothing (shown by the touch glow, lib/touchGlow.ts)
+  // 뽁: a tap on a spot that does nothing (shown by the touch glow, lib/touchGlow.ts)
   pop() {
     clip('pop', { rate: vary(1, 0.05), gain: 0.5 })
   },
@@ -197,19 +197,30 @@ export function installSound() {
     if (c.state !== 'running') c.resume().catch(() => {})
   }
   addEventListener('pointerdown', unlock, { capture: true, passive: true })
-  // a touch on something that does nothing: a soft pop with the touch glow
-  const ACTIVE = 'button, a, input, textarea, select, label, [role="button"], [contenteditable="true"], canvas, [data-walker], [data-pull]'
-  addEventListener(
-    'pointerdown',
-    (e) => {
-      if (e.button === 0 && !(e.target as HTMLElement).closest?.(ACTIVE)) sfx.pop()
-    },
-    { capture: true, passive: true },
-  )
+  // a tap on something that does nothing: a soft pop. Only a tap: pressing and dragging (panning the town,
+  // scrolling a list) stays quiet, so it plays on release if the finger hardly moved.
+  // [data-quiet] = an area that should make no sound at all (the color spectrum and opacity slider)
+  const ACTIVE = 'button, a, input, textarea, select, label, [role="button"], [contenteditable="true"], canvas, [data-walker], [data-pull], [data-quiet]'
+  const presses = new Map<number, { x: number; y: number; t: number }>()
+  const opts = { capture: true, passive: true }
+  addEventListener('pointerdown', (e) => {
+    if (e.button === 0 && !(e.target as HTMLElement).closest?.(ACTIVE)) presses.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.timeStamp })
+  }, opts)
+  addEventListener('pointermove', (e) => {
+    const p = presses.get(e.pointerId)
+    if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) presses.delete(e.pointerId)
+  }, opts)
+  addEventListener('pointerup', (e) => {
+    const p = presses.get(e.pointerId)
+    presses.delete(e.pointerId)
+    if (p && e.timeStamp - p.t < 600 && Math.hypot(e.clientX - p.x, e.clientY - p.y) <= 10) sfx.pop()
+  }, opts)
+  addEventListener('pointercancel', (e) => presses.delete(e.pointerId), opts)
   addEventListener(
     'click',
     (e) => {
-      if ((e.target as HTMLElement).closest?.('button')) sfx.tap()
+      const el = e.target as HTMLElement
+      if (el.closest?.('button') && !el.closest('[data-quiet]')) sfx.tap()
     },
     { capture: true, passive: true },
   )
