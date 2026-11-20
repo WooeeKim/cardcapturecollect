@@ -122,11 +122,12 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
             (() => {
               const c = cards.find((x) => x.id === a[`${q.showCard}_card`])
               return c ? (
-                <span className="mb-[6px] flex shrink-0 items-end gap-[10px]">
-                  <span className="block aspect-[360/515] w-[92px] overflow-hidden rounded-[8px] bg-white p-[4px] ring-2 ring-black">
+                <span className="mb-[8px] flex shrink-0 flex-col items-center">
+                  {/* a real border, not a ring: a ring is drawn outside the box and the scrolling area cut it off */}
+                  <span className="box-border block aspect-[360/515] w-[96px] overflow-hidden rounded-[8px] border-2 border-black bg-white p-[3px]">
                     <img src={c.image} alt="" className="size-full object-contain" draggable={false} />
                   </span>
-                  <span className="pb-[2px] text-[15px] leading-[1.2] text-[#555]">{c.nickname || serialLabel(c)}</span>
+                  <span className="mt-[4px] max-w-[200px] truncate text-center text-[15px] leading-[1.2] text-[#555]">{c.nickname || serialLabel(c)}</span>
                 </span>
               ) : null
             })()}
@@ -171,7 +172,7 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
                       tabIndex={live ? undefined : -1}
                       className={`text-left transition-opacity duration-200 ${on ? 'opacity-100' : 'opacity-35'}`}
                     >
-                      <span className={`block aspect-[360/515] overflow-hidden rounded-[8px] bg-white p-[4px] ${on ? 'ring-2 ring-black' : 'ring-1 ring-[#d4d4d4]'}`}>
+                      <span className={`box-border block aspect-[360/515] overflow-hidden rounded-[8px] border-2 bg-white p-[3px] ${on ? 'border-black' : 'border-[#d4d4d4]'}`}>
                         <img src={c.image} alt="" className="size-full object-contain" draggable={false} />
                       </span>
                       <span className="mt-[2px] block truncate text-[12px] leading-[1.2]">{c.nickname || serialLabel(c)}</span>
