@@ -97,11 +97,17 @@ export function FinalInterview({ rows }: { rows: Row[] }) {
                   <div>{nameOf(r)}</div>
                   <div className="text-xs text-neutral-500">{r.email ?? `guest · ${r.device_id.slice(0, 8)}`}</div>
                 </td>
-                {FINAL_QUESTIONS.map((q) => (
-                  <td key={q.id} className="py-2 pr-3">
-                    {show(r, q.id)}
-                  </td>
-                ))}
+                {FINAL_QUESTIONS.map((q) => {
+                  // card picks: the drawing next to its name (from the answerer's saved cards)
+                  const cardId = q.kind === 'card' ? (r.answers[`${q.id}_card`] as string | undefined) : undefined
+                  const img = cardId && r.user_id ? rows.find((x) => x.user_id === r.user_id)?.state.cards[cardId]?.image : undefined
+                  return (
+                    <td key={q.id} className="py-2 pr-3">
+                      {img && <img src={img} alt="" className="mb-1 h-[64px] w-[45px] rounded border border-neutral-200 bg-white object-contain" />}
+                      {show(r, q.id)}
+                    </td>
+                  )
+                })}
               </tr>
             ))}
           </tbody>

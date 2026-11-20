@@ -678,6 +678,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
       {ready && previewing && PREVIEW_INTERVIEW && <InterviewOverlay kind={PREVIEW_INTERVIEW} onDone={() => setPreviewing(false)} />}
       {ready && finalShown && (
         <FinalInterviewOverlay
+          cards={Object.values(state.cards).sort((x, y) => y.createdAt.localeCompare(x.createdAt))}
           onSubmit={(answers) => (PREVIEW_FINAL ? undefined : submitFinal(userRef.current, state.nickname ?? '', answers))}
           onClose={() => setFinal(false)}
         />

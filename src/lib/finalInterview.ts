@@ -16,33 +16,49 @@ type Text = { ko: string; en: string }
 export type FinalAnswers = Record<string, string | string[]>
 export type FinalQuestion = {
   id: string
-  kind: 'short' | 'long' | 'one' | 'many'
+  kind: 'short' | 'long' | 'one' | 'many' | 'card'
   prompt: Text
   choices?: Text[] // saved as the Korean label, whatever the app language
-  other?: boolean // "기타" with a text field (many)
-  exactly?: number // many: pick exactly this many
+  other?: boolean // "기타" with a text field (one / many)
   optional?: boolean
-  when?: (a: FinalAnswers) => boolean // only asked when this is true
+  when?: (a: FinalAnswers) => boolean // only asked when this is true (a follow-up of the question before it)
 }
+// card: pick one of your own cards (saved as "<name> (<serial label>)", the card id in `<id>_card`)
 
 const t = (ko: string, en: string): Text => ({ ko, en })
+const YES = t('예', 'Yes')
+const NO = t('아니오', 'No')
+const yes = (id: string) => (a: FinalAnswers) => a[id] === '예'
+const no = (id: string) => (a: FinalAnswers) => a[id] === '아니오'
 
 export const FINAL_QUESTIONS: FinalQuestion[] = [
-  { id: 'commute_used', kind: 'one', prompt: t('이동 시간에 앱을 사용했나요?', 'Did you use the app while on the move?'), choices: [t('예', 'Yes'), t('아니오', 'No')] },
+  // 1 — on the move? yes → how it felt; no → where/when then
+  { id: 'commute_used', kind: 'one', prompt: t('주로 이동 시간에 앱을 사용했나요?', 'Did you mostly use the app while on the move?'), choices: [YES, NO] },
   {
     id: 'commute_feel',
     kind: 'many',
     other: true,
+    when: yes('commute_used'),
     prompt: t('그 이동 시간이 어떻게 느껴졌나요?\n(해당하는 것 모두)', 'How did that time feel?\n(pick all that apply)'),
     choices: [t('짧게 느껴졌다', 'It felt short'), t('길게 느껴졌다', 'It felt long'), t('재밌었다', 'It was fun'), t('지루했다', 'It was boring'), t('시간에 쫓겼다', 'I was in a rush'), t('하다가 껐다', 'I closed it halfway')],
   },
-  { id: 'memorable', kind: 'long', prompt: t('제일 기억에 남는 주민은 누구인가요?\n그 이유는?', 'Which resident do you remember most?\nWhy?') },
-  { id: 'favorite', kind: 'short', prompt: t('7일 동안의 최애 주민은?', 'Your favorite resident of the 7 days?') },
   {
-    id: 'fun_two',
+    id: 'used_where',
+    kind: 'one',
+    other: true,
+    when: no('commute_used'),
+    prompt: t('그럼 주로 언제 사용했나요?', 'Then when did you mostly use it?'),
+    choices: [t('버스', 'On the bus'), t('카페', 'At a cafe'), t('길거리', 'On the street'), t('도서관', 'At the library'), t('학교', 'At school')],
+  },
+  // 2, 3 — pick from your own cards
+  { id: 'memorable', kind: 'card', prompt: t('제일 기억에 남는 주민을 골라주세요.', 'Pick the resident you remember most.') },
+  { id: 'memorable_why', kind: 'long', when: (a) => !!a.memorable, prompt: t('방금 그 주민을 고른 이유는?', 'Why did you pick them?') },
+  { id: 'favorite', kind: 'card', prompt: t('7일 동안의 최애 주민을 골라주세요.', 'Pick your favorite resident of the 7 days.') },
+  { id: 'favorite_why', kind: 'long', when: (a) => !!a.favorite, prompt: t('최애로 고른 이유는?', 'Why are they your favorite?') },
+  {
+    id: 'fun',
     kind: 'many',
-    exactly: 2,
-    prompt: t('앱을 쓰면서 가장 재미있었던 것\n2개를 골라주세요.', 'Pick the 2 most fun things\nin the app.'),
+    prompt: t('앱을 쓰면서 재미있었던 것을\n모두 골라주세요.', 'What was fun in the app?\n(pick all)'),
     choices: [
       t('그리기', 'Drawing'),
       t('메모 쓰기', 'Writing the memo'),
@@ -52,7 +68,7 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
       t('콜렉션 보기 (콜멍)', 'Looking at my collection'),
     ],
   },
-  { id: 'fun_why', kind: 'long', prompt: t('위에서 고른 2개가\n재미있었던 이유는 무엇인가요?', 'Why were those 2 fun?') },
+  { id: 'fun_why', kind: 'long', when: (a) => Array.isArray(a.fun) && a.fun.length > 0, prompt: t('위에서 고른 것들이\n재미있었던 이유는 무엇인가요?', 'Why were those fun?') },
   {
     id: 'wanted',
     kind: 'many',
@@ -67,32 +83,56 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
     ],
   },
   { id: 'wanted_more', kind: 'long', optional: true, prompt: t('그 외에 추가되면 좋겠는 기능이\n있다면 써주세요.', 'Any other feature you’d like?') },
-  { id: 'new_interest', kind: 'long', prompt: t('앱을 쓰면서 새롭게 알게 된\n나의 관심사가 있나요?', 'Did you discover a new interest\nof yours while using the app?') },
+  { id: 'new_interest', kind: 'long', prompt: t('앱을 쓰면서 새롭게 알게 된 관심사나\n‘나’에 대해 알게 된 점이 있나요?', 'Did you find a new interest, or something\nnew about yourself?') },
   { id: 'observed', kind: 'long', prompt: t('관찰할 때 무엇을 주로 봤나요?\n그 사이에 공통점이 있나요?', 'What did you mostly look at?\nAnything in common?') },
-  { id: 'let_go', kind: 'long', prompt: t('주민을 놓아줄 때\n기분이 어땠나요?', 'How did it feel\nto let a resident go?') },
-  { id: 'followed', kind: 'one', prompt: t('따라가기 기능을 써봤나요?', 'Did you try following a resident?'), choices: [t('네', 'Yes'), t('아니오', 'No')] },
-  { id: 'follow_why', kind: 'long', optional: true, when: (a) => a.followed === '네', prompt: t('왜 따라가 봤나요?\n기분은 어땠나요?', 'Why did you follow them?\nHow did it feel?') },
-  { id: 'moved_why', kind: 'long', optional: true, prompt: t('마을 이사를 했다면,\n왜 옮겼나요?', 'If you moved someone to\nanother town, why?') },
+  // yes/no first, the follow-up only on yes
+  { id: 'let_go_used', kind: 'one', prompt: t('주민을 놓아준 적이 있나요?', 'Did you ever let a resident go?'), choices: [YES, NO] },
+  { id: 'let_go', kind: 'long', when: yes('let_go_used'), prompt: t('주민을 놓아줄 때\n기분이 어땠나요?', 'How did it feel\nto let a resident go?') },
+  { id: 'followed', kind: 'one', prompt: t('따라가기 기능을 써봤나요?', 'Did you try following a resident?'), choices: [YES, NO] },
+  { id: 'follow_why', kind: 'long', when: yes('followed'), prompt: t('왜 따라가 봤나요?\n기분은 어땠나요?', 'Why did you follow them?\nHow did it feel?') },
+  { id: 'moved', kind: 'one', prompt: t('주민을 다른 마을로 이사시켜 본 적이 있나요?', 'Did you ever move a resident to another town?'), choices: [YES, NO] },
+  { id: 'moved_why', kind: 'long', when: yes('moved'), prompt: t('왜 옮겼나요?', 'Why did you move them?') },
   {
     id: 'imagined_vs_real',
     kind: 'one',
     prompt: t('상상해서 그린 것과 실제로 보고 그린 것 중\n뭐가 더 재밌었나요?', 'Which was more fun: drawing from\nimagination, or from life?'),
     choices: [t('상상해서 그린 것', 'From imagination'), t('실제로 보고 그린 것', 'From life'), t('비슷했다', 'About the same'), t('둘 중 하나만 해봤다', 'I only tried one')],
   },
-  { id: 'imagined_why', kind: 'long', optional: true, prompt: t('그렇게 생각한 이유는?', 'Why?') },
+  { id: 'imagined_why', kind: 'long', optional: true, when: (a) => !!a.imagined_vs_real, prompt: t('그렇게 생각한 이유는?', 'Why?') },
 ]
 
 export const OTHER = '기타'
+
+// asked with the answers so far
+export const askedQuestions = (a: FinalAnswers) => FINAL_QUESTIONS.filter((q) => !q.when || q.when(a))
+
+// "3", or "3-1" for a follow-up of question 3 (follow-ups = questions with `when`), counting only the asked ones
+export function numberOf(q: FinalQuestion, asked: FinalQuestion[] = FINAL_QUESTIONS) {
+  let n = 0
+  let sub = 0
+  for (const x of asked) {
+    if (x.when) sub++
+    else {
+      n++
+      sub = 0
+    }
+    if (x === q) return x.when ? `${n}-${sub}` : String(n)
+  }
+  return ''
+}
+export const MAIN_COUNT = FINAL_QUESTIONS.filter((q) => !q.when).length
 
 // answered enough to go on? (optional ones always can)
 export function done(q: FinalQuestion, a: FinalAnswers) {
   if (q.optional) return true
   const v = a[q.id]
+  const other = String(a[`${q.id}_other`] ?? '').trim()
   if (q.kind === 'many') {
     const list = Array.isArray(v) ? v : []
-    if (list.includes(OTHER) && !String(a[`${q.id}_other`] ?? '').trim()) return false
-    return q.exactly ? list.length === q.exactly : list.length > 0
+    if (list.includes(OTHER) && !other) return false
+    return list.length > 0
   }
+  if (q.kind === 'one' && v === OTHER) return !!other
   return typeof v === 'string' && v.trim() !== ''
 }
 
