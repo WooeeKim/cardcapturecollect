@@ -17,9 +17,13 @@ import { SQUARE_ID, SQUARE_NAME, SQUARE_PER_USER, SQUARE_THUMB } from '../lib/sq
 // send    = place a newly drawn card ("Send")
 export type ListMode = 'browse' | 'migrate' | 'send'
 
-// a town under the card being dragged: a little darker, its thumbnail pressed in (like a button under a finger)
-// (thumbnail + the open town's box only: a filter on the whole row would lift that box above the grey line)
-const DROP_OVER = '[&_[data-thumb]]:brightness-[0.85] [&_[data-thumb]]:scale-[0.94] [&>img]:brightness-[0.9] [&_[data-thumb]]:transition-[transform,filter] [&_[data-thumb]]:duration-150'
+// a town under the card being dragged: thumbnail and name pressed in, a little darker (like a button under a finger)
+// (thumbnail, name and the open town's box only: a filter on the whole row would lift that box above the grey line)
+const DROP_OVER = [
+  '[&_[data-thumb]]:brightness-[0.85] [&_[data-thumb]]:scale-[0.94] [&_[data-thumb]]:transition-[transform,filter] [&_[data-thumb]]:duration-150',
+  '[&_[data-name]]:scale-[0.94] [&_[data-name]]:origin-left [&_[data-name]]:text-[#333] [&_[data-name]]:transition-[transform,color] [&_[data-name]]:duration-150',
+  '[&>img]:brightness-[0.9]',
+].join(' ')
 
 const ROW = 130
 // iPad sideways (Figma iPad · townList 1033:10719): the same list moved right so the grey line sits at x 271,
@@ -310,7 +314,7 @@ export default function TownListScreen({
             className="absolute top-[22px] left-[135px] h-[27.3px] w-[205px] bg-transparent text-[21px] leading-[1.3] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
-          <p className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{sq ? tr(SQUARE_NAME) : townName(t!.name)}</p>
+          <p data-name className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{sq ? tr(SQUARE_NAME) : townName(t!.name)}</p>
         )}
         <button aria-label={tr('Close')} onClick={isNew ? () => setAdding(null) : close} className="absolute top-[14px] left-[344px] flex size-[28px] items-center justify-center">
           <img src={tlClose} alt="" className="h-[14.8px] w-[12.3px]" />
@@ -402,7 +406,7 @@ export default function TownListScreen({
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
                       <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} grey={dimmed} outline />
                     </button>
-                    <button onClick={() => toggle(t)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
+                    <button data-name onClick={() => toggle(t)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                       {townName(t.name)}
                     </button>
                     <span
@@ -445,7 +449,7 @@ export default function TownListScreen({
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
                     <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
                   </button>
-                  <button onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
+                  <button data-name onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                     {tr(SQUARE_NAME)}
                   </button>
                 </>
