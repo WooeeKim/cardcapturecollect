@@ -22,8 +22,15 @@ const ROW = 130
 const WIDE_LIST_X = 251
 const WIDE_HANDLE_X = 588
 const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
-// the shared town's open box has no Edit pill under it, so it's this much shorter (Figma Section 1, 1133:8068 Vector 405)
-const SQ_SHORT = 28
+// the shared town is the last stop, so its open box grows upward instead of hanging below the line
+// (Figma 261119 수정 › townList_scroll 1133:8068, Vector 405): it starts 49px above the circle and ends 15px under it,
+// its text moves up by SQ_UP; with a Migration / Send pill the box is a little taller so the pill can hang under it
+const SQ_BOX_TOP = -49
+const SQ_BOX_H = 148
+const SQ_BOX_H_PILL = 167
+const SQ_UP = 44
+// while a card waits in the corner, the list can scroll up until its end sits this high (frame px), clear of the card
+const CARD_CLEAR_Y = 485
 // the grey line (Figma 261119 수정 › line_bg): 84 wide, centred on the thumbnails, from 12px above the first one to
 // 11px below the last; only its middle stretches as towns are added, the rounded ends keep their shape
 const RAIL_X = 24
@@ -81,6 +88,11 @@ export default function TownListScreen({
   const open = state.towns.find((t) => t.id === openId)
   const isSquare = (t: Town) => t.id === SQUARE_ID
   const dirty = !!open && editing && (draft.name !== open.name || draft.bio !== open.bio)
+
+  // card waiting + shared town opened: bring it up above the card
+  useEffect(() => {
+    if (card && openId === SQUARE_ID) listEl.current?.scrollTo({ top: listEl.current.scrollHeight, behavior: 'smooth' })
+  }, [card, openId])
 
   useEffect(() => {
     if (adding) listEl.current?.scrollTo({ top: listEl.current.scrollHeight, behavior: 'smooth' })
@@ -196,9 +208,11 @@ export default function TownListScreen({
   // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
   const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
   const squareTop = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0)
-  // open shared town: shorter box, unless a Migration / Send pill hangs under it
-  const squareExtra = action ? OPEN_EXTRA : OPEN_EXTRA - SQ_SHORT
-  const listHeight = (square ? squareTop + ROW + (openId === SQUARE_ID ? squareExtra : 0) : squareTop) + 120
+  // open shared town: its box grows upward, so the row only gets taller for a Migration / Send pill under it
+  const squareExtra = action ? 20 : 0
+  const listEnd = square ? squareTop + ROW + (openId === SQUARE_ID ? squareExtra : 0) : squareTop
+  // with a card in the corner, leave enough room under the list that its end can scroll up to CARD_CLEAR_Y
+  const listHeight: number | string = card && !wide ? `max(${listEnd + 120}px, calc(${listEnd}px + 100% - ${CARD_CLEAR_Y - 109}px))` : listEnd + 120
   // the grey line runs from the first row to just under the last one (open rows have the bigger 84px thumbnail)
   const n = state.towns.length
   const last = square ? { top: squareTop, open: openId === SQUARE_ID } : adding ? { top: rowTop(n), open: true } : { top: rowTop(n - 1), open: openIndex === n - 1 }
@@ -220,14 +234,14 @@ export default function TownListScreen({
     const isNew = !t
     const sq = !!t && isSquare(t)
     const editable = isNew || (editing && !sq)
-    const short = sq && !action && !editing
+    const up = sq ? SQ_UP : 0
     return (
       <>
         {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
             behind it (-z), so the line's wavy edge covers the box's left end with no gap.
             Its top lines up with the thumbnail circle; the Edit/Done pill hangs over its bottom edge. */}
-        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute top-0 left-[64px] -z-10 w-[329px] max-w-none origin-left" style={{ height: short ? 162 - SQ_SHORT : 162 }} />
-        <div className="animate-tl-content absolute inset-0">
+        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute left-[64px] -z-10 w-[329px] max-w-none origin-left" style={sq ? { top: SQ_BOX_TOP, height: action ? SQ_BOX_H_PILL : SQ_BOX_H } : { top: 0, height: 162 }} />
+        <div className="animate-tl-content absolute inset-x-0 bottom-0" style={{ top: -up }}>
         {editable ? (
           <input
             autoFocus
@@ -255,12 +269,12 @@ export default function TownListScreen({
             rows={2}
             placeholder={tr('Write your town biography.')}
             aria-label={tr('Town biography')}
-            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-black"
+            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
           <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{sq ? tr('You can send your character only {n}!', { n: SQUARE_PER_USER }) : t!.bio}</p>
         )}
-        <p className="absolute left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]" style={{ top: short ? 127 - SQ_SHORT : 127 }}>since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
+        <p className="absolute left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]" style={{ top: sq ? 102 : 127 }}>since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
         {isNew ? (
           <>
             {pill(tr('Discard'), () => setAdding(null), 133, true)}
