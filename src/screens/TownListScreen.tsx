@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, Thumb, type PopupAction } from '../components/ui'
 import { sfx } from '../lib/sound'
 import { framePoint } from '../lib/frame'
 import tlBox from '../assets/proto/v2/tl-box.svg'
-import tlBar from '../assets/proto/v2/tl-bar.svg'
+import { BUMPY_TOP, LINE_BG, stretchX } from '../lib/lineShapes'
 import tlClose from '../assets/proto/v2/tl-close.svg'
 import tlPill from '../assets/proto/v2/tl-edit.svg'
 import { MAX_RESIDENTS, MAX_TOWNS, addTown, canDeleteTown, deleteTown, dotDate, moveTown, newTown, updateTown, type Card, type State, type Town } from '../lib/store'
@@ -23,8 +23,25 @@ const ROW = 130
 const WIDE_LIST_X = 251
 const WIDE_HANDLE_X = 588
 const OPEN_EXTRA = 114 // open row is 244 tall (Figma townList-detail 787:1012)
+// the shared town is the last stop, so its open box grows upward instead of hanging below the line
+// (Figma 261119 수정 › townList_scroll 1133:8068, Vector 405): it starts 49px above the circle and ends 15px under it,
+// its text moves up by SQ_UP; with a Migration / Send pill the box is a little taller so the pill can hang under it
+const SQ_BOX_TOP = -49
+const SQ_BOX_H = 148
+const SQ_BOX_H_PILL = 167
+const SQ_UP = 44
+// while a card waits in the corner, the list can scroll up until its end sits this high (frame px), clear of the card
+const CARD_CLEAR_Y = 485
+// the grey line (Figma 261119 수정 › line_bg): 84 wide, centred on the thumbnails, from 12px above the first one to
+// 11px below the last; only its middle stretches as towns are added, the rounded ends keep their shape
+const RAIL_X = 24
+const RAIL_TOP = 44 - 12
+const RAIL_PAD = 11
+// the list scrolls up under a cover with a wavy bottom edge (Figma 울퉁불퉁), so it starts this much higher
+const UNDER = 40
 
-// the shared town (lib/square.ts, Figma 1133:7217): one more row at the end of the list, Uncle Sam in a dark ring; no Edit, no reorder
+// the shared town (lib/square.ts, Figma Section 1 1133:7217 "Transfer"): one more row at the end of the list, the grey swirl
+// as its thumbnail (same ring as other towns); no Edit, no reorder
 export type SquareInfo = { town: Town; chief?: Card; mine: number; ok: boolean }
 
 export default function TownListScreen({
@@ -65,12 +82,18 @@ export default function TownListScreen({
 
   const openIndex = state.towns.findIndex((t) => t.id === openId)
   const chiefOf = (t: Town) => state.cards[t.residents[0] ?? '']
-  const chiefImage = (t: Town) => (isSquare(t) ? SQUARE_THUMB : chiefOf(t)?.image)
-  const chiefThumb = (t: Town) => (isSquare(t) ? undefined : chiefOf(t)?.thumb)
+  // the swirl fills the circle (thumb), it isn't a drawing to crop to the upper body (image)
+  const chiefImage = (t: Town) => (isSquare(t) ? undefined : chiefOf(t)?.image)
+  const chiefThumb = (t: Town) => (isSquare(t) ? SQUARE_THUMB : chiefOf(t)?.thumb)
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const open = state.towns.find((t) => t.id === openId)
   const isSquare = (t: Town) => t.id === SQUARE_ID
   const dirty = !!open && editing && (draft.name !== open.name || draft.bio !== open.bio)
+
+  // card waiting + shared town opened: bring it up above the card
+  useEffect(() => {
+    if (card && openId === SQUARE_ID) listEl.current?.scrollTo({ top: listEl.current.scrollHeight, behavior: 'smooth' })
+  }, [card, openId])
 
   useEffect(() => {
     if (adding) listEl.current?.scrollTo({ top: listEl.current.scrollHeight, behavior: 'smooth' })
@@ -187,7 +210,17 @@ export default function TownListScreen({
   // Figma townList geometry (frame px). The list scrolls under a white header (0–149).
   const rowTop = (i: number) => 44 + i * ROW + (openIndex >= 0 && i > openIndex ? OPEN_EXTRA : 0)
   const squareTop = rowTop(state.towns.length) + (adding ? ROW + OPEN_EXTRA : 0)
-  const listHeight = (square ? squareTop + ROW + (openId === SQUARE_ID ? OPEN_EXTRA : 0) : squareTop) + 120
+  // open shared town: its box grows upward, so the row only gets taller for a Migration / Send pill under it
+  const squareExtra = action ? 20 : 0
+  const listEnd = square ? squareTop + ROW + (openId === SQUARE_ID ? squareExtra : 0) : squareTop
+  // with a card in the corner, leave enough room under the list that its end can scroll up to CARD_CLEAR_Y
+  const listHeight: number | string = card && !wide ? `max(${listEnd + 120}px, calc(${listEnd}px + 100% - ${CARD_CLEAR_Y - 109}px))` : listEnd + 120
+  // the grey line runs from the first row to just under the last one (open rows have the bigger 84px thumbnail)
+  const n = state.towns.length
+  const last = square ? { top: squareTop, open: openId === SQUARE_ID } : adding ? { top: rowTop(n), open: true } : { top: rowTop(n - 1), open: openIndex === n - 1 }
+  const listTop = wide ? 121 : 149
+  const railH = last.top + (last.open ? 84 : 70) + RAIL_PAD - RAIL_TOP
+  const railD = useMemo(() => stretchX(LINE_BG.d, LINE_BG.len, railH, LINE_BG.capStart, LINE_BG.capEnd), [railH])
 
   // hand-drawn pill button (Figma Vector 406); grey label for the "leave it" side
   const pill = (label: string, onClick: () => void, left: number, grey = false) => (
@@ -203,13 +236,14 @@ export default function TownListScreen({
     const isNew = !t
     const sq = !!t && isSquare(t)
     const editable = isNew || (editing && !sq)
+    const up = sq ? SQ_UP : 0
     return (
       <>
         {/* townList-detail variant 2: the box grows out of the grey line. It starts well inside the line and sits
             behind it (-z), so the line's wavy edge covers the box's left end with no gap.
             Its top lines up with the thumbnail circle; the Edit/Done pill hangs over its bottom edge. */}
-        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute top-0 left-[64px] -z-10 h-[162px] w-[329px] max-w-none origin-left" />
-        <div className="animate-tl-content absolute inset-0">
+        <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute left-[64px] -z-10 w-[329px] max-w-none origin-left" style={sq ? { top: SQ_BOX_TOP, height: action ? SQ_BOX_H_PILL : SQ_BOX_H } : { top: 0, height: 162 }} />
+        <div className="animate-tl-content absolute inset-x-0 bottom-0" style={{ top: -up }}>
         {editable ? (
           <input
             autoFocus
@@ -237,12 +271,12 @@ export default function TownListScreen({
             rows={2}
             placeholder={tr('Write your town biography.')}
             aria-label={tr('Town biography')}
-            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-black"
+            className="absolute top-[77px] left-[135px] w-[235px] resize-none bg-transparent text-[17px] leading-[1.2] outline-none placeholder:text-[#5f5f5f]"
           />
         ) : (
           <p className="absolute top-[77px] left-[135px] line-clamp-2 w-[235px] text-[17px] leading-[1.2] break-words">{sq ? tr('You can send your character only {n}!', { n: SQUARE_PER_USER }) : t!.bio}</p>
         )}
-        <p className="absolute top-[127px] left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]">since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
+        <p className="absolute left-[135px] text-[14px] leading-[1.3] text-[#8e8e8e]" style={{ top: sq ? 102 : 127 }}>since {dotDate(t ? t.createdAt : adding!.createdAt)}</p>
         {isNew ? (
           <>
             {pill(tr('Discard'), () => setAdding(null), 133, true)}
@@ -263,7 +297,7 @@ export default function TownListScreen({
         )}
         </div>
         <span data-thumb className="animate-tl-thumb pointer-events-none absolute top-0 left-[24px]">
-          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong ring={sq ? 11 : undefined} />
+          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong />
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
@@ -278,12 +312,18 @@ export default function TownListScreen({
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
       <Header title={tr('Town List')} onBack={() => (dirty ? askSave(onBack) : onBack())} right={<PlusButton label={tr('Add town')} onClick={startAdd} />} />
-      <div className={`pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#f0f0f0] from-[71%] to-[#f0f0f0]/0 ${wide ? 'h-[120px]' : 'h-[186px]'}`} />
+      {/* the list slides up under a cover with a wavy bottom edge (Figma 261119 수정 › townList, 울퉁불퉁), not a
+          gradient: the same colour as the screen behind it and no outline, so only the cut-off line and towns show the edge */}
+      <svg aria-hidden viewBox={`0 0 ${BUMPY_TOP.w} ${BUMPY_TOP.h}`} preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 top-0 z-10 w-full" style={{ height: listTop }}>
+        <path d={BUMPY_TOP.d} fill="#F9F9F9" />
+      </svg>
 
-      <div ref={listEl} className={`absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none] ${wide ? 'top-[121px]' : 'top-[149px]'}`}>
-        <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
-          {/* the grey line every town hangs on; it runs past the end and is clipped, so its bottom end never shows */}
-          <img src={tlBar} alt="" className="pointer-events-none absolute top-[37px] left-[20px] w-[96px] max-w-none" style={{ height: 'calc(100% - 37px + 160px)' }} />
+      <div ref={listEl} className="absolute inset-x-0 bottom-0 overflow-y-auto [scrollbar-width:none]" style={{ top: listTop - UNDER }}>
+        <div className="relative isolate min-h-full overflow-hidden" style={{ height: listHeight, marginTop: UNDER, marginLeft: wide ? WIDE_LIST_X : undefined, width: wide ? WIDE_HANDLE_X + 60 : undefined }}>
+          {/* the grey line every town hangs on (Figma line_bg), lying down in its own drawing: x 0 = bottom end */}
+          <svg aria-hidden className="pointer-events-none absolute overflow-visible" style={{ left: RAIL_X, top: RAIL_TOP, width: LINE_BG.thick, height: railH }} viewBox={`0 0 ${LINE_BG.thick} ${railH}`}>
+            <path d={railD} transform={`translate(0 ${railH}) rotate(-90)`} fill="#CCCCCC" stroke="#000" strokeWidth={2} strokeLinejoin="round" />
+          </svg>
 
           {state.towns.map((t, i) => {
             const isOpen = openId === t.id
@@ -335,7 +375,7 @@ export default function TownListScreen({
           {square && (
             <div
               className="absolute inset-x-0 transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              style={{ top: squareTop, height: openId === SQUARE_ID ? ROW + OPEN_EXTRA : ROW }}
+              style={{ top: squareTop, height: openId === SQUARE_ID ? ROW + squareExtra : ROW }}
               ref={(el) => {
                 if (el) thumbs.current.set(SQUARE_ID, el)
                 else thumbs.current.delete(SQUARE_ID)
@@ -346,7 +386,7 @@ export default function TownListScreen({
               ) : (
                 <>
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
-                    <Thumb image={chiefImage(square.town)} size={70} strong ring={10} grey={(!!openId && openId !== SQUARE_ID) || !!adding} />
+                    <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
                   </button>
                   <button onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                     {tr(SQUARE_NAME)}

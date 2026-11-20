@@ -14,12 +14,6 @@ import fitIcon from '../assets/proto/v2/fit.svg'
 import moodBox from '../assets/proto/v2/mood-box.svg'
 import chipW1 from '../assets/proto/v2/chip-w1.svg'
 import chipW2 from '../assets/proto/v2/chip-w2.svg'
-import { APP_NAME } from '../components/Splash'
-import pillMoveIn from '../assets/proto/v2/pill-move-in.svg'
-import saveStem from '../assets/proto/v2/save-stem.svg'
-import saveHead from '../assets/proto/v2/save-head.svg'
-import saveBase from '../assets/proto/v2/save-base.svg'
-import shareIcon from '../assets/proto/v2/share.svg'
 import spark391 from '../assets/proto/v2/spark-391.svg'
 import spark392 from '../assets/proto/v2/spark-392.svg'
 import spark393 from '../assets/proto/v2/spark-393.svg'
@@ -29,8 +23,9 @@ import spark396 from '../assets/proto/v2/spark-396.svg'
 import spark397 from '../assets/proto/v2/spark-397.svg'
 import spark398 from '../assets/proto/v2/spark-398.svg'
 import { Bottom, CardView, Popup, shrink, type PopupAction } from '../components/ui'
+import CardActions from '../components/CardActions'
 import { ToggleIcon } from '../components/drawIcons'
-import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
+import { ChipShape, ColorWheelV2, ConfirmBubble, EraserV2, HighlighterV2, PenV2, PillBack, PillFinish, PillVillage, RedoV2, SizeBubbleV2, UndoV2 } from '../components/v2'
 import { MOODS } from '../lib/moods'
 import { framePoint, toLocal } from '../lib/frame'
 import { lastPlace, locatePlace, rememberPlace } from '../lib/place'
@@ -39,7 +34,7 @@ import { tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
 
 // New Figma GUI (prototyping › 그리기): Drawing | Memo tabs, hand-drawn toolbar, Colors panel with
-// eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "Choose a village" (719:11320).
+// eyedropper, Memo with 9 mood chips, speech-bubble confirm (745:694), "move in" (was "Choose a village", 719:11320).
 const SIZES = [2, 4, 8, 14, 22]
 // toolbar geometry in Figma frame px; `up` = how far the picked tool lifts
 const TOOLS = {
@@ -195,7 +190,7 @@ function Tour({ step, root, canNext, onPrev, onNext, onSkip }: { step: number; r
   )
 }
 
-export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean }) {
+export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: { onExit: () => void; onFinish: (draft: Draft) => void; tutorial?: boolean; by?: string }) {
   const wide = useWide()
   const [tip, setTip] = useState(tutorial ? 0 : -1)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -296,7 +291,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
     onExit()
   }
 
-  const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim() })
+  const draft = (image: string): Draft => ({ image, thumb: thumb || undefined, mood, place: place.trim(), nickname: nickname.trim(), memo: memo.trim(), by: by || undefined })
 
   function back() {
     if (preview) return setPreview(null)
@@ -453,19 +448,23 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false }: { onE
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
             <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>{tr('Mood')}</span>
             <label onClick={() => placeRef.current?.focus()} className={`absolute flex ${wide ? 'top-[-30.5px] right-[16px]' : 'top-[11px] right-[25px]'} cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
-              <input
-                value={place}
-                onChange={(e) => {
-                  typedPlace.current = true
-                  setPlace(e.target.value)
-                }}
-                placeholder={tr(locating ? 'Finding where you are…' : 'Where are you?')}
-                maxLength={30}
-                aria-label={tr('Place')}
-                ref={placeRef}
-                size={Math.max(4, (place || tr(locating ? 'Finding where you are…' : 'Where are you?')).length)}
-                className="max-w-[220px] bg-transparent text-right text-[17px] leading-[1.1] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#777]"
-              />
+              {/* the box hugs the typed text: an invisible copy of the text sets the width, the input fills it */}
+              <span className="relative inline-grid max-w-[220px] text-[17px] leading-[1.1] tracking-[-0.34px]">
+                <span aria-hidden className="invisible col-start-1 row-start-1 overflow-hidden whitespace-pre">{(place || tr(locating ? 'Finding where you are…' : 'Where are you?')) + ' '}</span>
+                <input
+                  value={place}
+                  onChange={(e) => {
+                    typedPlace.current = true
+                    setPlace(e.target.value)
+                  }}
+                  placeholder={tr(locating ? 'Finding where you are…' : 'Where are you?')}
+                  maxLength={30}
+                  aria-label={tr('Place')}
+                  ref={placeRef}
+                  size={1}
+                  className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-right outline-none text-[#3d3d3d] placeholder:text-[#777]"
+                />
+              </span>
             </label>
             <div className="absolute top-[69px] left-[36px] grid w-[327px] grid-cols-3 gap-x-[9.35px] gap-y-[13.36px]">
               {MOODS.map((m, i) => {
@@ -835,32 +834,9 @@ function hslHex(h: number, s: number, l: number) {
   return `#${hex2(f(0) * 255)}${hex2(f(8) * 255)}${hex2(f(4) * 255)}`
 }
 
-// the drawing as a PNG file (data URL from the canvas) — for Save and for Share's fallback
-async function cardFile(card: Card) {
-  const blob = await (await fetch(card.image)).blob()
-  return new File([blob], `${card.serial || 'card'}.png`, { type: blob.type || 'image/png' })
-}
-function download(file: File) {
-  const url = URL.createObjectURL(file)
-  const a = Object.assign(document.createElement('a'), { href: url, download: file.name })
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-// Finished card lands with a little burst, then moves in to a town (Figma 1134:3838; was 719:11320).
-// Back leaves it waiting (Draw → back here); Save downloads the drawing; Share opens the phone's share sheet.
+// Finished card lands with a little burst (sparks stay), then moves in to a town (Figma drawing-finish 1138:2642;
+// was 1134:3838, 719:11320). Back leaves it waiting (Draw → back here); Save / Share: components/CardActions.tsx.
 export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: () => void; onBack: () => void }) {
-  const save = async () => download(await cardFile(card))
-  const share = async () => {
-    const file = await cardFile(card)
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: card.nickname || APP_NAME })
-      } catch {
-        /* closed the sheet */
-      }
-    } else download(file)
-  }
   // Figma spark strokes (Vector 391–398), positioned as in the frame
   const sparks = [
     { src: spark391, x: 274.2, y: 135.3, w: 2, h: 21.2 },
@@ -878,7 +854,7 @@ export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: (
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {sparks.map((s, i) => (
-        <img key={i} src={s.src} alt="" className="pointer-events-none absolute" style={{ left: s.x, top: s.y, width: s.w, height: s.h, animation: `spark 1.4s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
+        <img key={i} src={s.src} alt="" className="pointer-events-none absolute" style={{ left: s.x, top: s.y, width: s.w, height: s.h, animation: `spark-stay 0.7s ease-out ${0.5 + (i % 3) * 0.12}s both` }} />
       ))}
       <div className="absolute top-[203.6px] left-[50.7px] w-[300px]" style={shrink(470)}>
         <div className="animate-tada drop-shadow-[0_6px_14px_rgba(0,0,0,0.15)]">
@@ -887,20 +863,16 @@ export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: (
             <CardView card={card} />
           </div>
         </div>
-        {/* under the card's lower right, frame px minus the box's top-left (50.7, 203.6) */}
-        <button aria-label={tr('Save')} onClick={save} className="absolute top-[422px] left-[252px] h-[38px] w-[34px]">
-          <img src={saveStem} alt="" className="absolute top-[4.95px] left-[11.27px] max-w-none" />
-          <img src={saveHead} alt="" className="absolute top-[20px] left-[7.65px] max-w-none" />
-          <img src={saveBase} alt="" className="absolute top-[32.4px] left-[1.85px] max-w-none" />
-        </button>
-        <button aria-label={tr('Share')} onClick={share} className="absolute top-[420px] left-[291px] size-[34px]">
-          <img src={shareIcon} alt="" className="absolute top-[1.25px] left-[1.15px] max-w-none" />
-        </button>
+        {/* save / share under the card's lower right — Figma drawing-finish (1138:2642): save (314.2, 656.5), share (347, 657.7),
+            minus this box's top-left (50.7, 203.6) and the icons' 5px tap padding; moves and shrinks with the card */}
+        <CardActions card={card} gap={0} className="absolute top-[447.9px] left-[258.5px]" />
       </div>
       <Bottom>
-        <button onClick={onChoose} className="absolute top-[753px] left-[134.7px] flex h-[51px] w-[132.6px] items-center justify-center">
-          <img src={pillMoveIn} alt="" className="absolute top-[-1px] left-[-1px] max-w-none" />
-          <span className="relative text-[23px] leading-[1.1] tracking-[-0.23px]">{tr('move in')}</span>
+        <button onClick={onChoose} className="absolute top-[751px] left-[104.3px] flex h-[53px] w-[185px] items-center justify-center">
+          <span className="absolute inset-[-2.22%_-0.44%]">
+            <PillVillage />
+          </span>
+          <span className="relative text-[28px] leading-[1.1] tracking-[-0.28px]">{tr('move in')}</span>
         </button>
       </Bottom>
     </div>

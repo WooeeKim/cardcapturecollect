@@ -10,8 +10,9 @@ import batteryIcon from '../assets/proto/battery.svg'
 import { type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { COL_X, useWide } from '../lib/wide'
+import { CIRCLE_FRAME } from '../lib/lineShapes'
 import { moodOf } from '../lib/moods'
-import type { Card } from '../lib/store'
+import { serialLabel, type Card } from '../lib/store'
 import { cycleLang, tr } from '../lib/i18n'
 import globe from '../assets/proto/v2/globe.svg'
 
@@ -146,7 +147,7 @@ export function Thumb({ image, thumb, size = 70, strong = false, grey = false, r
       {/* with the black outline, everything inside it is white (fills the wobble too) */}
       {outline && (
         <svg viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
-          <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring * 0.75, size + 3)} fill="#fff" />
+          <path d={CIRCLE_FRAME.d} transform={frameAt(size, size / 2 - ring * 0.75)} fill="#fff" />
         </svg>
       )}
       <span className="absolute overflow-hidden rounded-full bg-white" style={{ inset: ring * 0.75 }}>
@@ -162,30 +163,22 @@ export function Thumb({ image, thumb, size = 70, strong = false, grey = false, r
       </span>
       <svg viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden>
         {/* with the black outline, everything inside it is white (no grey ring between) */}
-        {!outline && <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring / 2, size)} fill="none" stroke={strong ? '#686868' : '#ccc'} strokeWidth={ring} strokeLinecap="round" strokeLinejoin="round" />}
+        {!outline && <path d={CIRCLE_FRAME.d} transform={frameAt(size, size / 2 - ring / 2)} fill="none" stroke={strong ? '#686868' : '#ccc'} strokeWidth={ring} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
         {/* townList-detail (right): thin black hand-drawn line around the white circle */}
         {outline && (
-          <path d={sketchyCircle(size / 2, size / 2, size / 2 - ring * 0.75, size + 3)} fill="none" stroke="#000" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          <path d={CIRCLE_FRAME.d} transform={frameAt(size, size / 2 - ring * 0.75)} fill="none" stroke="#000" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         )}
       </svg>
     </span>
   )
 }
 
-// A circle drawn by hand: radius wobbles a little and the stroke overlaps where it starts. Same seed = same shape.
-function sketchyCircle(cx: number, cy: number, r: number, seed: number) {
-  const a = 0.9 + ((seed * 7) % 5) * 0.12
-  const p1 = (seed % 7) * 0.9
-  const p2 = (seed % 11) * 0.6
-  const pts: string[] = []
-  const steps = 48
-  for (let i = 0; i <= steps + 3; i++) {
-    const t = (i / steps) * Math.PI * 2 - 0.4
-    const rr = r + a * Math.sin(3 * t + p1) + a * 0.6 * Math.sin(5 * t + p2) + (i > steps ? 1.2 : 0)
-    pts.push(`${(cx + rr * Math.cos(t)).toFixed(2)} ${(cy + rr * Math.sin(t)).toFixed(2)}`)
-  }
-  return `M${pts.join(' L')}`
+// The Figma 원형프레임 (lib/lineShapes.ts) scaled to a circle of radius r in the middle of a size × size thumbnail
+// (strokes keep their px width through vector-effect)
+function frameAt(size: number, r: number) {
+  return `translate(${size / 2 - r} ${size / 2 - r}) scale(${(2 * r) / CIRCLE_FRAME.w} ${(2 * r) / CIRCLE_FRAME.h})`
 }
+
 
 // ---------- mood chip ----------
 
@@ -221,7 +214,7 @@ export function CardView({ card, plain = false, onImage }: { card: Card; plain?:
               {card.memo && <p className="mt-[2cqw] line-clamp-4 text-[4.7cqw] leading-[1.2] break-words">{card.memo}</p>}
             </div>
           )}
-          <span className="absolute right-[4cqw] bottom-[2.5cqw] text-[3.9cqw] leading-[1.1]">{card.serial}</span>
+          <span className="absolute right-[4cqw] bottom-[2.5cqw] text-[3.9cqw] leading-[1.1]">{serialLabel(card)}</span>
         </>
       )}
     </div>
@@ -258,7 +251,6 @@ export function PhoneChrome() {
         </div>
       </div>
       <span className="absolute top-[861px] left-[129px] h-[5px] w-[144px] rounded-full bg-[#1a1a1a]" />
-      <span className="absolute inset-0 rounded-[62px] border-[13px] border-black" />
     </div>
   )
 }

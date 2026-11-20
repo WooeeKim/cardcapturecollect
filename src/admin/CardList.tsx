@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { serialLabel } from '../lib/store'
 import { moodOf } from '../lib/moods'
 import { when, who, type Item } from './data'
 
@@ -70,7 +71,7 @@ export function CardList({ items, onViewAs }: { items: Item[]; onViewAs: (userId
                   <img src={i.card.thumb || i.card.image} alt="" className="size-12 rounded bg-neutral-50 object-contain" loading="lazy" />
                 </td>
                 <td className="py-2 pr-3 whitespace-nowrap text-neutral-500">{when(i.card.createdAt)}</td>
-                <td className="py-2 pr-3 whitespace-nowrap">{i.card.serial}</td>
+                <td className="py-2 pr-3 whitespace-nowrap">{serialLabel(i.card)}</td>
                 <td className="py-2 pr-3">
                   <button className="text-left hover:underline" onClick={() => onViewAs(i.owner.user_id)} title="View as this person">
                     <div>{i.owner.state.nickname || '—'}</div>

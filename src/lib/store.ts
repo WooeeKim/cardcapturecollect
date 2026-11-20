@@ -12,6 +12,7 @@ export type Card = {
   memo: string
   createdAt: string // ISO
   serial: string // SN261126-07
+  by?: string // who collected it (the collector's app nickname); shown in the serial label (serialLabel)
 }
 
 export type Town = {
@@ -276,11 +277,18 @@ export function deleteCard(state: State, cardId: string): State {
   return { ...state, cards, towns: state.towns.map((t) => ({ ...t, residents: t.residents.filter((id) => id !== cardId) })) }
 }
 
+// Serial as shown on cards: "<collector>-<YYMMDD><NN>" (e.g. Naeun-26112607). The stored serial stays "SN261126-07"
+// (daily counter, merging); a card with no collector name shows the stored one.
+export function serialLabel(card: Pick<Card, 'serial' | 'by'>) {
+  const m = /^SN(\d{6})-(\d+)$/.exec(card.serial)
+  return m && card.by ? `${card.by}-${m[1]}${m[2]}` : card.serial
+}
+
 export function makePending(state: State, input: Omit<Card, 'id' | 'createdAt' | 'serial'>): State {
   const now = new Date()
   const day = ymd(now)
   const n = state.seq.day === day ? state.seq.n + 1 : 1
-  const card: Card = { ...input, id: uid(), createdAt: now.toISOString(), serial: `SN${day}-${String(n).padStart(2, '0')}` }
+  const card: Card = { ...input, by: input.by || state.nickname || undefined, id: uid(), createdAt: now.toISOString(), serial: `SN${day}-${String(n).padStart(2, '0')}` }
   return { ...state, pending: card, seq: { day, n } }
 }
 

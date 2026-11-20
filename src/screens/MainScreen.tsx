@@ -21,7 +21,7 @@ import fxStar from '../assets/proto/fx/star.svg'
 import fxHeart from '../assets/proto/fx/heart.svg'
 import fxShock from '../assets/proto/fx/shock.svg'
 import fxCloud from '../assets/proto/fx/cloud.svg'
-import { TONES, type Card, type State, type Town } from '../lib/store'
+import { TONES, serialLabel, type Card, type State, type Town } from '../lib/store'
 import { Bottom } from '../components/ui'
 import cardPanel from '../assets/proto/v2/card-panel.svg'
 import chipPanel from '../assets/proto/v2/chip-panel.svg'
@@ -1080,7 +1080,7 @@ function Detail({ wide, card, onClose, onFollow, onMigrate, onOpen }: { wide: bo
         {card.place && <p className="absolute top-[33px] right-[20px] text-[17px] leading-[1.1]">{card.place}</p>}
         {card.nickname && <p className="absolute top-[78px] left-[20px] text-[21px] leading-[1.1]">{card.nickname}</p>}
         {card.memo && <p className="absolute top-[116px] left-[20px] line-clamp-4 w-[340px] text-[17px] leading-[1.2] break-words">{card.memo}</p>}
-        <p className="absolute top-[207px] right-[20px] text-[14px] leading-[1.1] text-[#8e8e8e]">{card.serial}</p>
+        <p className="absolute top-[207px] right-[20px] text-[14px] leading-[1.1] text-[#8e8e8e]">{serialLabel(card)}</p>
         <button onClick={onFollow} className="absolute top-[225px] left-[44px] flex h-[55px] w-[113px] items-center justify-center">
           <img src={pillFollow} alt="" className="absolute inset-0 size-full" />
           <span className="relative text-[24.3px] leading-[1.1]">{tr('Follow')}</span>
