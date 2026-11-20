@@ -8,6 +8,7 @@ import { setFrameMatrix } from './lib/frame'
 import { WIDE_H, WIDE_W, setWide } from './lib/wide'
 import { preloadAssets } from './lib/preload'
 import { installTouchGlow } from './lib/touchGlow'
+import { installSound } from './lib/sound'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
@@ -152,5 +153,8 @@ function Boot() {
     </>
   )
 }
-if (!admin) installTouchGlow()
+if (!admin) {
+  installTouchGlow()
+  installSound()
+}
 createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <Boot />}</StrictMode>)

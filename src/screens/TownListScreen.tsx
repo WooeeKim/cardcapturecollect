@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, Thumb, type PopupAction } from '../components/ui'
+import { sfx } from '../lib/sound'
 import { framePoint } from '../lib/frame'
 import tlBox from '../assets/proto/v2/tl-box.svg'
 import tlBar from '../assets/proto/v2/tl-bar.svg'
@@ -146,6 +147,7 @@ export default function TownListScreen({
     const a = framePoint(from.left + from.width / 2, from.top + from.height / 2)
     const b = framePoint(to.left + to.width / 2, to.top + to.height / 2)
     setFlying({ x: b.x - a.x, y: b.y - a.y })
+    sfx.moveIn()
     setTimeout(() => onPlace(t.id), 650)
   }
 

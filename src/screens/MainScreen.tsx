@@ -28,6 +28,7 @@ import chipPanel from '../assets/proto/v2/chip-panel.svg'
 import pillFollow from '../assets/proto/v2/pill-follow.svg'
 import pillMigration from '../assets/proto/v2/pill-migration.svg'
 import { framePoint, toLocal } from '../lib/frame'
+import { sfx } from '../lib/sound'
 import groundSvg from '../assets/proto/ground/ground.svg?raw'
 import groundIpadSvg from '../assets/proto/ground/ground-ipad.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
@@ -474,6 +475,7 @@ export default function MainScreen({
           g.vx *= 0.6
           g.w = g.w * 0.4 + (Math.random() - 0.5) * 1.2
           vibrate(15)
+          sfx.bounce()
         } else {
           // land: keep the pose, but turn around the feet from now on, then stand back up
           const c = Math.cos(g.a)
@@ -490,6 +492,7 @@ export default function MainScreen({
           g.w = 0
           g.phase = 'land'
           vibrate(20)
+          sfx.land()
         }
       }
       // the body flies with its shadow: grip stays right above the spot on the ground
@@ -631,6 +634,7 @@ export default function MainScreen({
     // sideways hand speed carries it along the ground, up/down hand speed tosses it up / slams it down
     g.vx = cap(g.vx * THROW_SPEED)
     g.vz = cap(-g.vy * THROW_SPEED)
+    sfx.fly(Math.hypot(g.vx, g.vz))
     g.vy = 0
     g.phase = 'air'
     els.current.get(id)?.classList.remove('held')
@@ -806,6 +810,7 @@ export default function MainScreen({
     const p = pullRef.current
     const commit = zoneRef.current === 'commit'
     setZone(null)
+    if (commit && (p > 0 ? prev : next)) sfx.page() // 사락: off to the next town
     if (commit && p > 0 && prev) return onSwitch(prev.id)
     if (commit && p < 0 && next) return onSwitch(next.id)
     if (p !== 0) {

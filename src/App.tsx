@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LoadingLayer, waiting } from './components/Loading'
+import { sfx, soundForAccount } from './lib/sound'
 import { LoginSheet } from './components/LoginSheet'
 import NotifyPrompt from './components/NotifyPrompt'
 import { syncPush } from './lib/push'
@@ -195,7 +196,12 @@ export default function App({ onReady }: { onReady?: () => void }) {
   useEffect(() => {
     let live = true
     setIsAdmin(false)
-    checkAdmin(user).then((ok) => live && setIsAdmin(ok))
+    soundForAccount(false)
+    checkAdmin(user).then((ok) => {
+      if (!live) return
+      setIsAdmin(ok)
+      soundForAccount(ok) // sound is developer-only for now (lib/sound.ts)
+    })
     return () => {
       live = false
     }
@@ -538,6 +544,7 @@ export default function App({ onReady }: { onReady?: () => void }) {
             }
             setState(next)
             setRoute({ name: 'tada' })
+            sfx.cardDone()
           }}
         />
       )

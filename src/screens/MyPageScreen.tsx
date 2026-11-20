@@ -8,6 +8,7 @@ import underline from '../assets/proto/v2/mp-underline.svg'
 import toggleOn from '../assets/proto/v2/mp-toggle.svg'
 import pill from '../assets/proto/v2/tl-edit.svg'
 import { FeedbackSheet, LoginSheet, PasswordSheet, Sheet } from '../components/LoginSheet'
+import { setSound, soundEnabled } from '../lib/sound'
 import { ToggleIcon } from '../components/drawIcons'
 import { Bottom, LangButton, Popup, type PopupAction } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
@@ -74,6 +75,7 @@ export default function MyPageScreen({
   const [name, setName] = useState(nickname)
   const [about, setAbout] = useState(intro)
   const [notify, setNotify] = useState(readNotify)
+  const [sound, setSoundOn] = useState(soundEnabled)
 
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const startEdit = () => {
@@ -96,13 +98,16 @@ export default function MyPageScreen({
   // list rows: Figma pitch 59.8, first at 359
   const ROW0 = 359
   const PITCH = 59.8
+  const toggle = (on: boolean) => (on ? <img src={toggleOn} alt="" className="h-[25px] w-[48px]" /> : <span className="block h-[23px] w-[46px]"><ToggleIcon on={false} /></span>)
   type Row = { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }
   const rows: Row[] = ([
     {
       label: tr('Notification setting'),
       onClick: toggleNotify,
-      right: notify ? <img src={toggleOn} alt="" className="h-[25px] w-[48px]" /> : <span className="block h-[23px] w-[46px]"><ToggleIcon on={false} /></span>,
+      right: toggle(notify),
     },
+    // sound on/off: developer accounts only (regular accounts have no sound for now)
+    canReset && { label: tr('Sound effects'), onClick: () => { setSound(!sound); setSoundOn(!sound) }, right: toggle(sound) },
     { label: tr('Subway-TI'), onClick: onInterview },
     { label: tr('Notice'), onClick: () => gotIt(tr('Notices are coming soon.')) },
     { label: tr('FAQ'), onClick: () => gotIt(tr('FAQ is coming soon.')) },

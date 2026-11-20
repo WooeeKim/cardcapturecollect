@@ -211,6 +211,7 @@ const DICT: Record<string, string> = {
   'Just put me down': '그냥 내려줘',
   'Put me down!': '내려줘요!',
   'Aaah!': '으아아!',
+  'Sound effects': '효과음',
   'yay!': '야호!',
   'hey!': '안녕!',
   zzz: '쿨쿨',
