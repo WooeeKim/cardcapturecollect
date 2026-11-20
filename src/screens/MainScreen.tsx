@@ -228,6 +228,12 @@ export default function MainScreen({
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [openId, setOpenId] = useState<string | null>(null) // card detail
   const [follow, setFollow] = useState<string | null>(focusId)
+  // opened on a card that just moved in (new drawing sent here, or migrated): 띠링 as the camera finds it
+  useEffect(() => {
+    if (!focusId) return
+    const t = window.setTimeout(() => sfx.arrive(), 300)
+    return () => clearTimeout(t)
+  }, [])
   const [menu, setMenu] = useState(false)
   // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
   const [side, setSide] = useState<1 | -1 | 0>(0)

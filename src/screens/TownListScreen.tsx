@@ -243,7 +243,8 @@ export default function TownListScreen({
             behind it (-z), so the line's wavy edge covers the box's left end with no gap.
             Its top lines up with the thumbnail circle; the Edit/Done pill hangs over its bottom edge. */}
         <img src={tlBox} alt="" className="animate-tl-box pointer-events-none absolute left-[64px] -z-10 w-[329px] max-w-none origin-left" style={sq ? { top: SQ_BOX_TOP, height: action ? SQ_BOX_H_PILL : SQ_BOX_H } : { top: 0, height: 162 }} />
-        <div className="animate-tl-content absolute inset-x-0 bottom-0" style={{ top: -up }}>
+        {/* data-keyboard-box: while typing, the whole open box (pills too) moves up above the keyboard (main.tsx) */}
+        <div data-keyboard-box className="animate-tl-content absolute inset-x-0 bottom-0" style={{ top: -up }}>
         {editable ? (
           <input
             autoFocus

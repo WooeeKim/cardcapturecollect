@@ -14,9 +14,10 @@ import markerLoop from '../assets/sounds/marker-loop.wav'
 import pageClip from '../assets/sounds/page.wav'
 import moveInClip from '../assets/sounds/move-in.wav'
 import cardDoneClip from '../assets/sounds/card-done.wav'
+import arriveClip from '../assets/sounds/arrive.wav'
 import flyClip from '../assets/sounds/fly.wav'
 
-const CLIPS = { tap2, tap4, pop: popClip, pen: penLoop, marker: markerLoop, eraser: eraserLoop, page: pageClip, moveIn: moveInClip, cardDone: cardDoneClip, fly: flyClip }
+const CLIPS = { tap2, tap4, pop: popClip, pen: penLoop, marker: markerLoop, eraser: eraserLoop, page: pageClip, moveIn: moveInClip, cardDone: cardDoneClip, arrive: arriveClip, fly: flyClip }
 type Clip = keyof typeof CLIPS
 const buffers: Partial<Record<Clip, AudioBuffer>> = {}
 let loading = false
@@ -142,6 +143,10 @@ export const sfx = {
   // 띠링: a drawing just became a card
   cardDone() {
     clip('cardDone', { gain: 0.7 })
+  },
+  // 띠링: first look at a card in the town it just moved into (sent there or migrated; the camera follows it)
+  arrive() {
+    clip('arrive', { gain: 0.7 })
   },
   // 톡: any button
   tap() {
