@@ -17,7 +17,7 @@ export type Kind = 'drew' | 'didnt_draw'
 export type Slot = { day: string; from: Date; to: Date }
 export type Answers = Record<string, string>
 
-export const FEELINGS = ['Interested', 'Excited', 'Bored', 'Indifferent'] as const
+export const FEELINGS = ['Excited', 'Interested', 'Indifferent', 'Bored'] as const // 재밌었어요, 흥미로웠어요, 그저 그랬어요, 지루했어요 (then 기타)
 
 const p2 = (n: number) => String(n).padStart(2, '0')
 export const ymd = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
