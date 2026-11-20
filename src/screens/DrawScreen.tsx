@@ -448,19 +448,23 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
             <img src={moodBox} alt="" className="pointer-events-none absolute top-[10.5px] left-[21px] h-[226.5px] w-[367px] max-w-none -scale-y-100" />
             <span className={`absolute top-[27px] left-[68px] text-[21px] leading-[1.1] tracking-[-0.63px] ${showMissing && !mood ? 'text-[#d9534f]' : 'text-[#3d3d3d]'}`}>{tr('Mood')}</span>
             <label onClick={() => placeRef.current?.focus()} className={`absolute flex ${wide ? 'top-[-30.5px] right-[16px]' : 'top-[11px] right-[25px]'} cursor-text rounded-[10px] border-2 border-dashed px-[7px] py-[5px] ${dashed('place')}`}>
-              <input
-                value={place}
-                onChange={(e) => {
-                  typedPlace.current = true
-                  setPlace(e.target.value)
-                }}
-                placeholder={tr(locating ? 'Finding where you are…' : 'Where are you?')}
-                maxLength={30}
-                aria-label={tr('Place')}
-                ref={placeRef}
-                size={Math.max(4, (place || tr(locating ? 'Finding where you are…' : 'Where are you?')).length)}
-                className="max-w-[220px] bg-transparent text-right text-[17px] leading-[1.1] tracking-[-0.34px] text-[#3d3d3d] outline-none placeholder:text-[#777]"
-              />
+              {/* the box hugs the typed text: an invisible copy of the text sets the width, the input fills it */}
+              <span className="relative inline-grid max-w-[220px] text-[17px] leading-[1.1] tracking-[-0.34px]">
+                <span aria-hidden className="invisible col-start-1 row-start-1 overflow-hidden whitespace-pre">{(place || tr(locating ? 'Finding where you are…' : 'Where are you?')) + ' '}</span>
+                <input
+                  value={place}
+                  onChange={(e) => {
+                    typedPlace.current = true
+                    setPlace(e.target.value)
+                  }}
+                  placeholder={tr(locating ? 'Finding where you are…' : 'Where are you?')}
+                  maxLength={30}
+                  aria-label={tr('Place')}
+                  ref={placeRef}
+                  size={1}
+                  className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-right outline-none text-[#3d3d3d] placeholder:text-[#777]"
+                />
+              </span>
             </label>
             <div className="absolute top-[69px] left-[36px] grid w-[327px] grid-cols-3 gap-x-[9.35px] gap-y-[13.36px]">
               {MOODS.map((m, i) => {
