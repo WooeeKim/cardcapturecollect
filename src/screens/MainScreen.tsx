@@ -34,6 +34,7 @@ import groundIpadSvg from '../assets/proto/ground/ground-ipad.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
+import drawingCard from '../assets/proto/v2/drawing-card.svg'
 import { SQUARE_ID } from '../lib/square'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
@@ -1031,13 +1032,9 @@ export default function MainScreen({
 
       {/* draw a new card */}
       {!open && !follow && (
-        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
-          {/* the Figma + card, with rounded corners */}
-          <span className="absolute top-1/2 left-1/2 flex h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg] items-center justify-center rounded-[9px] border-[2.6px] border-[#222] bg-white">
-            <svg viewBox="0 0 28 28" className="size-[28px]" aria-hidden>
-              <path d="M14 2v24M2 14h24" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
-            </svg>
-          </span>
+        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-10.6px] bottom-[-49.6px] h-[167.8px] w-[137.7px] ${empty ? 'animate-hint' : ''}`}>
+          {/* the Figma drawing_card (02 메인 마을 › main-onboarding 1185:8533): a hand-drawn + card, tilted, running off the corner */}
+          <img src={drawingCard} alt="" className="absolute top-1/2 left-1/2 h-[147px] w-[94.24px] max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-[20deg]" />
         </button>
       )}
 
