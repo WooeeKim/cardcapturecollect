@@ -386,7 +386,7 @@ const DICT: Record<string, string> = {
   'Who did you collect, and why?': '누구를, 왜 수집했나요?',
   'How did you feel\nwhile collecting them?': '수집하는 동안\n기분이 어땠나요?',
   Interested: '흥미로웠어요',
-  Excited: '신났어요',
+  Excited: '재밌었어요', // saved as 'Excited' either way (admin › 10pm counts stay together)
   Bored: '지루했어요',
   Indifferent: '그저 그랬어요',
   'Anything else to tell us? (thoughts, ideas to improve)': '또 해줄 말이 있나요? (느낀 점, 개선 점)',
