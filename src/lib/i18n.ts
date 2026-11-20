@@ -412,4 +412,5 @@ const DICT: Record<string, string> = {
   'Other (write it here)': '기타 (직접 써주세요)',
   // day-7 interview: card question with no cards
   'No residents collected yet. You can skip this one.': '아직 수집한 주민이 없어요. 이 질문은 건너뛰어도 돼요.',
+  'Drag onto a town to move in': '마을로 끌어다 놓으면 입주해요',
 }

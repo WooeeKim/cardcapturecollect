@@ -74,6 +74,10 @@ export default function TownListScreen({
   const [adding, setAdding] = useState<Town | null>(null)
   const [popup, setPopup] = useState<{ message: string; actions: PopupAction[] } | null>(null)
   const [flying, setFlying] = useState<{ x: number; y: number } | null>(null)
+  // the waiting card held by a finger: offset from its resting spot (frame px), and the town row under the finger
+  const [carry, setCarry] = useState<{ x: number; y: number } | null>(null)
+  const [over, setOver] = useState<string | null>(null)
+  const carryStart = useRef<{ x: number; y: number } | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragDy, setDragDy] = useState(0)
   const thumbs = useRef(new Map<string, HTMLElement>())
@@ -157,7 +161,8 @@ export default function TownListScreen({
     setOpenId(t.id)
   }
 
-  function place(t: Town) {
+  // `carried` = where the dragged card was let go (offset from its resting spot), so it flies on from there
+  function place(t: Town, carried = { x: 0, y: 0 }) {
     if (mode === 'migrate' && t.id === homeId) return gotIt(tr('This person already lives here.'))
     if (isSquare(t)) {
       if (!loggedIn) return gotIt(tr('Log in to move someone to {name}.', { name: tr(SQUARE_NAME) }))
@@ -169,9 +174,54 @@ export default function TownListScreen({
     if (!from || !to) return onPlace(t.id)
     const a = framePoint(from.left + from.width / 2, from.top + from.height / 2)
     const b = framePoint(to.left + to.width / 2, to.top + to.height / 2)
-    setFlying({ x: b.x - a.x, y: b.y - a.y })
+    setFlying({ x: carried.x + b.x - a.x, y: carried.y + b.y - a.y })
     sfx.moveIn()
     setTimeout(() => onPlace(t.id), 650)
+  }
+
+  // ---- drag the waiting card onto a town (same as opening it and pressing Send / Migration) ----
+  const townAt = (clientX: number, clientY: number) => {
+    for (const el of document.elementsFromPoint(clientX, clientY)) {
+      const id = (el as HTMLElement).closest<HTMLElement>('[data-town]')?.dataset.town
+      if (id) return id
+    }
+    return null
+  }
+  const townById = (id: string) => (id === SQUARE_ID ? square?.town : state.towns.find((t) => t.id === id)) ?? null
+  function onCardDown(e: React.PointerEvent) {
+    if (flying) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    carryStart.current = framePoint(e.clientX, e.clientY)
+    setCarry({ x: 0, y: 0 })
+  }
+  function onCardMove(e: React.PointerEvent) {
+    const s0 = carryStart.current
+    if (!s0) return
+    const p = framePoint(e.clientX, e.clientY)
+    setCarry({ x: p.x - s0.x, y: p.y - s0.y })
+    setOver(townAt(e.clientX, e.clientY))
+    // near the top / bottom of the list: scroll it so far towns can be reached
+    const list = listEl.current
+    if (list) {
+      const r = list.getBoundingClientRect()
+      if (e.clientY < r.top + 60) list.scrollTop -= 12
+      else if (e.clientY > r.bottom - 60) list.scrollTop += 12
+    }
+  }
+  function onCardUp(e: React.PointerEvent) {
+    if (!carryStart.current) return
+    carryStart.current = null
+    const id = townAt(e.clientX, e.clientY)
+    const t = id ? townById(id) : null
+    const offset = carry ?? { x: 0, y: 0 }
+    setOver(null)
+    setCarry(null) // back to its spot unless it flies into the town
+    if (t && Math.hypot(offset.x, offset.y) > 12) place(t, offset)
+  }
+  function onCardCancel() {
+    carryStart.current = null
+    setOver(null)
+    setCarry(null)
   }
 
   // ---- reorder with the "=" handle ----
@@ -333,6 +383,7 @@ export default function TownListScreen({
             return (
               <div
                 key={t.id}
+                data-town={t.id}
                 className={`absolute inset-x-0 ${lifted ? 'z-10' : 'transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
                 style={{ top: rowTop(i) + (lifted ? dragDy : 0), height: isOpen ? ROW + OPEN_EXTRA : ROW }}
                 ref={(el) => {
@@ -340,6 +391,7 @@ export default function TownListScreen({
                   else thumbs.current.delete(t.id)
                 }}
               >
+                {over === t.id && <span aria-hidden className="pointer-events-none absolute inset-x-[12px] top-[-10px] h-[94px] rounded-[20px] border-[2.5px] border-dashed border-black/70 bg-black/5" />}
                 {isOpen ? (
                   detail(t)
                 ) : (
@@ -375,6 +427,7 @@ export default function TownListScreen({
 
           {square && (
             <div
+              data-town={SQUARE_ID}
               className="absolute inset-x-0 transition-[top] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
               style={{ top: squareTop, height: openId === SQUARE_ID ? ROW + squareExtra : ROW }}
               ref={(el) => {
@@ -382,6 +435,7 @@ export default function TownListScreen({
                 else thumbs.current.delete(SQUARE_ID)
               }}
             >
+              {over === SQUARE_ID && <span aria-hidden className="pointer-events-none absolute inset-x-[12px] top-[-10px] h-[94px] rounded-[20px] border-[2.5px] border-dashed border-black/70 bg-black/5" />}
               {openId === SQUARE_ID ? (
                 detail(square.town)
               ) : (
@@ -399,20 +453,31 @@ export default function TownListScreen({
         </div>
       </div>
 
-      {/* card waiting to move in (townList for migration) */}
+      {/* card waiting to move in (townList for migration): drag it onto a town, or open a town and press the pill */}
       {card && (
         <div
           ref={cardEl}
-          className="pointer-events-none absolute z-30 w-[115px] drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]"
+          aria-label={tr('Drag onto a town to move in')}
+          className={`absolute z-30 w-[115px] touch-none select-none ${carry ? 'cursor-grabbing drop-shadow-[0_10px_18px_rgba(0,0,0,0.3)]' : 'cursor-grab drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)]'}`}
           style={{
             left: wide ? 960 : 290,
             top: fromBottom(676),
-            transform: flying ? `translate(${flying.x}px, ${flying.y}px) scale(0.15) rotate(0deg)` : 'rotate(6deg)',
+            transform: flying
+              ? `translate(${flying.x}px, ${flying.y}px) scale(0.15) rotate(0deg)`
+              : carry
+                ? `translate(${carry.x}px, ${carry.y}px) scale(0.85) rotate(0deg)`
+                : 'rotate(6deg)',
             opacity: flying ? 0.2 : 1,
-            transition: 'transform 0.6s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.6s ease-in',
+            transition: carry ? 'none' : flying ? 'transform 0.6s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.6s ease-in' : 'transform 0.3s var(--ease-spring)',
           }}
+          onPointerDown={onCardDown}
+          onPointerMove={onCardMove}
+          onPointerUp={onCardUp}
+          onPointerCancel={onCardCancel}
         >
-          <CardView card={card} />
+          <div className="pointer-events-none">
+            <CardView card={card} />
+          </div>
         </div>
       )}
 
