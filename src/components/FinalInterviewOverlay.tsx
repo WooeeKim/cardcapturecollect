@@ -69,7 +69,8 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
       const v = all[q.id]
       if (Array.isArray(v) ? v.length : typeof v === 'string' && v.trim()) out[q.id] = Array.isArray(v) ? v : v!.trim()
       const other = String(all[`${q.id}_other`] ?? '').trim()
-      if ((Array.isArray(v) ? v.includes(OTHER) : v === OTHER) && other) out[`${q.id}_other`] = other
+      // 기타 text is kept next to the pick ("학교" + "기숙사"); for many, typing it also ticks 기타
+      if (other && (Array.isArray(v) ? v.includes(OTHER) : q.other)) out[`${q.id}_other`] = other
       if (q.kind === 'card' && all[`${q.id}_card`]) out[`${q.id}_card`] = all[`${q.id}_card`]
     }
     await onSubmit(out)
@@ -148,12 +149,12 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
               value={String(a[`${q.id}_other`] ?? '')}
               onChange={(e) => {
                 const t = e.target.value.slice(0, MAX)
-                // typing here picks 기타; clearing it un-picks it
-                setA((x) => ({ ...x, [`${q.id}_other`]: t, [q.id]: t.trim() ? OTHER : x[q.id] === OTHER ? '' : (x[q.id] ?? '') }))
+                // its own answer: a picked choice stays picked (both are saved)
+                setA((x) => ({ ...x, [`${q.id}_other`]: t }))
               }}
               placeholder={tr('Other (write it here)')}
               aria-label={tr('Other (write it here)')}
-              className={`min-h-[33px] w-full shrink-0 rounded-[8px] border-[1.6px] bg-white px-[11px] text-[16px] outline-none placeholder:text-[#9a9a9a] ${v === OTHER ? 'border-solid border-[#2e2e2e]' : 'border-dashed border-[#555]'}`}
+              className={`min-h-[33px] w-full shrink-0 rounded-[8px] border-[1.6px] bg-white px-[11px] text-[16px] outline-none placeholder:text-[#9a9a9a] ${String(a[`${q.id}_other`] ?? '').trim() ? 'border-solid border-[#2e2e2e]' : 'border-dashed border-[#555]'}`}
               {...ro}
             />
           )}

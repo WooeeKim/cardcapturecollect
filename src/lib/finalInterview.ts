@@ -23,7 +23,7 @@ export type FinalQuestion = {
   showCard?: string // long: show the card picked in that card question above the answer box
   prompt: Text
   choices?: Text[] // saved as the Korean label, whatever the app language
-  other?: boolean // "기타" with a text field (one / many)
+  other?: boolean // "기타" with a text field (one / many); a picked choice and the 기타 text are both kept
   optional?: boolean
   when?: (a: FinalAnswers) => boolean // only asked when this is true (a follow-up of the question before it)
 }
@@ -43,7 +43,7 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
     kind: 'one',
     other: true,
     when: no('commute_used'),
-    prompt: t('그럼 주로 언제 사용했나요?', 'Then when did you mostly use it?'),
+    prompt: t('그럼 주로 어디서 사용했나요?', 'Then where did you mostly use it?'),
     choices: [t('버스', 'On the bus'), t('카페', 'At a cafe'), t('길거리', 'On the street'), t('도서관', 'At the library'), t('학교', 'At school')],
   },
   {
@@ -62,6 +62,7 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
   {
     id: 'fun',
     kind: 'many',
+    other: true,
     prompt: t('앱을 쓰면서 재미있었던 것을\n모두 골라주세요.', 'What was fun in the app?\n(pick all)'),
     choices: [
       t('그리기', 'Drawing'),
@@ -69,7 +70,8 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
       t('주민들이 돌아다니는 것 관찰하기', 'Watching residents walk around'),
       t('주민들이 말하는 것 보기', 'Seeing residents talk'),
       t('마을 이사하기 (내 입맛대로 분류하기)', 'Moving towns (sorting my way)'),
-      t('콜렉션 보기 (콜멍)', 'Looking at my collection'),
+      t('콜렉션 보기', 'Looking at my collection'),
+      t('주민과 인터랙션', 'Interacting with residents'),
     ],
   },
   { id: 'fun_why', kind: 'long', when: (a) => Array.isArray(a.fun) && a.fun.length > 0, prompt: t('위에서 고른 것들이\n재미있었던 이유는 무엇인가요?', 'Why were those fun?') },
@@ -136,7 +138,7 @@ export function done(q: FinalQuestion, a: FinalAnswers) {
     if (list.includes(OTHER) && !other) return false
     return list.length > 0
   }
-  if (q.kind === 'one' && v === OTHER) return !!other
+  if (q.kind === 'one' && q.other) return (typeof v === 'string' && v.trim() !== '' && v !== OTHER) || !!other
   return typeof v === 'string' && v.trim() !== ''
 }
 

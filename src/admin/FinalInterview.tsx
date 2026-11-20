@@ -64,7 +64,10 @@ export function FinalInterview({ rows }: { rows: Row[] }) {
           <div key={q.id} className="rounded bg-neutral-100 p-3 text-sm">
             <p className="mb-2 font-medium whitespace-pre-line">{q.prompt.ko}</p>
             {[...q.choices!.map((c) => c.ko), ...(q.other ? ['기타'] : [])].map((c) => {
-              const n = latest.filter((r) => (Array.isArray(r.answers[q.id]) ? (r.answers[q.id] as string[]).includes(c) : r.answers[q.id] === c)).length
+              // 기타 = wrote something in the 기타 box (a pick and 기타 text can both be there)
+              const n = latest.filter((r) =>
+                c === '기타' ? !!r.answers[`${q.id}_other`] : Array.isArray(r.answers[q.id]) ? (r.answers[q.id] as string[]).includes(c) : r.answers[q.id] === c,
+              ).length
               return (
                 <div key={c} className="flex justify-between gap-2">
                   <span className="text-neutral-700">{c}</span>
