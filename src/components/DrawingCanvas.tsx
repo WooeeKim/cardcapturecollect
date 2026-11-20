@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, type ReactNode, type Ref } from 'react'
+import { drawEnd, drawMove, drawStart } from '../lib/sound'
 import FigureGuide from './FigureGuide'
 import { toLocal } from '../lib/frame'
 
@@ -242,16 +243,22 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
     settleResolution()
   }
 
+  // drawing sound: speed of the finger on the paper (lib/sound.ts loops pen / marker scratching)
+  const lastAt = useRef<{ p: Point; t: number } | null>(null)
+  useEffect(() => drawEnd, []) // leaving mid-stroke: no scratching left running
   function addPointer(id: number, p: Point, t: number) {
     pointers.current.set(id, p)
     if (pointers.current.size === 1) {
       gesture.current = { maxTouches: 1, startedAt: t, moved: false }
       const { tool, color, size } = live.current
       current.current = { tool, color, size, points: [toFraction(p)] }
+      drawStart(tool)
+      lastAt.current = { p, t }
     } else {
       // another finger: drop the stroke in progress, it's a gesture
       gesture.current.maxTouches = Math.max(gesture.current.maxTouches, pointers.current.size)
       current.current = null
+      drawEnd()
       pinch.current = pointers.current.size === 2 ? { ...pinchState(), view: view.current } : null
     }
     redraw()
@@ -280,13 +287,21 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
         return
       }
       if (!current.current || pointers.current.size > 1) return
-      current.current.points.push(toFraction(hostPoint(e)))
+      const hp = hostPoint(e)
+      current.current.points.push(toFraction(hp))
+      const last = lastAt.current
+      if (last && e.timeStamp > last.t) {
+        const d = Math.hypot(hp.x - last.p.x, hp.y - last.p.y)
+        drawMove((d * 1000) / (e.timeStamp - last.t), d)
+      }
+      lastAt.current = { p: hp, t: e.timeStamp }
       redraw()
     }
     const onUp = (e: PointerEvent) => {
       if (!pointers.current.has(e.pointerId)) return
       pointers.current.delete(e.pointerId)
       pinch.current = null
+      drawEnd()
       if (e.type === 'pointercancel') {
         current.current = null
         redraw()

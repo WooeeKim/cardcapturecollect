@@ -28,11 +28,13 @@ import chipPanel from '../assets/proto/v2/chip-panel.svg'
 import pillFollow from '../assets/proto/v2/pill-follow.svg'
 import pillMigration from '../assets/proto/v2/pill-migration.svg'
 import { framePoint, toLocal } from '../lib/frame'
+import { sfx } from '../lib/sound'
 import groundSvg from '../assets/proto/ground/ground.svg?raw'
 import groundIpadSvg from '../assets/proto/ground/ground-ipad.svg?raw'
 import tuftCrown from '../assets/proto/ground/tuft-crown.svg'
 import tuftSprout from '../assets/proto/ground/tuft-sprout.svg'
 import tuftLeaf from '../assets/proto/ground/tuft-leaf.svg'
+import drawingCard from '../assets/proto/v2/drawing-card.svg'
 import { SQUARE_ID } from '../lib/square'
 import { townName, tr } from '../lib/i18n'
 import { useWide } from '../lib/wide'
@@ -227,6 +229,12 @@ export default function MainScreen({
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [openId, setOpenId] = useState<string | null>(null) // card detail
   const [follow, setFollow] = useState<string | null>(focusId)
+  // opened on a card that just moved in (new drawing sent here, or migrated): 띠링 as the camera finds it
+  useEffect(() => {
+    if (!focusId) return
+    const t = window.setTimeout(() => sfx.arrive(), 300)
+    return () => clearTimeout(t)
+  }, [])
   const [menu, setMenu] = useState(false)
   // which neighbour town is in reach: 1 = prev (left end / pulled from the left), -1 = next, 0 = none
   const [side, setSide] = useState<1 | -1 | 0>(0)
@@ -474,6 +482,7 @@ export default function MainScreen({
           g.vx *= 0.6
           g.w = g.w * 0.4 + (Math.random() - 0.5) * 1.2
           vibrate(15)
+          sfx.bounce()
         } else {
           // land: keep the pose, but turn around the feet from now on, then stand back up
           const c = Math.cos(g.a)
@@ -490,6 +499,7 @@ export default function MainScreen({
           g.w = 0
           g.phase = 'land'
           vibrate(20)
+          sfx.land()
         }
       }
       // the body flies with its shadow: grip stays right above the spot on the ground
@@ -631,6 +641,7 @@ export default function MainScreen({
     // sideways hand speed carries it along the ground, up/down hand speed tosses it up / slams it down
     g.vx = cap(g.vx * THROW_SPEED)
     g.vz = cap(-g.vy * THROW_SPEED)
+    sfx.fly(Math.hypot(g.vx, g.vz))
     g.vy = 0
     g.phase = 'air'
     els.current.get(id)?.classList.remove('held')
@@ -806,6 +817,7 @@ export default function MainScreen({
     const p = pullRef.current
     const commit = zoneRef.current === 'commit'
     setZone(null)
+    if (commit && (p > 0 ? prev : next)) sfx.page() // 사락: off to the next town
     if (commit && p > 0 && prev) return onSwitch(prev.id)
     if (commit && p < 0 && next) return onSwitch(next.id)
     if (p !== 0) {
@@ -1020,13 +1032,9 @@ export default function MainScreen({
 
       {/* draw a new card */}
       {!open && !follow && (
-        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-5px] bottom-[-11px] h-[156px] w-[124px] ${empty ? 'animate-hint' : ''}`}>
-          {/* the Figma + card, with rounded corners */}
-          <span className="absolute top-1/2 left-1/2 flex h-[136px] w-[89px] -translate-x-1/2 -translate-y-1/2 rotate-[163.63deg] items-center justify-center rounded-[9px] border-[2.6px] border-[#222] bg-white">
-            <svg viewBox="0 0 28 28" className="size-[28px]" aria-hidden>
-              <path d="M14 2v24M2 14h24" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
-            </svg>
-          </span>
+        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-10.6px] bottom-[-49.6px] h-[167.8px] w-[137.7px] ${empty ? 'animate-hint' : ''}`}>
+          {/* the Figma drawing_card (02 메인 마을 › main-onboarding 1185:8533): a hand-drawn + card, tilted, running off the corner */}
+          <img src={drawingCard} alt="" className="absolute top-1/2 left-1/2 h-[147px] w-[94.24px] max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-[20deg]" />
         </button>
       )}
 

@@ -2,12 +2,12 @@ import { useState } from 'react'
 import backIcon from '../assets/proto/v2/back40.svg'
 import boxSvg from '../assets/proto/v2/mp-box.svg'
 import personSvg from '../assets/proto/v2/mp-person.svg'
-import lineA from '../assets/proto/v2/mp-line-a.svg'
-import lineB from '../assets/proto/v2/mp-line-b.svg'
+import lineImg from '../assets/proto/v2/mp-line.svg'
 import underline from '../assets/proto/v2/mp-underline.svg'
 import toggleOn from '../assets/proto/v2/mp-toggle.svg'
 import pill from '../assets/proto/v2/tl-edit.svg'
 import { FeedbackSheet, LoginSheet, PasswordSheet, Sheet } from '../components/LoginSheet'
+import { setSound, soundEnabled } from '../lib/sound'
 import { ToggleIcon } from '../components/drawIcons'
 import { Bottom, LangButton, Popup, type PopupAction } from '../components/ui'
 import { PillBack, PillFinish } from '../components/v2'
@@ -74,6 +74,7 @@ export default function MyPageScreen({
   const [name, setName] = useState(nickname)
   const [about, setAbout] = useState(intro)
   const [notify, setNotify] = useState(readNotify)
+  const [sound, setSoundOn] = useState(soundEnabled)
 
   const gotIt = (message: string) => setPopup({ message, actions: [{ label: tr('Got it!'), onClick: () => setPopup(null) }] })
   const startEdit = () => {
@@ -96,13 +97,16 @@ export default function MyPageScreen({
   // list rows: Figma pitch 59.8, first at 359
   const ROW0 = 359
   const PITCH = 59.8
+  const toggle = (on: boolean) => (on ? <img src={toggleOn} alt="" className="h-[26px] w-[49px]" /> : <span className="block h-[23px] w-[46px]"><ToggleIcon on={false} /></span>)
   type Row = { label: string; tone?: string; soon?: boolean; right?: React.ReactNode; onClick?: () => void; disabled?: boolean }
   const rows: Row[] = ([
     {
       label: tr('Notification setting'),
       onClick: toggleNotify,
-      right: notify ? <img src={toggleOn} alt="" className="h-[25px] w-[48px]" /> : <span className="block h-[23px] w-[46px]"><ToggleIcon on={false} /></span>,
+      right: toggle(notify),
     },
+    // sound on/off: developer accounts only (regular accounts have no sound for now)
+    canReset && { label: tr('Sound effects'), onClick: () => { setSound(!sound); setSoundOn(!sound) }, right: toggle(sound) },
     { label: tr('Subway-TI'), onClick: onInterview },
     { label: tr('Notice'), onClick: () => gotIt(tr('Notices are coming soon.')) },
     { label: tr('FAQ'), onClick: () => gotIt(tr('FAQ is coming soon.')) },
@@ -154,7 +158,8 @@ export default function MyPageScreen({
                   {r.soon && <span className="text-[14px]">{tr('Coming Soon')}</span>}
                   {r.right}
                 </Tag>
-                {i < rows.length - 1 && <img src={i % 2 ? lineB : lineA} alt="" className="pointer-events-none absolute left-[33px] h-[4.3px] w-[335px] max-w-none" style={{ top: top + 43 }} />}
+                {/* light grey hand-drawn divider (Figma 06 마이페이지, Vector 540–545) */}
+                {i < rows.length - 1 && <img src={lineImg} alt="" className="pointer-events-none absolute left-[34px] h-[3.5px] w-[333.8px] max-w-none" style={{ top: top + 42.5 }} />}
               </div>
             )
           })}

@@ -8,6 +8,7 @@ import { setFrameMatrix } from './lib/frame'
 import { WIDE_H, WIDE_W, setWide } from './lib/wide'
 import { preloadAssets } from './lib/preload'
 import { installTouchGlow } from './lib/touchGlow'
+import { installSound } from './lib/sound'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
@@ -114,12 +115,25 @@ function pinPage() {
 
   // The keyboard covers the bottom of the frame and the page can't scroll (see above), so the frame itself
   // moves up until the focused field is above the keyboard (through the frame matrix, so touches stay right).
-  // A box marked data-own-keyboard (Draw › Memo) moves itself instead.
+  // A box marked data-own-keyboard (Draw › Memo) moves itself instead. Inside a box marked data-keyboard-box
+  // (an open town in the town list) the whole box, with everything hanging off it, comes up, not just the field.
   const lift = () => {
     const el = document.activeElement
     let next = 0
     if (vv && typing() && el && !el.closest('[data-own-keyboard]') && /phone|tablet/.test(document.documentElement.className)) {
-      const r = el.getBoundingClientRect()
+      const box = el.closest('[data-keyboard-box]')
+      let r: { top: number; bottom: number } = el.getBoundingClientRect()
+      if (box) {
+        let top = Infinity
+        let bottom = -Infinity
+        for (const n of [box, ...box.querySelectorAll('*')]) {
+          const b = n.getBoundingClientRect()
+          if (!b.height) continue
+          top = Math.min(top, b.top)
+          bottom = Math.max(bottom, b.bottom)
+        }
+        r = { top, bottom }
+      }
       const visTop = vv.offsetTop + 8
       const visBottom = vv.offsetTop + vv.height - 12
       // field position without the current lift; a field taller than the space keeps its top visible
@@ -153,5 +167,8 @@ function Boot() {
     </>
   )
 }
-if (!admin) installTouchGlow()
+if (!admin) {
+  installTouchGlow()
+  installSound()
+}
 createRoot(document.getElementById('root')!).render(<StrictMode>{admin ? <AdminPage /> : <Boot />}</StrictMode>)
