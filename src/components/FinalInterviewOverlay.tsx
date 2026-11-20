@@ -117,6 +117,19 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
         </p>
         <p className="mt-[8px] shrink-0 text-[22px] leading-[1.2] whitespace-pre-line">{say(q.prompt)}</p>
         <div className="mt-[12px] flex min-h-0 flex-1 flex-col gap-[5px] overflow-y-auto pb-[4px] [scrollbar-width:none]">
+          {/* "why" after a card pick: that card above the answer box */}
+          {q.showCard &&
+            (() => {
+              const c = cards.find((x) => x.id === a[`${q.showCard}_card`])
+              return c ? (
+                <span className="mb-[6px] flex shrink-0 items-end gap-[10px]">
+                  <span className="block aspect-[360/515] w-[92px] overflow-hidden rounded-[8px] bg-white p-[4px] ring-2 ring-black">
+                    <img src={c.image} alt="" className="size-full object-contain" draggable={false} />
+                  </span>
+                  <span className="pb-[2px] text-[15px] leading-[1.2] text-[#555]">{c.nickname || serialLabel(c)}</span>
+                </span>
+              ) : null
+            })()}
           {(q.kind === 'short' || q.kind === 'long') && (
             <textarea
               value={(v as string) ?? ''}

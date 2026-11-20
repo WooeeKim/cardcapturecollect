@@ -17,6 +17,7 @@ export type FinalAnswers = Record<string, string | string[]>
 export type FinalQuestion = {
   id: string
   kind: 'short' | 'long' | 'one' | 'many' | 'card'
+  showCard?: string // long: show the card picked in that card question above the answer box
   prompt: Text
   choices?: Text[] // saved as the Korean label, whatever the app language
   other?: boolean // "기타" with a text field (one / many)
@@ -32,16 +33,8 @@ const yes = (id: string) => (a: FinalAnswers) => a[id] === '예'
 const no = (id: string) => (a: FinalAnswers) => a[id] === '아니오'
 
 export const FINAL_QUESTIONS: FinalQuestion[] = [
-  // 1 — on the move? yes → how it felt; no → where/when then
-  { id: 'commute_used', kind: 'one', prompt: t('주로 이동 시간에 앱을 사용했나요?', 'Did you mostly use the app while on the move?'), choices: [YES, NO] },
-  {
-    id: 'commute_feel',
-    kind: 'many',
-    other: true,
-    when: yes('commute_used'),
-    prompt: t('그 이동 시간이 어떻게 느껴졌나요?\n(해당하는 것 모두)', 'How did that time feel?\n(pick all that apply)'),
-    choices: [t('짧게 느껴졌다', 'It felt short'), t('길게 느껴졌다', 'It felt long'), t('재밌었다', 'It was fun'), t('지루했다', 'It was boring'), t('시간에 쫓겼다', 'I was in a rush'), t('하다가 껐다', 'I closed it halfway')],
-  },
+  // 1 — on the move? no → 1-1 when then; both → how that time felt
+  { id: 'commute_used', kind: 'one', prompt: t('주로 이동 시간에 앱을 사용했나요?', 'Did you mostly use the app\nwhile on the move?'), choices: [YES, NO] },
   {
     id: 'used_where',
     kind: 'one',
@@ -50,11 +43,19 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
     prompt: t('그럼 주로 언제 사용했나요?', 'Then when did you mostly use it?'),
     choices: [t('버스', 'On the bus'), t('카페', 'At a cafe'), t('길거리', 'On the street'), t('도서관', 'At the library'), t('학교', 'At school')],
   },
+  {
+    id: 'commute_feel',
+    kind: 'many',
+    other: true,
+    when: (a) => !!a.commute_used, // after 1-1 (where) on 'no', straight after 1 on 'yes'
+    prompt: t('그 시간이 어떻게 느껴졌나요?\n(해당하는 것 모두)', 'How did that time feel?\n(pick all that apply)'),
+    choices: [t('짧게 느껴졌다', 'It felt short'), t('길게 느껴졌다', 'It felt long'), t('재밌었다', 'It was fun'), t('지루했다', 'It was boring'), t('시간에 쫓겼다', 'I was in a rush'), t('하다가 껐다', 'I closed it halfway')],
+  },
   // 2, 3 — pick from your own cards
-  { id: 'memorable', kind: 'card', prompt: t('제일 기억에 남는 주민을 골라주세요.', 'Pick the resident you remember most.') },
-  { id: 'memorable_why', kind: 'long', when: (a) => !!a.memorable, prompt: t('방금 그 주민을 고른 이유는?', 'Why did you pick them?') },
-  { id: 'favorite', kind: 'card', prompt: t('7일 동안의 최애 주민을 골라주세요.', 'Pick your favorite resident of the 7 days.') },
-  { id: 'favorite_why', kind: 'long', when: (a) => !!a.favorite, prompt: t('최애로 고른 이유는?', 'Why are they your favorite?') },
+  { id: 'memorable', kind: 'card', prompt: t('제일 기억에 남는 주민을 골라주세요.', 'Pick the resident\nyou remember most.') },
+  { id: 'memorable_why', kind: 'long', showCard: 'memorable', when: (a) => !!a.memorable, prompt: t('이 주민을 고른 이유는?', 'Why did you pick this resident?') },
+  { id: 'favorite', kind: 'card', prompt: t('7일 동안의 최애 주민을 골라주세요.', 'Pick your favorite resident\nof the 7 days.') },
+  { id: 'favorite_why', kind: 'long', showCard: 'favorite', when: (a) => !!a.favorite, prompt: t('이 주민을 최애로 고른 이유는?', 'Why is this resident\nyour favorite?') },
   {
     id: 'fun',
     kind: 'many',
@@ -83,19 +84,19 @@ export const FINAL_QUESTIONS: FinalQuestion[] = [
     ],
   },
   { id: 'wanted_more', kind: 'long', optional: true, prompt: t('그 외에 추가되면 좋겠는 기능이\n있다면 써주세요.', 'Any other feature you’d like?') },
-  { id: 'new_interest', kind: 'long', prompt: t('앱을 쓰면서 새롭게 알게 된 관심사나\n‘나’에 대해 알게 된 점이 있나요?', 'Did you find a new interest, or something\nnew about yourself?') },
+  { id: 'new_interest', kind: 'long', prompt: t('앱을 쓰면서 새롭게 알게 된 관심사나\n‘나’에 대해 알게 된 점이 있나요?', 'Did you find a new interest,\nor something new\nabout yourself?') },
   { id: 'observed', kind: 'long', prompt: t('관찰할 때 무엇을 주로 봤나요?\n그 사이에 공통점이 있나요?', 'What did you mostly look at?\nAnything in common?') },
   // yes/no first, the follow-up only on yes
   { id: 'let_go_used', kind: 'one', prompt: t('주민을 놓아준 적이 있나요?', 'Did you ever let a resident go?'), choices: [YES, NO] },
   { id: 'let_go', kind: 'long', when: yes('let_go_used'), prompt: t('주민을 놓아줄 때\n기분이 어땠나요?', 'How did it feel\nto let a resident go?') },
   { id: 'followed', kind: 'one', prompt: t('따라가기 기능을 써봤나요?', 'Did you try following a resident?'), choices: [YES, NO] },
   { id: 'follow_why', kind: 'long', when: yes('followed'), prompt: t('왜 따라가 봤나요?\n기분은 어땠나요?', 'Why did you follow them?\nHow did it feel?') },
-  { id: 'moved', kind: 'one', prompt: t('주민을 다른 마을로 이사시켜 본 적이 있나요?', 'Did you ever move a resident to another town?'), choices: [YES, NO] },
-  { id: 'moved_why', kind: 'long', when: yes('moved'), prompt: t('왜 옮겼나요?', 'Why did you move them?') },
+  { id: 'moved', kind: 'one', prompt: t('주민을 다른 마을로\n이사시켜 본 적이 있나요?', 'Did you ever move a resident\nto another town?'), choices: [YES, NO] },
+  { id: 'moved_why', kind: 'long', when: yes('moved'), prompt: t('왜 옮겼나요?\n옮길 때 기분은 어땠나요?', 'Why did you move them?\nHow did it feel?') },
   {
     id: 'imagined_vs_real',
     kind: 'one',
-    prompt: t('상상해서 그린 것과 실제로 보고 그린 것 중\n뭐가 더 재밌었나요?', 'Which was more fun: drawing from\nimagination, or from life?'),
+    prompt: t('상상해서 그린 것과\n실제로 보고 그린 것 중\n뭐가 더 재밌었나요?', 'Which was more fun: drawing from\nimagination, or from life?'),
     choices: [t('상상해서 그린 것', 'From imagination'), t('실제로 보고 그린 것', 'From life'), t('비슷했다', 'About the same'), t('둘 중 하나만 해봤다', 'I only tried one')],
   },
   { id: 'imagined_why', kind: 'long', optional: true, when: (a) => !!a.imagined_vs_real, prompt: t('그렇게 생각한 이유는?', 'Why?') },
