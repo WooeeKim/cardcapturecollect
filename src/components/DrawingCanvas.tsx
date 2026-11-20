@@ -290,7 +290,10 @@ export default function DrawingCanvas({ tool, color, size, guide = true, onChang
       const hp = hostPoint(e)
       current.current.points.push(toFraction(hp))
       const last = lastAt.current
-      if (last && e.timeStamp > last.t) drawMove((Math.hypot(hp.x - last.p.x, hp.y - last.p.y) * 1000) / (e.timeStamp - last.t))
+      if (last && e.timeStamp > last.t) {
+        const d = Math.hypot(hp.x - last.p.x, hp.y - last.p.y)
+        drawMove((d * 1000) / (e.timeStamp - last.t), d)
+      }
       lastAt.current = { p: hp, t: e.timeStamp }
       redraw()
     }

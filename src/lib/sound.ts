@@ -10,14 +10,15 @@ import tap4 from '../assets/sounds/tap-4.wav'
 import popClip from '../assets/sounds/pop.wav'
 import eraserLoop from '../assets/sounds/eraser-loop.wav'
 import penLoop from '../assets/sounds/pen-loop.wav'
-import markerLoop from '../assets/sounds/marker-loop.wav'
+import marker1 from '../assets/sounds/marker-1.wav'
+import marker2 from '../assets/sounds/marker-2.wav'
 import pageClip from '../assets/sounds/page.wav'
 import moveInClip from '../assets/sounds/move-in.wav'
 import cardDoneClip from '../assets/sounds/card-done.wav'
 import arriveClip from '../assets/sounds/arrive.wav'
 import flyClip from '../assets/sounds/fly.wav'
 
-const CLIPS = { tap2, tap4, pop: popClip, pen: penLoop, marker: markerLoop, eraser: eraserLoop, page: pageClip, moveIn: moveInClip, cardDone: cardDoneClip, arrive: arriveClip, fly: flyClip }
+const CLIPS = { tap2, tap4, pop: popClip, pen: penLoop, marker1, marker2, eraser: eraserLoop, page: pageClip, moveIn: moveInClip, cardDone: cardDoneClip, arrive: arriveClip, fly: flyClip }
 type Clip = keyof typeof CLIPS
 const buffers: Partial<Record<Clip, AudioBuffer>> = {}
 let loading = false
@@ -158,12 +159,20 @@ export const sfx = {
   },
 }
 
-// ---------- drawing: pen / marker on paper, looped while a stroke is drawn, as loud as the hand is fast ----------
+// ---------- drawing: pen / eraser on paper looped while a stroke is drawn, as loud as the hand is fast;
+// the highlighter plays short marker swipes instead (two recordings, taking turns) every stretch of the stroke ----------
 let draw: { src: AudioBufferSourceNode; g: GainNode } | null = null
+let marker: { dist: number; last: number; next: 0 | 1 } | null = null
+const SWIPE_EVERY = 110 // screen px of highlighter stroke per swipe sound
+const SWIPE_GAP = 0.16 // s, at least this between swipes (fast scribbles don't machine-gun)
 export function drawStart(tool: 'pen' | 'highlighter' | 'eraser') {
   drawEnd()
+  if (tool === 'highlighter') {
+    marker = { dist: SWIPE_EVERY - 10, last: 0, next: Math.random() < 0.5 ? 0 : 1 } // first swipe after ~10px
+    return
+  }
   const c = live()
-  const buf = buffers[tool === 'pen' ? 'pen' : tool === 'eraser' ? 'eraser' : 'marker']
+  const buf = buffers[tool === 'pen' ? 'pen' : 'eraser']
   if (!c || !buf) return
   const src = c.createBufferSource()
   src.buffer = buf
@@ -175,13 +184,24 @@ export function drawStart(tool: 'pen' | 'highlighter' | 'eraser') {
   src.start(0, Math.random() * buf.duration) // a different bit of the recording each stroke
   draw = { src, g }
 }
-// speed = finger speed on the paper, screen px/s
-export function drawMove(speed: number) {
-  if (!draw || !ctx) return
+// speed = finger speed on the paper (screen px/s), dist = how far it moved since the last call (screen px)
+export function drawMove(speed: number, dist = 0) {
   const level = Math.min(1, speed / 900) * 0.9
+  if (marker) {
+    marker.dist += dist
+    const c = live()
+    if (!c || marker.dist < SWIPE_EVERY || c.currentTime - marker.last < SWIPE_GAP) return
+    marker.dist = 0
+    marker.last = c.currentTime
+    clip(marker.next ? 'marker2' : 'marker1', { rate: vary(1, 0.07), gain: 0.25 + level * 0.6 })
+    marker.next = marker.next ? 0 : 1
+    return
+  }
+  if (!draw || !ctx) return
   draw.g.gain.setTargetAtTime(level, ctx.currentTime, 0.04)
 }
 export function drawEnd() {
+  marker = null
   if (!draw || !ctx) return
   const { src, g } = draw
   draw = null
