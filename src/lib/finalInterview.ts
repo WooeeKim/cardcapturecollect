@@ -10,7 +10,10 @@ import { deviceId } from './gilbti'
 export const FINAL_DAY = '2026-11-22'
 const FROM = new Date(2026, 10, 22, 22) // 11/22 22:00, phone's local time
 const UNTIL = new Date(2026, 11, 1) // 12/1 00:00
-export const finalOpen = (now = new Date()) => now >= FROM && now < UNTIL
+// The real interview for testers is OFF until the team approves it (try it in admin › 7일차 인터뷰 시뮬레이터 or
+// <site>/?interview=final). Set to true before 11/22 22:00 to send it to everyone.
+export const FINAL_LIVE = false
+export const finalOpen = (now = new Date()) => FINAL_LIVE && now >= FROM && now < UNTIL
 
 type Text = { ko: string; en: string }
 export type FinalAnswers = Record<string, string | string[]>
