@@ -1032,9 +1032,10 @@ export default function MainScreen({
 
       {/* draw a new card */}
       {!open && !follow && (
-        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-10.6px] bottom-[-49.6px] h-[167.8px] w-[137.7px] ${empty ? 'animate-hint' : ''}`}>
-          {/* the Figma drawing_card (02 메인 마을 › main-onboarding 1185:8533): a hand-drawn + card, tilted, running off the corner */}
-          <img src={drawingCard} alt="" className="absolute top-1/2 left-1/2 h-[147px] w-[94.24px] max-w-none -translate-x-1/2 -translate-y-1/2 -rotate-[20deg]" />
+        <button aria-label={tr('Draw someone')} onClick={onDraw} className={`absolute right-[-6.7px] bottom-[-14.9px] h-[152.5px] w-[125.2px] ${empty ? 'animate-hint' : ''}`}>
+          {/* the Figma drawing_card (02 메인 마을 › main-onboarding 1185:8533): 83×131 card at x 283.5 y 766.5, tilted 21.24°
+              around its top-left corner. The exported SVG is drawn 1.1× big, so it's shown at 85.7×133.6 (stroke included). */}
+          <img src={drawingCard} alt="" className="absolute top-[28.97px] left-[-1.19px] h-[133.64px] w-[85.67px] max-w-none origin-[1.19px_1.21px] -rotate-[21.24deg]" />
         </button>
       )}
 
