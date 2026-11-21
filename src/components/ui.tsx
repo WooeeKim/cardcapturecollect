@@ -233,9 +233,9 @@ function StretchPill({ shape, fill, stroke = '#000', strokeWidth = 2, className 
 }
 
 // town chip over an open card (Figma 1207:9188 + 9189 + 9191): grey hand-drawn pill, the chief in a small circle, the name
-export function TownChip({ name, image, thumb, className = '' }: { name: string; image?: string; thumb?: string; className?: string }) {
+export function TownChip({ name, image, thumb, className = '', style }: { name: string; image?: string; thumb?: string; className?: string; style?: React.CSSProperties }) {
   return (
-    <span className={`flex h-[45px] items-center pr-[19px] pl-[4.5px] font-hand text-[20px] leading-[1.1] text-black ${className}`}>
+    <span style={style} className={`flex h-[45px] items-center pr-[19px] pl-[4.5px] font-hand text-[20px] leading-[1.1] text-black ${className}`}>
       {/* the Figma vector is turned 180° */}
       <StretchPill shape={TOWN_CHIP} fill="#CCCCCC" className="rotate-180" />
       <span className="relative">
