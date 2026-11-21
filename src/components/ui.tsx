@@ -1,7 +1,7 @@
 import xIcon from '../assets/proto/x.svg'
 import { ConfirmBubble, PillBack, PillFinish } from './v2'
 import handleIcon from '../assets/proto/handle.svg'
-import goBox from '../assets/proto/gobox.svg'
+import goBox from '../assets/proto/v2/go-box.svg'
 import backIcon from '../assets/proto/back.svg'
 import plusIcon from '../assets/proto/plus.svg'
 import underlineSvg from '../assets/proto/underline.svg'
@@ -34,10 +34,11 @@ export function XIcon() {
   return <img src={xIcon} alt="" className="h-[16.8px] w-[14.3px]" />
 }
 export function GoTag() {
+  // Figma 03 마을 목록 › townList-detail (915:885 Vector 538): white rounded hand-drawn box, thick #424242 outline
   return (
-    <span className="relative block h-[37px] w-[54px]">
-      <img src={goBox} alt="" className="absolute inset-0 size-full" />
-      <span className="absolute top-[3px] left-[13px] font-hand text-[25px] leading-[normal]">{tr('Go')}</span>
+    <span className="relative block h-[38px] w-[57px]">
+      <img src={goBox} alt="" className="absolute top-[-2.5px] left-[-2.5px] h-[43px] w-[62px] max-w-none" />
+      <span className="absolute top-[3px] left-[15px] font-hand text-[25px] leading-[normal]">{tr('Go')}</span>
     </span>
   )
 }

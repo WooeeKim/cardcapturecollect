@@ -360,7 +360,7 @@ export default function TownListScreen({
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
-          <button aria-label={tr('Go to {name}', { name: sq ? tr(SQUARE_NAME) : townName(t.name) })} onClick={() => onGo(t.id)} className="absolute top-[70px] left-[39px] z-10">
+          <button aria-label={tr('Go to {name}', { name: sq ? tr(SQUARE_NAME) : townName(t.name) })} onClick={() => onGo(t.id)} className="absolute top-[69px] left-[38px] z-10">
             <GoTag />
           </button>
         )}
