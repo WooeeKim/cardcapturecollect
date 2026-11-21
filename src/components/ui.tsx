@@ -47,7 +47,8 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
   return (
     <button type="button" onClick={onClick} className={`${className.includes('absolute') ? '' : 'relative'} font-hand leading-[normal] ${dim ? 'text-[#646464]' : ''} ${className}`} style={style}>
       {children}
-      <img src={underlineSvg} alt="" className={`absolute inset-x-[-3px] -bottom-[2px] h-[3px] w-[calc(100%+6px)] max-w-none ${dim ? 'opacity-60' : ''} ${light ? 'invert' : ''}`} />
+      {/* hand-drawn underline (Figma 00 Components › TextButton): follows the text's width, 4px past each end */}
+      <img src={underlineSvg} alt="" className={`absolute left-[-4px] -bottom-[2px] h-[3px] w-[calc(100%+8px)] max-w-none ${dim ? 'opacity-60' : ''} ${light ? 'invert' : ''}`} />
     </button>
   )
 }
