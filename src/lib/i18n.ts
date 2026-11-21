@@ -403,6 +403,11 @@ const DICT: Record<string, string> = {
   "Couldn't make the image. Try again in a moment.": '이미지를 만들지 못했어요. 잠시 후 다시 해 주세요.',
   'Admin view: read-only.': '어드민 보기: 읽기 전용이에요.',
   // day-7 interview (components/FinalInterviewOverlay.tsx)
+  // between the last 10 p.m. interview and the day-7 one
+  'Thanks for sharing today!': '오늘 이야기, 고마워요!',
+  'It’s our last day, so there’s': '마지막 날인 오늘은',
+  'one more little interview.': '작은 인터뷰가 하나 더 있어요.',
+  'Sounds good': '좋아요',
   'Last interview!': '마지막 인터뷰예요!',
   'Let’s look back on 7 days.': '7일을 함께 돌아봐요.',
   'Thank you for': '7일 동안',

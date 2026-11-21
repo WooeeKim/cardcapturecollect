@@ -11,7 +11,7 @@ export const FINAL_DAY = '2026-11-22'
 const FROM = new Date(2026, 10, 22, 22) // 11/22 22:00, phone's local time
 const UNTIL = new Date(2026, 11, 1) // 12/1 00:00
 // The real interview for testers (approved 11/20): opens 11/22 22:00, right after that day's 10 p.m. interview.
-// Set to false to stop it; the admin › 7일차 인터뷰 시뮬레이터 and <site>/?interview=final work either way.
+// Set to false to stop it; <site>/?interview=final previews it either way.
 export const FINAL_LIVE = true
 export const finalOpen = (now = new Date()) => FINAL_LIVE && now >= FROM && now < UNTIL
 

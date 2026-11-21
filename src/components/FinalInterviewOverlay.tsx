@@ -34,13 +34,14 @@ function Pill({ label, top, onClick, disabled = false, wide = false, x = 0, grey
   )
 }
 
-type Step = 'start' | number | 'thanks'
+type Step = 'bridge' | 'start' | number | 'thanks'
 
 export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }: { cards?: Card[]; onSubmit: (a: FinalAnswers) => Promise<void> | void; onClose: () => void }) {
   const lang = useLang()
   const wide = useWide()
   const say = (x: { ko: string; en: string }) => (lang === 'en' ? x.en : x.ko)
-  const [step, setStep] = useState<Step>('start')
+  // 'bridge': a warm line right after the 10 p.m. interview, before this one starts
+  const [step, setStep] = useState<Step>('bridge')
   const [a, setA] = useState<FinalAnswers>({})
   const [leaving, setLeaving] = useState<{ q: FinalQuestion; idx: number; pad: number } | null>(null)
 
@@ -212,17 +213,18 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
     <img key={i} src={sheet} alt="" className="absolute h-[428px] w-[370px] max-w-none" style={{ left: SHEETS[i].left - 1, top: SHEETS[i].top - 1 }} />
   )
 
-  const bubbleWith = (lines: string[], label: string, onClick: () => void) => (
+  // `tall`: three lines (the bubble drawing stretches a little taller)
+  const bubbleWith = (lines: string[], label: string, onClick: () => void, tall = false) => (
     <div key={label} className="animate-pop-in">
-      <img src={bubble} alt="" className="absolute top-[353px] left-[73px] h-[122px] w-[257px] max-w-none" />
-      <p className="absolute top-[380px] left-1/2 w-[240px] -translate-x-1/2 text-center text-[23px] leading-[1.15]">
+      <img src={bubble} alt="" className="absolute left-[73px] w-[257px] max-w-none" style={tall ? { top: 338, height: 152 } : { top: 353, height: 122 }} />
+      <p className={`absolute left-1/2 w-[250px] -translate-x-1/2 text-center leading-[1.15] ${tall ? 'top-[362px] text-[21px]' : 'top-[380px] text-[23px]'}`}>
         {lines.map((l, i) => (
           <span key={i} className="block">
             {l}
           </span>
         ))}
       </p>
-      <Pill label={label} top={452} onClick={onClick} wide={label.length > 4} />
+      <Pill label={label} top={tall ? 467 : 452} onClick={onClick} wide={label.length > 4} />
     </div>
   )
 
@@ -230,6 +232,7 @@ export default function FinalInterviewOverlay({ cards = [], onSubmit, onClose }:
   return (
     <div role="dialog" aria-modal className="animate-fade-in absolute inset-0 z-[60] overflow-hidden bg-black/35 font-hand backdrop-blur-[1px]">
       <div className={`absolute top-0 h-[874px] origin-center ${wide ? 'w-[402px]' : 'inset-x-0'}`} style={{ left: wide ? COL_X : undefined, transform: 'translateY(calc(var(--cut) * -0.5px)) scale(var(--interview-scale))' }}>
+        {step === 'bridge' && bubbleWith([tr('Thanks for sharing today!'), tr('It’s our last day, so there’s'), tr('one more little interview.')], tr('Sounds good'), () => setStep('start'), true)}
         {step === 'start' && bubbleWith([tr('Last interview!'), tr('Let’s look back on 7 days.')], tr('Start'), () => setStep(0))}
         {step === 'thanks' && !leaving && bubbleWith([tr('Thank you for'), tr('these 7 days!')], tr('Close'), onClose)}
         {q && (
