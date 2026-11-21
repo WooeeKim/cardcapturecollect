@@ -75,12 +75,48 @@ function strokeAll(ctx: CanvasRenderingContext2D, strokes: Stroke[]) {
   for (const s of strokes) drawStroke(ctx, s)
 }
 
+// A see-through stroke is drawn solid on a scratch canvas, then laid down once at its opacity.
+// Safari cuts a line of more than 256 points into separate pieces (WebKit bug 223799), so a highlighter
+// held for a few seconds came out as two strokes, darker where the pieces overlap. Drawn solid, the
+// pieces merge invisibly; the opacity is applied once to the whole stroke.
+let scratch: HTMLCanvasElement | null = null
+const alphaOf = (color: string) => (/^#[0-9a-f]{8}$/i.test(color) ? parseInt(color.slice(7), 16) / 255 : 1)
+
 function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
+  const alpha = s.tool === 'eraser' ? 1 : alphaOf(s.color)
+  if (alpha >= 1) return tracePath(ctx, s, s.color, s.tool === 'eraser' ? 'destination-out' : 'source-over')
   const { width: w, height: h } = ctx.canvas
-  ctx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over'
-  ctx.strokeStyle = s.color
-  // pen lines at half the step size (thinnest = 1), fill 3×, eraser as is
-  ctx.lineWidth = s.size * (s.tool === 'highlighter' ? 3 : s.tool === 'pen' ? 0.5 : 1) * (w / 300)
+  scratch ??= document.createElement('canvas')
+  if (scratch.width !== w || scratch.height !== h) {
+    scratch.width = w
+    scratch.height = h
+  }
+  // only the stroke's own box is cleared and copied, not the whole card
+  const pad = lineWidth(s, w) / 2 + 2
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+  for (const p of s.points) {
+    x0 = Math.min(x0, p.x * w); y0 = Math.min(y0, p.y * h); x1 = Math.max(x1, p.x * w); y1 = Math.max(y1, p.y * h)
+  }
+  const bx = Math.max(0, Math.floor(x0 - pad)), by = Math.max(0, Math.floor(y0 - pad))
+  const bw = Math.min(w, Math.ceil(x1 + pad)) - bx, bh = Math.min(h, Math.ceil(y1 + pad)) - by
+  if (bw <= 0 || bh <= 0) return
+  const sc = scratch.getContext('2d')!
+  sc.setTransform(1, 0, 0, 1, 0, 0)
+  sc.clearRect(bx, by, bw, bh)
+  tracePath(sc, s, s.color.slice(0, 7), 'source-over')
+  ctx.globalAlpha = alpha
+  ctx.drawImage(scratch, bx, by, bw, bh, bx, by, bw, bh)
+  ctx.globalAlpha = 1
+}
+
+// pen lines at half the step size (thinnest = 1), fill 3×, eraser as is
+const lineWidth = (s: Stroke, w: number) => s.size * (s.tool === 'highlighter' ? 3 : s.tool === 'pen' ? 0.5 : 1) * (w / 300)
+
+function tracePath(ctx: CanvasRenderingContext2D, s: Stroke, color: string, op: GlobalCompositeOperation) {
+  const { width: w, height: h } = ctx.canvas
+  ctx.globalCompositeOperation = op
+  ctx.strokeStyle = color
+  ctx.lineWidth = lineWidth(s, w)
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
   ctx.beginPath()
