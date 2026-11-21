@@ -491,16 +491,20 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
                 e.stopPropagation()
                 nickRef.current?.focus()
               }}>
-                <input
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder={tr('Nickname')}
-                  maxLength={24}
-                  aria-label={tr('Nickname')}
-                  ref={nickRef}
-                  size={Math.max(8, nickname.length + 1)}
-                  className="max-w-[320px] bg-transparent text-[21px] leading-[1.1] tracking-[-0.42px] text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d]"
-                />
+                {/* the box hugs the typed name, like the place box: an invisible copy of the text sets the width */}
+                <span className="relative inline-grid max-w-[320px] text-[21px] leading-[1.1] tracking-[-0.42px]">
+                  <span aria-hidden className="invisible col-start-1 row-start-1 overflow-hidden whitespace-pre">{(nickname || tr('Nickname')) + ' '}</span>
+                  <input
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder={tr('Nickname')}
+                    maxLength={24}
+                    aria-label={tr('Nickname')}
+                    ref={nickRef}
+                    size={1}
+                    className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-[#3d3d3d] outline-none placeholder:text-[#3d3d3d]"
+                  />
+                </span>
               </label>
               <textarea
                 value={memo}
