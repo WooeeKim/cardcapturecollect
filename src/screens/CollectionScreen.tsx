@@ -5,7 +5,8 @@ import closeX from '../assets/proto/v2/detail-close-x.svg'
 import deckBoxSvg from '../assets/proto/v2/deck-box.svg?raw'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import { BAND, stretchX } from '../lib/lineShapes'
-import { Bottom, CardView, Popup, TextButton, Thumb, TownChip, shrink, type PopupAction, SketchyBox } from '../components/ui'
+import { Bottom, CardView, Popup, TextButton, Thumb, TownChip, shrink, type PopupAction } from '../components/ui'
+import cardShape from '../assets/proto/v2/card-shape.svg'
 import CardActions from '../components/CardActions'
 import { PillVillage } from '../components/v2'
 import { framePoint, toLocal } from '../lib/frame'
@@ -231,8 +232,8 @@ export default function CollectionScreen({
       <span className="absolute inset-[1px] overflow-hidden rounded-[3px]">
         <img src={c.thumb ?? c.image} alt="" draggable={false} className={c.thumb ? 'pointer-events-none absolute inset-0 size-full object-cover' : 'pointer-events-none absolute top-[5%] left-[-15%] w-[130%] max-w-none'} />
       </span>
-      {/* hand-drawn black frame */}
-      <SketchyBox w={TILE} h={TILE} seed={c.id.charCodeAt(0) + c.id.charCodeAt(1)} />
+      {/* hand-drawn black frame (Figma 04 콜렉션 › card_shape 1207:10765) */}
+      <img src={cardShape} alt="" className="pointer-events-none absolute top-[-1.11%] left-[-1.1%] h-[102.22%] w-[102.2%] max-w-none" />
     </button>
   )
 
@@ -346,14 +347,17 @@ export default function CollectionScreen({
       {/* card following the finger */}
       {drag && (
         <div
-          className="pointer-events-none absolute z-40 size-[74px] -translate-x-1/2 -translate-y-1/2 scale-[1.2] overflow-hidden rounded-[3.7px] border-[2.4px] border-black bg-white shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
+          className="pointer-events-none absolute z-40 size-[74px] -translate-x-1/2 -translate-y-1/2 scale-[1.2] drop-shadow-[0_8px_16px_rgba(0,0,0,0.25)]"
           style={{ left: drag.x, top: drag.y }}
         >
+          <span className="absolute inset-[1px] overflow-hidden rounded-[3px] bg-white">
           {state.cards[drag.id]?.thumb ? (
             <img src={state.cards[drag.id]!.thumb} alt="" className="absolute inset-0 size-full object-cover" />
           ) : (
             <img src={state.cards[drag.id]?.image} alt="" className="absolute top-[5%] left-[-15%] w-[130%] max-w-none" />
           )}
+          </span>
+          <img src={cardShape} alt="" className="absolute top-[-1.11%] left-[-1.1%] h-[102.22%] w-[102.2%] max-w-none" />
         </div>
       )}
 
