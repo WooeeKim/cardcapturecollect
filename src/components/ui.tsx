@@ -7,10 +7,14 @@ import plusIcon from '../assets/proto/plus.svg'
 import underlineSvg from '../assets/proto/underline.svg'
 import wifiIcon from '../assets/proto/wifi.svg'
 import batteryIcon from '../assets/proto/battery.svg'
-import { type ReactNode } from 'react'
+import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { COL_X, useWide } from '../lib/wide'
-import { CIRCLE_FRAME } from '../lib/lineShapes'
+import { CIRCLE_FRAME, stretchX } from '../lib/lineShapes'
+import cardOutline from '../assets/proto/v2/card-outline.svg'
+import cardChipRaw from '../assets/proto/v2/card-chip.svg?raw'
+import townChipRaw from '../assets/proto/v2/town-chip.svg?raw'
+import cardBlurRaw from '../assets/proto/v2/card-blur.svg?raw'
 import { moodOf } from '../lib/moods'
 import { serialLabel, type Card } from '../lib/store'
 import { cycleLang, tr } from '../lib/i18n'
@@ -194,26 +198,82 @@ export function MoodChip({ mood, size = 21 }: { mood: string; size?: number }) {
   )
 }
 
-// ---------- character card (Figma card-example 360×515) ----------
+// ---------- hand-drawn shapes that follow their box (Figma 04 콜렉션 › Collection 1207:9008) ----------
+
+const pathOf = (raw: string) => raw.match(/ d="([^"]+)"/)![1]
+const CHIP = { d: pathOf(cardChipRaw), w: 72.44, h: 37.1, cap: 18 } // Vector 373: mood chip on the card
+const TOWN_CHIP = { d: pathOf(townChipRaw), w: 166, h: 47, cap: 23 } // Vector 538: town chip above the open card
+// blur_bg's outline as an opaque mask, so only the blur (not the text) takes its shape
+const BLUR_MASK = `url("data:image/svg+xml,${encodeURIComponent(cardBlurRaw.replace(/fill="#F7F7F7"/i, 'fill="#000"').replace(/fill-opacity="[^"]*"/, ''))}")`
+const BLUR_FILL = `url("data:image/svg+xml,${encodeURIComponent(cardBlurRaw)}")`
+
+// A pill drawn by hand that keeps its rounded ends whatever its length: fills its (relative) parent, and only the
+// straight middle stretches with the parent's width (lib/lineShapes stretchX). Strokes scale with the height.
+function StretchPill({ shape, fill, stroke = '#000', strokeWidth = 2, className = '' }: { shape: { d: string; w: number; h: number; cap: number }; fill: string; stroke?: string; strokeWidth?: number; className?: string }) {
+  const el = useRef<SVGSVGElement>(null)
+  const [ratio, setRatio] = useState(shape.w / shape.h)
+  useLayoutEffect(() => {
+    const svg = el.current
+    if (!svg) return
+    const measure = () => {
+      const { width, height } = svg.getBoundingClientRect()
+      if (width && height) setRatio(width / height)
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(svg)
+    return () => ro.disconnect()
+  }, [])
+  const len = Math.max(shape.cap * 2 + 2, shape.h * ratio)
+  return (
+    <svg ref={el} aria-hidden viewBox={`0 0 ${len} ${shape.h}`} preserveAspectRatio="none" className={`pointer-events-none absolute inset-0 size-full overflow-visible ${className}`}>
+      <path d={stretchX(shape.d, shape.w, len, shape.cap, shape.cap)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// town chip over an open card (Figma 1207:9188 + 9189 + 9191): grey hand-drawn pill, the chief in a small circle, the name
+export function TownChip({ name, image, thumb, className = '' }: { name: string; image?: string; thumb?: string; className?: string }) {
+  return (
+    <span className={`flex h-[45px] items-center pr-[19px] pl-[4.5px] font-hand text-[20px] leading-[1.1] text-black ${className}`}>
+      {/* the Figma vector is turned 180° */}
+      <StretchPill shape={TOWN_CHIP} fill="#CCCCCC" className="rotate-180" />
+      <span className="relative">
+        <Thumb image={image} thumb={thumb} size={36} ring={2} outline />
+      </span>
+      <span className="relative ml-[11px] max-w-[220px] truncate">{name}</span>
+    </span>
+  )
+}
+
+// ---------- character card (Figma card-example 360×515; outline, chip and blur box from 04 콜렉션 1207:9008) ----------
 
 export function CardView({ card, plain = false, onImage }: { card: Card; plain?: boolean; onImage?: () => void }) {
   return (
-    <div className="relative aspect-[360/515] w-full overflow-hidden rounded-[10px] bg-white font-hand text-black [container-type:inline-size]">
+    <div className="relative aspect-[360/515] w-full font-hand text-black [container-type:inline-size]">
+      {/* white card inside the same hand-drawn outline as the drawing paper (Vector 421) */}
+      <img src={cardOutline} alt="" className="pointer-events-none absolute top-[-0.19%] left-[-0.28%] h-[100.39%] w-[100.56%] max-w-none" />
       <button aria-label={tr('Show drawing only')} onClick={onImage} className="absolute inset-[3%_4%_6%] block">
         <img src={card.image} alt={card.nickname || 'drawing'} className="size-full object-contain" />
       </button>
       {!plain && (
         <>
           {card.mood && (
-            <span className="absolute top-[3.5cqw] left-[5.5cqw]">
+            <span className="absolute top-[3.06cqw] left-[3.6cqw]">
               <ChipCq mood={card.mood} />
             </span>
           )}
           {card.place && <span className="absolute top-[5.5cqw] right-[4.2cqw] text-[5.5cqw] leading-[1.1] tracking-[-0.02em]">{card.place}</span>}
           {(card.nickname || card.memo) && (
-            <div className="absolute inset-x-[2.8cqw] bottom-[8.9cqw] rounded-[2.8cqw] bg-white/30 p-[2.8cqw] backdrop-blur-[2px]">
-              {card.nickname && <p className="text-[5.9cqw] leading-[1.1]">{card.nickname}</p>}
-              {card.memo && <p className="mt-[2cqw] line-clamp-4 text-[4.7cqw] leading-[1.2] break-words">{card.memo}</p>}
+            <div className="absolute inset-x-[2.8cqw] bottom-[8.9cqw] p-[2.8cqw]">
+              {/* blur_bg: the blur takes the hand-drawn box's shape, tinted #f7f7f7 at 50% */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 backdrop-blur-[2px]"
+                style={{ backgroundImage: BLUR_FILL, backgroundSize: '100% 100%', maskImage: BLUR_MASK, WebkitMaskImage: BLUR_MASK, maskSize: '100% 100%', WebkitMaskSize: '100% 100%' }}
+              />
+              {card.nickname && <p className="relative text-[5.9cqw] leading-[1.1]">{card.nickname}</p>}
+              {card.memo && <p className="relative mt-[2cqw] line-clamp-4 text-[4.7cqw] leading-[1.2] break-words">{card.memo}</p>}
             </div>
           )}
           <span className="absolute right-[4cqw] bottom-[2.5cqw] text-[3.9cqw] leading-[1.1]">{serialLabel(card)}</span>
@@ -223,12 +283,13 @@ export function CardView({ card, plain = false, onImage }: { card: Card; plain?:
   )
 }
 
-// chip sized in container units so the card scales as one piece
+// chip sized in container units so the card scales as one piece; hand-drawn pill (Vector 373) in the mood's colour
 function ChipCq({ mood }: { mood: string }) {
   const m = moodOf(mood)
   return (
-    <span className="block rounded-full px-[3.3cqw] py-[1.8cqw] text-[5.8cqw] leading-[1.1]" style={{ background: m.color, color: m.ink }}>
-      {tr(mood)}
+    <span className="relative block px-[4.5cqw] py-[2.4cqw] text-[4.72cqw] leading-[1.1] tracking-[-0.01em]" style={{ color: m.ink }}>
+      <StretchPill shape={CHIP} fill={m.color} />
+      <span className="relative">{tr(mood)}</span>
     </span>
   )
 }
