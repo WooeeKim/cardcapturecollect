@@ -38,7 +38,7 @@ export function XIcon() {
   return <img src={xIcon} alt="" className="h-[16.8px] w-[14.3px]" />
 }
 export function GoTag() {
-  // Figma 03 마을 목록 › townList-detail (915:885 Vector 538): white rounded hand-drawn box, thick #424242 outline
+  // Figma 03 마을 목록 › townList-detail (915:885 Vector 538): white rounded hand-drawn box, thick #686868 outline (same as the open chief ring, Thumb strong)
   return (
     <span className="relative block h-[38px] w-[57px]">
       <img src={goBox} alt="" className="absolute top-[-2.5px] left-[-2.5px] h-[43px] w-[62px] max-w-none" />
