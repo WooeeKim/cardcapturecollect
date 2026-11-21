@@ -364,6 +364,9 @@ export default function CollectionScreen({
   )
 }
 
+// how far the open card's side edges move in when shrink(515) scales it down on a shorter phone
+const CARD_INSET = '180px * (1 - clamp(0.5, calc((515 - var(--cut)) / 515), 1))'
+
 // card overlay (Figma 725:13761): tap the drawing to hide the card text, drag to tilt it around
 // iPad sideways: the card in the middle of the screen, town name and close above it, Let go at its lower right
 function Detail({ wide, card, town, onClose, onDelete, onMigrate }: { wide: boolean; card: Card; town: { name: string; image?: string; thumb?: string }; onClose: () => void; onDelete: () => void; onMigrate: () => void }) {
@@ -374,9 +377,11 @@ function Detail({ wide, card, town, onClose, onDelete, onMigrate }: { wide: bool
 
   return (
     <div className="animate-fade-in absolute inset-0 z-30 bg-black/35 text-white backdrop-blur-[1.5px]">
-      {/* town chip above the card (Figma 04 콜렉션 › Collection 1207:9008): 10px above the card's top, from its left edge */}
-      <TownChip name={town.name} image={town.image} thumb={town.thumb} className={`absolute ${wide ? 'top-[57px] left-[417px]' : 'top-[155px] left-[21px]'}`} />
-      <button aria-label={tr('Close')} onClick={onClose} className={`absolute flex h-[37px] w-[35px] items-center justify-center ${wide ? 'top-[68px] left-[745px]' : 'top-[166px] left-[349px]'}`}>
+      {/* town chip above the card (Figma 04 콜렉션 › Collection 1207:9008): 10px above the card's top, lined up with its left
+          edge. On a shorter phone the card shrinks around its top centre (shrink(515)), so its edges move in by
+          180px × (1 − scale): the chip and the close button move with them. */}
+      <TownChip name={town.name} image={town.image} thumb={town.thumb} className={`absolute ${wide ? 'top-[57px] left-[417px]' : 'top-[155px]'}`} style={wide ? undefined : { left: `calc(21px + ${CARD_INSET})` }} />
+      <button aria-label={tr('Close')} onClick={onClose} className={`absolute flex h-[37px] w-[35px] items-center justify-center ${wide ? 'top-[68px] left-[745px]' : 'top-[166px]'}`} style={wide ? undefined : { left: `calc(349px - ${CARD_INSET})` }}>
         <img src={closeRing} alt="" className="absolute inset-0 size-full" />
         <img src={closeX} alt="" className="relative h-[14.8px] w-[12.3px]" />
       </button>

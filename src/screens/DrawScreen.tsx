@@ -51,7 +51,7 @@ const WIDE_BAR = { undo: 920, redo: 960, guide: 1004, color: 1090, fit: 1080 }
 
 type Draft = Omit<Card, 'id' | 'createdAt' | 'serial'>
 
-// The drawing paper (Figma drawing 1011:4962, Vector 421): very light grey #f3f3f3 inside a hand-drawn outline.
+// The drawing paper (Figma drawing 1011:4962, Vector 421): very light grey #f3f3f3 inside a hand-drawn black outline (same as every card).
 // Stretched to the paper box; the outline keeps its 2px width whatever the size or zoom.
 function PaperFrame() {
   return (
@@ -59,7 +59,7 @@ function PaperFrame() {
       <path
         vectorEffect="non-scaling-stroke"
         fill="#f3f3f3"
-        stroke="#404040"
+        stroke="#000000"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
