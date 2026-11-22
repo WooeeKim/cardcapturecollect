@@ -5,7 +5,6 @@ import { LoginSheet } from './components/LoginSheet'
 import NotifyPrompt from './components/NotifyPrompt'
 import { syncPush } from './lib/push'
 import { PhoneChrome, Popup, WideCol } from './components/ui'
-import { fillInsideImage } from './lib/fillInside'
 import { answeredByAccount, claim, resendUnsent } from './lib/gilbti'
 import InterviewOverlay from './components/InterviewOverlay'
 import FinalInterviewOverlay from './components/FinalInterviewOverlay'
@@ -314,34 +313,6 @@ export default function App({ onReady }: { onReady?: () => void }) {
       return next
     })
   }, [])
-
-  // one-time: drawings made before the white inside-fill get it now (new ones get it when finished)
-  useEffect(() => {
-    if (!ready || state.insideFilled3 || viewAsId) return
-    const who = userRef.current
-    let stale = false
-    ;(async () => {
-      const fixed: Record<string, string> = {}
-      for (const c of Object.values(state.cards)) {
-        if (!c.image) continue
-        try {
-          fixed[c.id] = await fillInsideImage(c.image)
-        } catch {
-          /* broken image: leave it */
-        }
-      }
-      if (stale || userRef.current !== who) return
-      commit((s) => {
-        const cards = { ...s.cards }
-        for (const [id, image] of Object.entries(fixed)) if (cards[id]) cards[id] = { ...cards[id], image }
-        return { ...s, cards, insideFilled3: true }
-      })
-    })()
-    return () => {
-      stale = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, user, state.insideFilled3, commit])
 
   const onSquare = route.name === 'main' && route.townId === SQUARE_ID
   const listing = route.name === 'towns' || route.name === 'migrate' || route.name === 'send'

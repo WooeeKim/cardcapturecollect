@@ -1,4 +1,3 @@
-import { fillInside } from '../lib/fillInside'
 import { waiting } from '../components/Loading'
 import { useEffect, useRef, useState } from 'react'
 import { logEvent } from '../lib/events'
@@ -320,10 +319,10 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
       setShowMissing(true)
       return
     }
-    // unpainted spots inside the figure become white (they looked white on the paper)
+    // auto white inside-fill (lib/fillInside) disabled: keep the drawing exactly as drawn
     const { thumb, preview } = await waiting(
       (async () => {
-        const blob = await fillInside(await canvas.current!.toBlob())
+        const blob = await canvas.current!.toBlob()
         return { thumb: await toThumb(blob), preview: await toDataUrl(blob) }
       })(),
     )
