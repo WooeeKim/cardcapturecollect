@@ -144,15 +144,17 @@ export function WideCol({ children, bg = '#f9f9f9' }: { children: ReactNode; bg?
 
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
-// selected / open town: its ring is as thick as the Go box's outline (go-box.svg stroke 5)
-export const SELECTED_RING = 5
-// a closed town's circle (outline style) at its Figma size: townList 65 in a 70 box, Collection 45 in a 52 box
+// selected / open town: its ring is as thick as the Go box's outline (go-box.svg stroke 5)// selected / open town ring (Figma 따뜻한컬러 townThumbnail, stroke centred on the circle's edge):
+// Town List open 84 circle → 6px ring (90 outside), Collection picked 60 circle → 4.5px ring (64.5 outside)
+export const OPEN_RING = 6
+export const PICKED_RING = 4.5
+// a closed town's circle (outline style) at its size: townList 65 in a 70 box, Collection 43 in a 52 box
 export const ringFor = (size: number, circle: number) => ((size - circle) / 2) / 0.75
 
 export function Thumb({ image, thumb, size = 70, strong = false, grey = false, ring: ringW, outline = false }: { image?: string; thumb?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number; outline?: boolean }) {
   // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body.
   // The ring is drawn as a slightly wobbly hand-drawn stroke, like the rest of the sketchy UI.
-  const ring = ringW ?? (strong ? SELECTED_RING : 9)
+  const ring = ringW ?? (strong ? OPEN_RING : 9)
   return (
     <span className="relative block shrink-0" style={{ width: size, height: size }}>
       {/* with the black outline, everything inside it is white (fills the wobble too) */}
