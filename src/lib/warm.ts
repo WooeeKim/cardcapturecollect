@@ -1,55 +1,48 @@
 // Warm colours (Figma UX › 앱 확정 › 따뜻한컬러, paint styles color_00–06), for admin accounts only for now.
-// The app's greys are written straight into many classes, inline styles and SVG files. For admins every neutral grey
-// (r = g = b) is swapped at its source for the warm grey Figma gives the same job:
-//   #fff → color_00 #fffefd (cards, chips) · #f0f0f0 / #f9f9f9 → color_01 #f5f4f4 (screen backgrounds)
-//   #e0e0e0 → color_02 #e0dfdd (boxes) · #ccc → color_03 #c6c5c3 (line, grey fills) · #9a9a9a → color_04 #a8a7a5 (tufts)
-//   #686868–#8e8e8e → color_05 #767573 (secondary text, open ring) · #000 → color_06 #171615 (text, lines)
-// Greys in between follow the curve through those points. Colours (moods, drawings) are left alone.
-// Where: the stylesheet (override rules in the same @layer), inline style / fill / stroke attributes, and SVG
-// files shown as <img> (recoloured copies). (A whole-frame SVG filter was tried first, but iPhone Safari skipped
-// some layers with it, so parts stayed grey.)
+// The app's colours are written straight into many classes, inline styles and SVG files. For admins each one is
+// swapped at its source: the stylesheet (override rules in the same @layer), inline style / fill / stroke
+// attributes, and SVG files shown as <img> (recoloured copies). (A whole-frame SVG filter was tried first, but
+// iPhone Safari skipped some layers with it, so parts stayed grey.)
 
-// [input grey, R, G, B] — Figma paint styles color_00–06
-const ANCHORS: [number, number, number, number][] = [
-  [0, 0x17, 0x16, 0x15],
-  [0x68, 0x76, 0x75, 0x73],
-  [0x8e, 0x76, 0x75, 0x73],
-  [0x9a, 0xa8, 0xa7, 0xa5],
-  [0xcc, 0xc6, 0xc5, 0xc3],
-  [0xe0, 0xe0, 0xdf, 0xdd],
-  [0xf0, 0xf5, 0xf4, 0xf4],
-  [0xf9, 0xf5, 0xf4, 0xf4],
-  [0xff, 0xff, 0xfe, 0xfd],
+// The 7 Figma paint styles. Every UI colour that isn't clearly a colour (greys, and the faintly tinted greys of the
+// town skies / grounds) snaps to one of these by its brightness, so admins see nothing but these 7 (alpha kept).
+// Brightness bands follow the job each style has in the Figma frames:
+const PALETTE: [number, string][] = [
+  // [lowest brightness for this style, colour]
+  [252, 'fffefd'], // color_00 white: cards, chips, thumbnails (#fff)
+  [234, 'f5f4f4'], // color_01 screen backgrounds, town sky (#f0f0f0, #f9f9f9, #eaeaea…)
+  [212, 'e0dfdd'], // color_02 boxes, light lines (#e0e0e0, #e6e6e6, #d6d6d6…)
+  [182, 'c6c5c3'], // color_03 line, grey fills, town ground (#ccc, #c4c4c4, #c9c9c9…)
+  [150, 'a8a7a5'], // color_04 tufts, darker fills (#9a9a9a, #a4a4a4, #b3b3b3…)
+  [80, '767573'], // color_05 secondary text, open ring (#686868, #8e8e8e, #555…)
+  [0, '171615'], // color_06 text, lines (#000, #2e2e2e, #3d3d3d…)
 ]
+// a colour whose channels differ by more than this is a real colour (mood, warning red, highlighter): left alone
+const TINT = 40
 
-const hex2 = (n: number) => Math.round(n).toString(16).padStart(2, '0')
-const MAP: string[] = []
-for (let v = 0; v < 256; v++) {
-  let i = 0
-  while (i < ANCHORS.length - 2 && v > ANCHORS[i + 1][0]) i++
-  const [a, b] = [ANCHORS[i], ANCHORS[i + 1]]
-  const t = (v - a[0]) / (b[0] - a[0])
-  MAP.push([1, 2, 3].map((c) => hex2(a[c] + (b[c] - a[c]) * t)).join(''))
+function snap(r: number, g: number, b: number): string | null {
+  if (Math.max(r, g, b) - Math.min(r, g, b) > TINT) return null
+  const l = 0.299 * r + 0.587 * g + 0.114 * b
+  return PALETTE.find(([min]) => l >= min)![1]
 }
-const warmHex = (v: number) => MAP[v]
 
-// every neutral grey in a CSS / SVG value → its warm grey (keeps any alpha); other colours untouched
+// every grey / faint tint in a CSS / SVG value → one of the 7 (keeps any alpha); real colours untouched
 const HEX = /(#|%23)([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3})\b/gi
 const RGB = /rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)\s*([,/]\s*[\d.]+%?\s*)?\)/gi
 function warmText(s: string, keywords = false) {
   let out = s.replace(HEX, (m, hash: string, h: string) => {
     const full = h.length === 3 ? h.replace(/./g, '$&$&') : h
     const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16))
-    if (r !== g || g !== b) return m
-    return hash + warmHex(r) + full.slice(6)
+    const w = snap(r, g, b)
+    return w ? hash + w + full.slice(6) : m
   })
   out = out.replace(RGB, (m, r: string, g: string, b: string, a?: string) => {
-    if (r !== g || g !== b) return m
-    const w = warmHex(Number(r))
+    const w = snap(Number(r), Number(g), Number(b))
+    if (!w) return m
     const rgb = [0, 2, 4].map((i) => parseInt(w.slice(i, i + 2), 16)).join(', ')
     return a ? `rgba(${rgb}, ${a.replace(/^[,/]\s*/, '').trim()})` : `rgb(${rgb})`
   })
-  if (keywords) out = out.replace(/\bblack\b/g, `#${warmHex(0)}`).replace(/\bwhite\b/g, `#${warmHex(255)}`)
+  if (keywords) out = out.replace(/\bblack\b/g, `#${snap(0, 0, 0)}`).replace(/\bwhite\b/g, `#${snap(255, 255, 255)}`)
   return out
 }
 
