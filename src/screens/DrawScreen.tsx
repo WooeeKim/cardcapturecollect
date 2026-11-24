@@ -57,6 +57,7 @@ function PaperFrame() {
     <svg aria-hidden viewBox="0 0 363 520" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 block size-full">
       <path
         vectorEffect="non-scaling-stroke"
+        className="paper-fill"
         fill="#f3f3f3"
         stroke="#000000"
         strokeWidth="2"
@@ -400,8 +401,9 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
 
       {/* header */}
       <div className={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0 ${wide ? 'h-[100px]' : 'h-[140px]'}`} />
-      {/* header: icons centred on y 104, the tab names' line on y 97 (Figma main), like every page */}
-      <button aria-label={tr('Back')} onClick={back} className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] left-[40px]' : 'top-[79px] left-[24px]'}`}>
+      {/* header (Figma 따뜻한컬러 › drawing 1283:12569): chevron at (34, 85), ✓ at (347, 83), tab names at y 81, the
+          underline at y 114 (Drawing 106–201, Memo 216–269) */}
+      <button aria-label={tr('Back')} onClick={back} className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] left-[40px]' : 'top-[72px] left-[19px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {(['draw', 'memo'] as const).map((t) => (
@@ -427,14 +429,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
       <img
         src={tab === 'draw' ? lineDraw : lineMemo}
         alt=""
-        className={`pointer-events-none absolute z-20 h-[3px] max-w-none ${wide ? 'top-[69px]' : 'top-[108px]'}`}
-        style={wide ? (tab === 'draw' ? { left: 515, width: 92 } : { left: 619, width: 60 }) : tab === 'draw' ? { left: 116, width: 76 } : { left: 215, width: 55 }}
+        className={`pointer-events-none absolute z-20 h-[3px] max-w-none ${wide ? 'top-[69px]' : 'top-[112.5px]'}`}
+        style={wide ? (tab === 'draw' ? { left: 515, width: 92 } : { left: 619, width: 60 }) : tab === 'draw' ? { left: 106, width: 95 } : { left: 216, width: 53 }}
       />
       <button
         aria-label={tr('Finish drawing')}
         data-tour="finish"
         onClick={check}
-        className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] right-[40px]' : 'top-[79px] right-[24px]'}`}>
+        className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] right-[40px]' : 'top-[72px] right-[19px]'}`}>
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 
@@ -643,7 +645,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
         />
       )}
 
-      {/* confirm (Figma drawing-handwrite 745:694): card + speech bubble */}
+      {/* confirm (Figma drawing-handwrite 745:694 / 따뜻한컬러 1296:13414): card + speech bubble; Go Back on the left, Finish on the right */}
       {/* iPad sideways: the card where the paper was, the bubble and buttons to its right */}
       {preview && wide && (
         <div className="animate-fade-in absolute inset-0 top-[100px] z-30 bg-[#f0f0f0]">
@@ -658,30 +660,30 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
               {tr('Ready to finish?\nYou won’t be able to edit this afterward.')}
             </p>
             <button
-              onClick={() => {
-                rememberPlace(place.trim())
-                log('finish', { mood, strokes: strokes() })
-                onFinish(draft(preview))
-              }}
-              className="absolute top-[325.6px] left-[746px] h-[54.8px] w-[113px]"
-            >
-              <span className="absolute inset-0 rotate-[-178.73deg]">
-                <PillFinish />
-              </span>
-              <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
-            </button>
-            <button
               data-tour="go-back"
               onClick={() => {
                 setPreview(null)
                 done('back')
               }}
+              className="absolute top-[325.6px] left-[746px] h-[54.8px] w-[113px]"
+            >
+              <span className="pill-light absolute inset-0 rotate-[-178.73deg]">
+                <PillFinish />
+              </span>
+              <span className="relative text-[24.3px] leading-[1.1] text-[#686868]">{tr('Go Back')}</span>
+            </button>
+            <button
+              onClick={() => {
+                rememberPlace(place.trim())
+                log('finish', { mood, strokes: strokes() })
+                onFinish(draft(preview))
+              }}
               className="absolute top-[323px] left-[903px] h-[58.3px] w-[133.6px]"
             >
-              <span className="absolute inset-0 rotate-[-177.79deg]">
+              <span className="pill-grey absolute inset-0 rotate-[-177.79deg]">
                 <PillBack />
               </span>
-              <span className="relative text-[24.3px] leading-[1.1]">{tr('Go Back')}</span>
+              <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
             </button>
           </div>
         </div>
@@ -701,30 +703,30 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
                   {tr('Ready to finish?\nYou won’t be able to edit this afterward.')}
                 </p>
                 <button
-                  onClick={() => {
-                    rememberPlace(place.trim())
-                    log('finish', { mood, strokes: strokes() })
-                    onFinish(draft(preview))
-                  }}
-                  className="absolute top-[768.6px] left-[63.8px] h-[54.8px] w-[113px]"
-                >
-                  <span className="absolute inset-0 rotate-[-178.73deg]">
-                    <PillFinish />
-                  </span>
-                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
-                </button>
-                <button
                   data-tour="go-back"
                   onClick={() => {
                     setPreview(null)
                     done('back')
                   }}
+                  className="absolute top-[768.6px] left-[63.8px] h-[54.8px] w-[113px]"
+                >
+                  <span className="pill-light absolute inset-0 rotate-[-178.73deg]">
+                    <PillFinish />
+                  </span>
+                  <span className="relative text-[24.3px] leading-[1.1] text-[#686868]">{tr('Go Back')}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    rememberPlace(place.trim())
+                    log('finish', { mood, strokes: strokes() })
+                    onFinish(draft(preview))
+                  }}
                   className="absolute top-[766px] left-[221px] h-[58.3px] w-[133.6px]"
                 >
-                  <span className="absolute inset-0 rotate-[-177.79deg]">
+                  <span className="pill-grey absolute inset-0 rotate-[-177.79deg]">
                     <PillBack />
                   </span>
-                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Go Back')}</span>
+                  <span className="relative text-[24.3px] leading-[1.1]">{tr('Finish')}</span>
                 </button>
               </div>
             </Bottom>
@@ -856,7 +858,7 @@ export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: (
   ]
   return (
     <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[79px] left-[24px] z-10 size-[50px]">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[72px] left-[19px] z-10 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {sparks.map((s, i) => (

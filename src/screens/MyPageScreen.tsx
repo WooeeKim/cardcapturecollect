@@ -126,18 +126,18 @@ export default function MyPageScreen({
     // admin testing helpers, same rule as Reset
     canReset && { label: tr('Replay tutorial (test)'), onClick: onTutorial },
     canReset && { label: tr('Loading screen (test)'), onClick: onLoadingTest },
-    { label: tr('Neighbors'), tone: 'text-[#7e7e7e]', soon: true },
-    { label: tr('Developers'), tone: 'text-[#7e7e7e]', soon: true },
+    { label: tr('Neighbors'), tone: 'warm-a8 text-[#7e7e7e]', soon: true },
+    { label: tr('Developers'), tone: 'warm-a8 text-[#7e7e7e]', soon: true },
     // account deletion is blocked on purpose for the test period — the row stays, greyed out, with no action
-    { label: tr('Delete Account'), tone: 'text-[#b8b8b8]', disabled: true },
+    { label: tr('Delete Account'), tone: 'warm-a8 text-[#b8b8b8]', disabled: true },
   ] as (Row | false)[]).filter((r): r is Row => !!r)
 
   return (
-    <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-10 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[84px] left-[24px]'}`}>
+    <div className="mp-page relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-10 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[77px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[81px]'}`}>{tr('My Page')}</p>
+      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[88px]'}`}>{tr('My Page')}</p>
       <LangButton className={`z-10 ${wide ? 'top-[30px] left-[1104px]' : 'top-[84px] left-[333px]'}`} />
 
       {/* settings list (scrolls on short phones; iPad sideways: the right column, first row at y 140) */}
@@ -202,10 +202,10 @@ export default function MyPageScreen({
         ) : (
           <p className={`absolute top-[17px] left-[112px] w-[240px] truncate text-[24px] leading-[normal] ${nickname ? '' : 'text-[#9a9a9a]'}`}>{nickname || tr('No Profile')}</p>
         )}
-        <p className="absolute top-[54px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
+        <p className="warm-75 absolute top-[54px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
           {tr(cardCount === 1 ? '{n} Person' : '{n} People', { n: cardCount })}
         </p>
-        <p className="absolute top-[72px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
+        <p className="warm-75 absolute top-[72px] left-[112px] text-[14px] leading-[normal] text-[#464646]">
           {tr(townCount === 1 ? '{n} Town' : '{n} Towns', { n: townCount })}
         </p>
         {user && <p className="absolute top-[54px] right-[18px] max-w-[120px] truncate text-[12px] text-[#9a9a9a]">{user.username}</p>}
@@ -229,7 +229,7 @@ export default function MyPageScreen({
               onClick={() => setEditing(false)}
               className="absolute top-[290px] left-[30px] flex h-[52px] w-[108px] items-center justify-center"
             >
-              <span className="absolute inset-0 rotate-[-178.73deg]">
+              <span className="pill-mid absolute inset-0 rotate-[-178.73deg]">
                 <PillFinish />
               </span>
               <span className="relative text-[22px] leading-[1.1] text-[#686868]">{tr('Discard')}</span>
@@ -241,7 +241,7 @@ export default function MyPageScreen({
               }}
               className="absolute top-[289px] left-[244px] flex h-[54px] w-[110px] items-center justify-center"
             >
-              <span className="absolute inset-0 rotate-[-177.79deg]">
+              <span className="pill-grey absolute inset-0 rotate-[-177.79deg]">
                 <PillBack />
               </span>
               <span className="relative text-[22px] leading-[1.1]">{tr('Save')}</span>

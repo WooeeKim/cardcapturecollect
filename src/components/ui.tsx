@@ -58,16 +58,16 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
   )
 }
 
-// Page header, the same on every page, on the lines of Figma main (803:951): icons centred on y 104 (back 40×40 at
-// (24, 84)), the title's line centred on y 97, the right-hand control 40×40 at (338, 84). iPad sideways: same row at the top of the frame.
+// Page header (Figma 따뜻한컬러 › townList-detail 1278:10968): back 40×40 at (24, 85) (its line at 34, 93), the title
+// at y 89, the right-hand control 40×40 at (338, 85) — the chevron, title and + all centred on y 105. iPad sideways: same row at the top of the frame.
 export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
   const wide = useWide()
   return (
     <>
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[84px] left-[24px]'}`}>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[81px]'}`}>{title}</h1>
+      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{title}</h1>
       {right}
     </>
   )
@@ -76,7 +76,7 @@ export function Header({ title, onBack, right }: { title: string; onBack: () => 
 export function PlusButton({ onClick, label }: { onClick: () => void; label: string }) {
   const wide = useWide()
   return (
-    <button aria-label={label} onClick={onClick} className={`absolute z-20 flex size-[40px] items-center justify-center ${wide ? 'top-[30px] left-[1114px]' : 'top-[84px] left-[338px]'}`}>
+    <button aria-label={label} onClick={onClick} className={`absolute z-20 flex size-[40px] items-center justify-center ${wide ? 'top-[30px] left-[1114px]' : 'top-[85px] left-[339px]'}`}>
       <img src={plusIcon} alt="" className="h-[23.8px] w-[26.8px]" />
     </button>
   )
@@ -290,12 +290,15 @@ export function CardView({ card, plain = false, onImage }: { card: Card; plain?:
   )
 }
 
+const isGrey = (hex: string) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); return Math.max(r, g, b) - Math.min(r, g, b) < 12 }
+
 // chip sized in container units so the card scales as one piece; hand-drawn pill (Vector 373) in the mood's colour
 function ChipCq({ mood }: { mood: string }) {
   const m = moodOf(mood)
   return (
     <span className="relative block px-[4.5cqw] py-[2.4cqw] text-[4.72cqw] leading-[1.1] tracking-[-0.01em]" style={{ color: m.ink }}>
-      <StretchPill shape={CHIP} fill={m.color} />
+      {/* a grey mood (Silent) is a black chip on the card in the warm Figma frames: .warm .chip-grey */}
+      <StretchPill shape={CHIP} fill={m.color} className={isGrey(m.color) ? 'chip-grey' : ''} />
       <span className="relative">{tr(mood)}</span>
     </span>
   )

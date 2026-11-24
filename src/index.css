@@ -394,3 +394,30 @@ img {
   background: #bfbdbb;
   border-color: #e0dfdd;
 }
+/* drawing paper, My Page, the confirm / edit pills, the card's grey mood chip (Figma 따뜻한컬러 drawing, drawing-handwrite,
+   mypage-login / mypage-logout) */
+.warm .paper-fill {
+  fill: #fffefd;
+}
+.warm .mp-page {
+  background: #fffefd;
+}
+.warm .warm-a8 {
+  color: #a8a7a5;
+  opacity: 1;
+}
+.warm .warm-75 {
+  color: #767573;
+}
+.warm .pill-light path:not([fill='none']) {
+  fill: #f5f4f4;
+}
+.warm .pill-mid path:not([fill='none']) {
+  fill: #e0dfdd;
+}
+.warm .pill-grey path:not([fill='none']) {
+  fill: #c6c5c3;
+}
+.warm .chip-grey path {
+  fill: #171615;
+}
