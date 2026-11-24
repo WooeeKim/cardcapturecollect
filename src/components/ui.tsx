@@ -58,16 +58,16 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
   )
 }
 
-// Page header, the same on every page (Figma townList / Collection / My Page): back 40×40 at (24, 85), the title
-// 24px centred on y 105, the right-hand control 40×40 at (338, 85). iPad sideways: same row at the top of the frame.
+// Page header, the same on every page, on the lines of Figma main (803:951): icons centred on y 104 (back 40×40 at
+// (24, 84)), the title's line centred on y 97, the right-hand control 40×40 at (338, 84). iPad sideways: same row at the top of the frame.
 export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
   const wide = useWide()
   return (
     <>
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[84px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{title}</h1>
+      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[81px]'}`}>{title}</h1>
       {right}
     </>
   )
@@ -76,7 +76,7 @@ export function Header({ title, onBack, right }: { title: string; onBack: () => 
 export function PlusButton({ onClick, label }: { onClick: () => void; label: string }) {
   const wide = useWide()
   return (
-    <button aria-label={label} onClick={onClick} className={`absolute z-20 flex size-[40px] items-center justify-center ${wide ? 'top-[30px] left-[1114px]' : 'top-[85px] left-[338px]'}`}>
+    <button aria-label={label} onClick={onClick} className={`absolute z-20 flex size-[40px] items-center justify-center ${wide ? 'top-[30px] left-[1114px]' : 'top-[84px] left-[338px]'}`}>
       <img src={plusIcon} alt="" className="h-[23.8px] w-[26.8px]" />
     </button>
   )

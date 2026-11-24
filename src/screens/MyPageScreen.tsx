@@ -134,10 +134,10 @@ export default function MyPageScreen({
 
   return (
     <div className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-10 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-10 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[84px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[normal] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{tr('My Page')}</p>
+      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[81px]'}`}>{tr('My Page')}</p>
       <LangButton className={`z-10 ${wide ? 'top-[30px] left-[1104px]' : 'top-[84px] left-[333px]'}`} />
 
       {/* settings list (scrolls on short phones; iPad sideways: the right column, first row at y 140) */}
