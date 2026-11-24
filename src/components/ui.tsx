@@ -146,6 +146,8 @@ export function WideCol({ children, bg = '#f9f9f9' }: { children: ReactNode; bg?
 
 // selected / open town: its ring is as thick as the Go box's outline (go-box.svg stroke 5)
 export const SELECTED_RING = 5
+// a closed town's circle (outline style) at its Figma size: townList 65 in a 70 box, Collection 45 in a 52 box
+export const ringFor = (size: number, circle: number) => ((size - circle) / 2) / 0.75
 
 export function Thumb({ image, thumb, size = 70, strong = false, grey = false, ring: ringW, outline = false }: { image?: string; thumb?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number; outline?: boolean }) {
   // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body.

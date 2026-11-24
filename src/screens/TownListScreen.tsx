@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CardView, GoTag, fromBottom, HandleIcon, Header, PlusButton, Popup, Thumb, type PopupAction } from '../components/ui'
+import { CardView, GoTag, ringFor, fromBottom, HandleIcon, Header, PlusButton, Popup, Thumb, type PopupAction } from '../components/ui'
 import { sfx } from '../lib/sound'
 import { framePoint } from '../lib/frame'
 import tlBox from '../assets/proto/v2/tl-box.svg'
@@ -404,7 +404,7 @@ export default function TownListScreen({
                 ) : (
                   <>
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
-                      <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} grey={dimmed} outline />
+                      <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} ring={ringFor(70, 65)} grey={dimmed} outline />
                     </button>
                     <button data-name onClick={() => toggle(t)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                       {townName(t.name)}
@@ -447,7 +447,7 @@ export default function TownListScreen({
               ) : (
                 <>
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
-                    <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
+                    <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} ring={ringFor(70, 65)} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
                   </button>
                   <button data-name onClick={() => toggle(square.town)} className="absolute top-[23px] left-[136px] max-w-[205px] truncate text-left text-[21px] leading-[1.1]">
                     {tr(SQUARE_NAME)}

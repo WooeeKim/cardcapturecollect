@@ -10,8 +10,8 @@
 const PALETTE: [number, string][] = [
   // [lowest brightness for this style, colour]
   [252, 'fffefd'], // color_00 white: cards, chips, thumbnails (#fff)
-  [238, 'f5f4f4'], // color_01 screen backgrounds, town sky, light pills (#f0f0f0, #f2f2f2, #f3f3f3, #f9f9f9…)
-  [212, 'e0dfdd'], // color_02 icon fills, boxes, light lines (#eaeaea triangle / menu / profile, #ededed town box, #e0e0e0, #d6d6d6…)
+  [238.5, 'f5f4f4'], // color_01 screen backgrounds, town sky, light pills (#f0f0f0, #f2f2f2, #f3f3f3, #f9f9f9…)
+  [212, 'e0dfdd'], // color_02 icon fills, boxes, light lines (#eaeaea triangle / menu / profile, #ededed town box, #eeeeee swirl, #e0e0e0, #d6d6d6…)
   [182, 'c6c5c3'], // color_03 line, grey fills, town ground (#ccc, #c4c4c4, #c9c9c9…)
   [150, 'a8a7a5'], // color_04 tufts, darker fills (#9a9a9a, #a4a4a4, #b3b3b3…)
   [80, '767573'], // color_05 secondary text, open ring (#686868, #8e8e8e, #555…)
