@@ -5,7 +5,7 @@ import closeX from '../assets/proto/v2/detail-close-x.svg'
 import deckBoxSvg from '../assets/proto/v2/deck-box.svg?raw'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
 import { BAND, stretchX } from '../lib/lineShapes'
-import { Bottom, CardView, Popup, SELECTED_RING, TextButton, Thumb, TownChip, shrink, type PopupAction } from '../components/ui'
+import { Bottom, CardView, Popup, SELECTED_RING, ringFor, TextButton, Thumb, TownChip, shrink, type PopupAction } from '../components/ui'
 import cardShape from '../assets/proto/v2/card-shape.svg'
 import CardActions from '../components/CardActions'
 import { PillVillage } from '../components/v2'
@@ -265,7 +265,7 @@ export default function CollectionScreen({
                   thumb={t.id === SQUARE_ID ? SQUARE_THUMB : state.cards[t.residents[0] ?? '']?.thumb}
                   size={size}
                   strong={on}
-                  ring={on ? SELECTED_RING : 6.6}
+                  ring={on ? SELECTED_RING : ringFor(size, 45)}
                   outline={!on}
                 />
                 <span className="absolute left-1/2 w-[100px] -translate-x-1/2 truncate text-center text-[16px] leading-[normal]" style={{ top: on ? 72 : 66 }}>
