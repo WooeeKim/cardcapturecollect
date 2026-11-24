@@ -403,6 +403,8 @@ export default function TownListScreen({
                   detail(t)
                 ) : (
                   <>
+                    {/* the whole row is a touch area (like a list row), not just the thumbnail and name */}
+                    <button aria-hidden tabIndex={-1} onClick={() => toggle(t)} className="absolute inset-0" />
                     <button aria-label={`${t.name} details`} onClick={() => toggle(t)} data-thumb className="absolute top-0 left-[31px]">
                       <Thumb image={chiefImage(t)} thumb={chiefThumb(t)} size={70} ring={ringFor(70, 65)} grey={dimmed} outline />
                     </button>
@@ -446,6 +448,7 @@ export default function TownListScreen({
                 detail(square.town)
               ) : (
                 <>
+                  <button aria-hidden tabIndex={-1} onClick={() => toggle(square.town)} className="absolute inset-0" />
                   <button aria-label={tr('{name} details', { name: tr(SQUARE_NAME) })} onClick={() => toggle(square.town)} data-thumb className="absolute top-0 left-[31px]">
                     <Thumb image={chiefImage(square.town)} thumb={chiefThumb(square.town)} size={70} ring={ringFor(70, 65)} grey={(!!openId && openId !== SQUARE_ID) || !!adding} outline />
                   </button>
