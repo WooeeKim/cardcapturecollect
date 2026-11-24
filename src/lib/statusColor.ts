@@ -1,5 +1,3 @@
-import { isWarm, warmRGB } from './warm'
-
 // Phone status bar = the colour at the top of the screen.
 // On a phone (and as a home-screen web app) iOS / Android paint the status bar area from the page, not from the
 // app frame: the page background (body) and <meta name="theme-color">. They used to be fixed (#fff / #f9f9f9),
@@ -36,9 +34,7 @@ function colorAt(x: number, y: number): string | null {
   }
   if (left > 0.99) return null
   // whatever is left shows the page behind: assume the frame's own paper colour
-  let rgb = out.map((v) => v + 240 * left) as [number, number, number]
-  // warm colours (admins): the page is read before the frame's colour filter, so map it the same way
-  if (isWarm()) rgb = warmRGB(...rgb)
+  const rgb = out.map((v) => v + 240 * left) as [number, number, number]
   const hex = rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
   return `#${hex}`
 }
