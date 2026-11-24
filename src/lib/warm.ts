@@ -56,6 +56,8 @@ function overrides(): string {
   const walk = (rules: CSSRuleList, wrap: (css: string) => string) => {
     for (const rule of Array.from(rules)) {
       if (rule instanceof CSSStyleRule) {
+        // rules written for warm mode already (index.css .warm …) use exactly the colours Figma gives: leave them
+        if (/\.warm\b/.test(rule.selectorText)) continue
         const decls: string[] = []
         for (let i = 0; i < rule.style.length; i++) {
           const prop = rule.style[i]

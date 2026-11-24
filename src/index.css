@@ -367,3 +367,30 @@ img {
 @media (prefers-reduced-motion: reduce) {
   .animate-tl-box, .animate-tl-thumb, .animate-tl-content { animation: none; }
 }
+
+/* warm colours (admins, lib/warm.ts): spots where Figma 따뜻한컬러 uses its own colours instead of the 7 styles.
+   lib/warm.ts leaves rules that already name .warm alone. */
+.warm-only {
+  display: none;
+}
+.warm .warm-only {
+  display: block;
+}
+.warm .warm-hide {
+  display: none;
+}
+/* Collection deck (Figma 1283:11544 / 1283:11818): empty slots, and the deck while a card is dragged over it */
+.warm .deck-empty {
+  background: #e6e5e3;
+  border-color: #f5f4f4;
+}
+.warm [data-over] .deck-box {
+  filter: none;
+}
+.warm [data-over] .deck-box path {
+  fill: #a8a7a5;
+}
+.warm [data-over] .deck-empty {
+  background: #bfbdbb;
+  border-color: #e0dfdd;
+}

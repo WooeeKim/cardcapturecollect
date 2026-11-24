@@ -4,6 +4,7 @@ import closeRing from '../assets/proto/v2/detail-close-ring.svg'
 import closeX from '../assets/proto/v2/detail-close-x.svg'
 import deckBoxSvg from '../assets/proto/v2/deck-box.svg?raw'
 import pillDiscard from '../assets/proto/v2/pill-discard.svg'
+import pillMigrationWarm from '../assets/proto/v2/pill-migration-warm.svg'
 import { BAND, stretchX } from '../lib/lineShapes'
 import { Bottom, CardView, Popup, PICKED_RING, ringFor, TextButton, Thumb, TownChip, shrink, type PopupAction } from '../components/ui'
 import cardShape from '../assets/proto/v2/card-shape.svg'
@@ -239,11 +240,11 @@ export default function CollectionScreen({
 
   return (
     <div ref={root} className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[84px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{tr('Collection')}</p>
-      <TextButton onClick={() => setNewest(!newest)} className={`absolute z-20 text-[17px] ${wide ? 'top-[40px] right-[40px]' : 'top-[93px] right-[24px]'}`}>
+      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[81px]'}`}>{tr('Collection')}</p>
+      <TextButton onClick={() => setNewest(!newest)} className={`absolute z-20 text-[17px] ${wide ? 'top-[40px] right-[40px]' : 'top-[92px] right-[38px]'}`}>
         {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
 
@@ -278,9 +279,9 @@ export default function CollectionScreen({
       </div>
 
       {/* selected town's deck */}
-      <div ref={deckEl} data-deck className="absolute inset-x-0" style={{ top: G.top, height: G.h - CUT, transformOrigin: `${G.boxL + G.boxW / 2}px ${(G.boxH - CUT) / 2}px` }}>
+      <div ref={deckEl} data-deck data-over={overDeck ? 1 : undefined} className="absolute inset-x-0" style={{ top: G.top, height: G.h - CUT, transformOrigin: `${G.boxL + G.boxW / 2}px ${(G.boxH - CUT) / 2}px` }}>
         {/* Figma Collection 787:893: hand-drawn box (Vector 413); darker while a card hovers over it or it's refusing one */}
-        <svg aria-hidden viewBox="0 0 382 256" preserveAspectRatio="none" className={`pointer-events-none absolute top-[1px] overflow-visible transition-[filter] ${overDeck ? 'brightness-[0.62]' : full ? 'brightness-[0.78]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }}>
+        <svg aria-hidden viewBox="0 0 382 256" preserveAspectRatio="none" className={`deck-box pointer-events-none absolute top-[1px] overflow-visible transition-[filter] ${overDeck ? 'brightness-[0.62]' : full ? 'brightness-[0.78]' : ''}`} style={{ left: G.boxL, width: G.boxW, height: G.boxH - CUT }}>
           <path d={DECK_D} fill="#E0E0E0" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
         <div
@@ -305,7 +306,7 @@ export default function CollectionScreen({
                         )}
                       </>
                     ) : (
-                      <span className="block size-full rounded-[3px] border-2 border-[#efefef] bg-[#e7e7e7]" />
+                      <span className="deck-empty block size-full rounded-[3px] border-2 border-[#efefef] bg-[#e7e7e7]" />
                     )}
                   </div>
                 )
@@ -387,7 +388,7 @@ function Detail({ wide, card, town, onClose, onDelete, onMigrate }: { wide: bool
       <TownChip name={town.name} image={town.image} thumb={town.thumb} className={`absolute ${wide ? 'top-[57px] left-[417px]' : 'top-[155px]'}`} style={wide ? undefined : { left: `calc(21px + ${CARD_INSET})` }} />
       <button aria-label={tr('Close')} onClick={onClose} className={`absolute flex h-[37px] w-[35px] items-center justify-center ${wide ? 'top-[68px] left-[745px]' : 'top-[166px]'}`} style={wide ? undefined : { left: `calc(349px - ${CARD_INSET})` }}>
         <img src={closeRing} alt="" className="absolute inset-0 size-full" />
-        <img src={closeX} alt="" className="relative h-[14.8px] w-[12.3px]" />
+        <img src={closeX} alt="" className="relative h-[16.78px] w-[14.33px] max-w-none" />
       </button>
       <div className={`absolute w-[360px] [perspective:700px] ${wide ? 'top-[112px] left-[417px]' : 'top-[210px] left-[21px]'}`} style={wide ? undefined : shrink(515)}>
         <div
@@ -428,19 +429,23 @@ function Detail({ wide, card, town, onClose, onDelete, onMigrate }: { wide: bool
         </div>
       </div>
       {(() => {
+        // Figma 따뜻한컬러 › Collection (1283:12306 Group 114): Let go on the left (109×41 at 144), Migration on the
+        // right (113×41 at 268), both at y 736; iPad: the same pair at the card's lower right
         const letGo = (
-          <button onClick={onDelete} className={`absolute flex h-[43px] w-[102px] items-center justify-center ${wide ? 'top-[652px] left-[675px]' : 'top-[735px] left-[280px]'}`}>
+          <button onClick={onDelete} className={`absolute flex h-[41px] w-[109px] items-center justify-center ${wide ? 'top-[652px] left-[539px]' : 'top-[736px] left-[144px]'}`}>
             <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
-            <span className="relative text-[23px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
+            <span className="relative text-[22px] leading-[1.1] text-[#686868]">{tr('Let go')}</span>
           </button>
         )
         // inside the card's outline (card starts at x 21 / 417)
         const actions = <CardActions card={card} light className={`absolute ${wide ? 'top-[652px] left-[426px]' : 'top-[734px] left-[30px]'}`} />
-        // Migration left of Let go: opens Town List to pick any town, the plaza included
+        // Migration right of Let go: opens Town List to pick any town, the plaza included.
+        // Warm colours (admins): a grey pill (color_03), like the Figma frame
         const migrate = (
-          <button onClick={onMigrate} className={`absolute flex h-[43px] w-[124px] items-center justify-center ${wide ? 'top-[652px] left-[539px]' : 'top-[735px] left-[144px]'}`}>
-            <img src={pillDiscard} alt="" className="absolute inset-0 size-full" />
-            <span className="relative text-[23px] leading-[1.1] text-black">{tr('Migration')}</span>
+          <button onClick={onMigrate} className={`absolute flex h-[41px] w-[113px] items-center justify-center ${wide ? 'top-[652px] left-[663px]' : 'top-[736px] left-[268px]'}`}>
+            <img src={pillDiscard} alt="" className="warm-hide absolute inset-0 size-full" />
+            <img src={pillMigrationWarm} alt="" className="warm-only absolute inset-0 size-full" />
+            <span className="relative text-[22px] leading-[1.1] text-black">{tr('Migration')}</span>
           </button>
         )
         return wide ? (

@@ -317,7 +317,7 @@ export default function TownListScreen({
           <p data-name className="absolute top-[22px] left-[135px] w-[205px] truncate text-[21px] leading-[1.3]">{sq ? tr(SQUARE_NAME) : townName(t!.name)}</p>
         )}
         <button aria-label={tr('Close')} onClick={isNew ? () => setAdding(null) : close} className="absolute top-[14px] left-[344px] flex size-[28px] items-center justify-center">
-          <img src={tlClose} alt="" className="h-[14.8px] w-[12.3px]" />
+          <img src={tlClose} alt="" className="h-[16.78px] w-[14.33px] max-w-none" />
         </button>
         <p className="absolute top-[54px] left-[135px] text-[14px] leading-[normal] text-[#8e8e8e]">
           {sq ? tr('Residents {n}/no limits', { n: t!.residents.length }) : `Residents ${t ? t.residents.length : 0}/${MAX_RESIDENTS}`}
