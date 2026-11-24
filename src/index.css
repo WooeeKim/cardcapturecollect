@@ -367,8 +367,3 @@ img {
 @media (prefers-reduced-motion: reduce) {
   .animate-tl-box, .animate-tl-thumb, .animate-tl-content { animation: none; }
 }
-
-/* admin accounts only (lib/warm.ts): every grey turned into the warm greys of Figma 따뜻한컬러 */
-.warm #root {
-  filter: url(#warm-colors);
-}
