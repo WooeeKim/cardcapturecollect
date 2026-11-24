@@ -144,10 +144,13 @@ export function WideCol({ children, bg = '#f9f9f9' }: { children: ReactNode; bg?
 
 // ---------- town thumbnail: chief's drawing inside a sketchy ring ----------
 
+// selected / open town: its ring is as thick as the Go box's outline (go-box.svg stroke 5)
+export const SELECTED_RING = 5
+
 export function Thumb({ image, thumb, size = 70, strong = false, grey = false, ring: ringW, outline = false }: { image?: string; thumb?: string; size?: number; strong?: boolean; grey?: boolean; ring?: number; outline?: boolean }) {
   // Figma townThumbnail: white circle, 9px #ccc ring (8.5px #686868 when open); drawing zoomed on the upper body.
   // The ring is drawn as a slightly wobbly hand-drawn stroke, like the rest of the sketchy UI.
-  const ring = ringW ?? (strong ? 8.5 : 9)
+  const ring = ringW ?? (strong ? SELECTED_RING : 9)
   return (
     <span className="relative block shrink-0" style={{ width: size, height: size }}>
       {/* with the black outline, everything inside it is white (fills the wobble too) */}
