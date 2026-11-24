@@ -2,7 +2,7 @@ import xIcon from '../assets/proto/x.svg'
 import { ConfirmBubble, PillBack, PillFinish } from './v2'
 import handleIcon from '../assets/proto/handle.svg'
 import goBox from '../assets/proto/v2/go-box.svg'
-import backIcon from '../assets/proto/back.svg'
+import backIcon from '../assets/proto/v2/back40.svg'
 import plusIcon from '../assets/proto/plus.svg'
 import underlineSvg from '../assets/proto/underline.svg'
 import wifiIcon from '../assets/proto/wifi.svg'
@@ -58,16 +58,16 @@ export function TextButton({ children, onClick, dim = false, light = false, clas
   )
 }
 
-// Figma header (townList): back chevron · title · optional right control
-// iPad sideways: back in the top-left corner (Figma iPad 40, 30), title centred at the top
+// Page header, the same on every page (Figma townList / Collection / My Page): back 40×40 at (24, 85), the title
+// 24px centred on y 105, the right-hand control 40×40 at (338, 85). iPad sideways: same row at the top of the frame.
 export function Header({ title, onBack, right }: { title: string; onBack: () => void; right?: ReactNode }) {
   const wide = useWide()
   return (
     <>
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 p-[10px] ${wide ? 'top-[28px] left-[38px]' : 'top-[72px] left-[17px]'}`}>
-        <img src={backIcon} alt="" className="h-[25.3px] w-[16.1px] -scale-x-100" />
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
+        <img src={backIcon} alt="" className="size-full" />
       </button>
-      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[normal] [-webkit-text-stroke:0.6px_black] ${wide ? 'top-[36px]' : 'top-[77px]'}`}>{title}</h1>
+      <h1 className={`pointer-events-none absolute inset-x-0 z-20 text-center font-hand text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{title}</h1>
       {right}
     </>
   )
@@ -76,7 +76,7 @@ export function Header({ title, onBack, right }: { title: string; onBack: () => 
 export function PlusButton({ onClick, label }: { onClick: () => void; label: string }) {
   const wide = useWide()
   return (
-    <button aria-label={label} onClick={onClick} className={`absolute z-20 p-[10px] ${wide ? 'top-[28px] left-[1110px]' : 'top-[72px] left-[344px]'}`}>
+    <button aria-label={label} onClick={onClick} className={`absolute z-20 flex size-[40px] items-center justify-center ${wide ? 'top-[30px] left-[1114px]' : 'top-[85px] left-[338px]'}`}>
       <img src={plusIcon} alt="" className="h-[23.8px] w-[26.8px]" />
     </button>
   )
