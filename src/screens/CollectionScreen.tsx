@@ -240,11 +240,11 @@ export default function CollectionScreen({
 
   return (
     <div ref={root} className="relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[84px] left-[24px]'}`}>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-20 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[85px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[81px]'}`}>{tr('Collection')}</p>
-      <TextButton onClick={() => setNewest(!newest)} className={`absolute z-20 text-[17px] ${wide ? 'top-[40px] right-[40px]' : 'top-[92px] right-[38px]'}`}>
+      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[89px]'}`}>{tr('Collection')}</p>
+      <TextButton onClick={() => setNewest(!newest)} className={`absolute z-20 text-[17px] ${wide ? 'top-[40px] right-[40px]' : 'top-[94px] right-[38px]'}`}>
         {tr(newest ? 'Newest' : 'Oldest')}
       </TextButton>
 
