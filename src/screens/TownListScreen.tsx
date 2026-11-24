@@ -355,8 +355,8 @@ export default function TownListScreen({
           }, 311)
         )}
         </div>
-        <span data-thumb className="animate-tl-thumb pointer-events-none absolute top-0 left-[24px]">
-          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={84} strong />
+        <span data-thumb className="animate-tl-thumb pointer-events-none absolute top-[-3px] left-[21px]">
+          <Thumb image={t ? chiefImage(t) : undefined} thumb={t ? chiefThumb(t) : undefined} size={90} strong />
         </span>
         {/* Go sits on top of the thumbnail, centered under it */}
         {t && !editing && mode === 'browse' && (
