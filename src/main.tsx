@@ -10,6 +10,7 @@ import { preloadAssets } from './lib/preload'
 import { installTouchGlow } from './lib/touchGlow'
 import { installSound } from './lib/sound'
 import { installStatusColor } from './lib/statusColor'
+import { setWarm } from './lib/warm'
 
 // The app is laid out in Figma frame px (402 wide).
 // - PC: the whole 402×874 frame, scaled down to fit the window (never upscale).
@@ -169,6 +170,7 @@ function Boot() {
   )
 }
 if (!admin) {
+  setWarm(true) // warm colours (Figma 따뜻한컬러) for every account, from the splash on (lib/warm.ts)
   installTouchGlow()
   installSound()
   installStatusColor()

@@ -368,7 +368,7 @@ img {
   .animate-tl-box, .animate-tl-thumb, .animate-tl-content { animation: none; }
 }
 
-/* warm colours (admins, lib/warm.ts): spots where Figma 따뜻한컬러 uses its own colours instead of the 7 styles.
+/* warm colours (every account, lib/warm.ts): spots where Figma 따뜻한컬러 uses its own colours instead of the 7 styles.
    lib/warm.ts leaves rules that already name .warm alone. */
 .warm-only {
   display: none;

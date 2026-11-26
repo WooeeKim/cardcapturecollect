@@ -1,11 +1,12 @@
-// Warm colours (Figma UX › 앱 확정 › 따뜻한컬러, paint styles color_00–06), for admin accounts only for now.
-// The app's colours are written straight into many classes, inline styles and SVG files. For admins each one is
+// Warm colours (Figma UX › 앱 확정 › 따뜻한컬러, paint styles color_00–06), for every account
+// (turned on in main.tsx; the <site>/admin page stays as it is).
+// The app's colours are written straight into many classes, inline styles and SVG files. Each one is
 // swapped at its source: the stylesheet (override rules in the same @layer), inline style / fill / stroke
 // attributes, and SVG files shown as <img> (recoloured copies). (A whole-frame SVG filter was tried first, but
 // iPhone Safari skipped some layers with it, so parts stayed grey.)
 
 // The 7 Figma paint styles. Every UI colour that isn't clearly a colour (greys, and the faintly tinted greys of the
-// town skies / grounds) snaps to one of these by its brightness, so admins see nothing but these 7 (alpha kept).
+// town skies / grounds) snaps to one of these by its brightness, so the app shows nothing but these 7 (alpha kept).
 // Brightness bands follow the job each style has in the Figma frames:
 const PALETTE: [number, string][] = [
   // [lowest brightness for this style, colour]

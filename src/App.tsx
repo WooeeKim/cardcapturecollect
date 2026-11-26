@@ -12,7 +12,6 @@ import { FINAL_DAY, finalAnswered, finalOpen, resendFinal, submitFinal } from '.
 import { answered as interviewAnswered, cardsIn, currentSlot, resendInterviews, submit as submitInterview, type Kind, type Slot } from './lib/interview'
 import { NicknameScreen, WelcomeScreen } from './screens/OnboardingScreens'
 import { loadImage } from './lib/preload'
-import { setWarm } from './lib/warm'
 import { checkAdmin, currentUser, flushRemote, loadRemote, logOut, saveRemote, saveRemoteNow, supabase, usingSupabase, type User } from './lib/auth'
 import { viewAsId } from './lib/viewAs'
 import { setScreen, startTracking } from './lib/events'
@@ -198,12 +197,10 @@ export default function App({ onReady }: { onReady?: () => void }) {
     let live = true
     setIsAdmin(false)
     soundForAccount(false)
-    setWarm(false)
     checkAdmin(user).then((ok) => {
       if (!live) return
       setIsAdmin(ok)
       soundForAccount(ok) // sound is developer-only for now (lib/sound.ts)
-      setWarm(ok) // warm colours (Figma 따뜻한컬러) are admin-only for now, to try before everyone gets them (lib/warm.ts)
     })
     return () => {
       live = false
