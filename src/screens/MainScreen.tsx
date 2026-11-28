@@ -987,14 +987,14 @@ export default function MainScreen({
       {!follow && (
         <>
           {/* Figma 따뜻한컬러 › main 1273:10778 (closed: ▽) / 1286:13278 (open: △ with the icon box under it).
-              The triangle stays in one spot (center 50, 97.3) so it flips in place. Triangle, name and person icon all centred on y 97. */}
-          <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className={`absolute z-30 flex h-[44px] w-[50px] items-center justify-center ${wide ? 'top-[33px] left-[40px]' : 'top-[75.3px] left-[25px]'}`}>
+              The triangle stays in one spot (center 50, 87.3) so it flips in place. Triangle, name and person icon all centred on y 87 (Figma 97, 10px higher). */}
+          <button aria-label={tr(menu ? 'Close menu' : 'Menu')} aria-expanded={menu} onClick={() => setMenu(!menu)} className={`absolute z-30 flex h-[44px] w-[50px] items-center justify-center ${wide ? 'top-[33px] left-[40px]' : 'top-[65.3px] left-[25px]'}`}>
             <img src={menu ? triUp : triDown} alt="" className="h-[20.5px] w-[28.7px] max-w-none" />
           </button>
           {menu && (
             <>
               <div className="absolute inset-0 z-20" onClick={() => setMenu(false)} />
-              <div className={`animate-pop-in absolute z-20 h-[130.8px] w-[66px] origin-top ${wide ? 'top-[76.2px] left-[34.8px]' : 'top-[119.2px] left-[19.8px]'}`}>
+              <div className={`animate-pop-in absolute z-20 h-[130.8px] w-[66px] origin-top ${wide ? 'top-[76.2px] left-[34.8px]' : 'top-[109.2px] left-[19.8px]'}`}>
                 <img src={menuBox} alt="" className="absolute inset-0 size-full" />
                 <button aria-label={tr('Collection')} onClick={() => { setMenu(false); onCollection() }} className="absolute top-[11.8px] left-[13.2px] size-[45px]">
                   <img src={menuCollection} alt="" className="size-full" />
@@ -1006,13 +1006,13 @@ export default function MainScreen({
             </>
           )}
           {/* town name → Town List (only the name itself is tappable; the rest of the bar still pans the town) */}
-          <div className={`pointer-events-none absolute flex justify-center ${wide ? 'inset-x-[200px] top-[30px]' : 'inset-x-[90px] top-[75px]'}`}>
+          <div className={`pointer-events-none absolute flex justify-center ${wide ? 'inset-x-[200px] top-[30px]' : 'inset-x-[90px] top-[65px]'}`}>
             <button onClick={() => { setMenu(false); onTowns() }} className="pointer-events-auto max-w-full truncate px-[6px] py-[8px] font-hand text-[24px] leading-[28px]">
               {townName(town.name)}
             </button>
           </div>
-          {/* same gap from the right edge as the triangle from the left (36.6px), icon centred on y 97 (Figma main › Frame 164) */}
-          <button aria-label={tr('My page')} onClick={onMyPage} className={`absolute p-[8px] ${wide ? 'top-[27px] left-[1108px]' : 'top-[68.9px] left-[332.9px]'}`}>
+          {/* same gap from the right edge as the triangle from the left (36.6px), icon centred on y 87 (Figma main › Frame 164, 10px higher) */}
+          <button aria-label={tr('My page')} onClick={onMyPage} className={`absolute p-[8px] ${wide ? 'top-[27px] left-[1108px]' : 'top-[58.9px] left-[332.9px]'}`}>
             <img src={personIcon} alt="" className="h-[40.1px] w-[25.4px]" />
           </button>
         </>
