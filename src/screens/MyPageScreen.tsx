@@ -134,11 +134,11 @@ export default function MyPageScreen({
 
   return (
     <div className="mp-page relative h-full overflow-hidden bg-[#f9f9f9] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-10 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[77px] left-[24px]'}`}>
+      <button aria-label={tr('Back')} onClick={onBack} className={`absolute z-10 size-[40px] ${wide ? 'top-[30px] left-[40px]' : 'top-[67px] left-[24px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
-      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[88px]'}`}>{tr('My Page')}</p>
-      <LangButton className={`z-10 ${wide ? 'top-[30px] left-[1104px]' : 'top-[84px] left-[333px]'}`} />
+      <p className={`absolute left-1/2 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[36px]' : 'top-[78px]'}`}>{tr('My Page')}</p>
+      <LangButton className={`z-10 ${wide ? 'top-[30px] left-[1104px]' : 'top-[74px] left-[333px]'}`} />
 
       {/* settings list (scrolls on short phones; iPad sideways: the right column, first row at y 140) */}
       <div className={`absolute overflow-y-auto [scrollbar-width:none] ${wide ? 'w-[402px]' : 'inset-x-0'}`} style={wide ? { left: 623, top: 121, bottom: 130 } : { top: 340, bottom: 99 }}>

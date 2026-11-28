@@ -402,8 +402,8 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
       {/* header */}
       <div className={`pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-[#f0f0f0] to-[#f0f0f0]/0 ${wide ? 'h-[100px]' : 'h-[140px]'}`} />
       {/* header (Figma 따뜻한컬러 › drawing 1283:12569): chevron at (34, 85), ✓ at (347, 83), tab names at y 81, the
-          underline at y 114 (Drawing 106–201, Memo 216–269) */}
-      <button aria-label={tr('Back')} onClick={back} className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] left-[40px]' : 'top-[72px] left-[19px]'}`}>
+          underline at y 114 (Drawing 106–201, Memo 216–269); the whole row sits 10px higher than Figma */}
+      <button aria-label={tr('Back')} onClick={back} className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] left-[40px]' : 'top-[62px] left-[19px]'}`}>
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {(['draw', 'memo'] as const).map((t) => (
@@ -420,7 +420,7 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
           }}
           aria-pressed={tab === t}
           data-tour={t === 'memo' ? 'memo' : undefined}
-          className={`absolute z-20 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[40px]' : 'top-[81px]'}`}
+          className={`absolute z-20 -translate-x-1/2 text-[24px] leading-[1.3] ${wide ? 'top-[40px]' : 'top-[71px]'}`}
           style={{ left: wide ? (t === 'draw' ? 561 : 649) : t === 'draw' ? 154 : 242.5 }}
         >
           {tr(t === 'draw' ? 'Drawing' : 'Memo')}
@@ -429,14 +429,14 @@ export default function DrawScreen({ onExit, onFinish, tutorial = false, by }: {
       <img
         src={tab === 'draw' ? lineDraw : lineMemo}
         alt=""
-        className={`pointer-events-none absolute z-20 h-[3px] max-w-none ${wide ? 'top-[69px]' : 'top-[112.5px]'}`}
+        className={`pointer-events-none absolute z-20 h-[3px] max-w-none ${wide ? 'top-[69px]' : 'top-[102.5px]'}`}
         style={wide ? (tab === 'draw' ? { left: 515, width: 92 } : { left: 619, width: 60 }) : tab === 'draw' ? { left: 106, width: 95 } : { left: 216, width: 53 }}
       />
       <button
         aria-label={tr('Finish drawing')}
         data-tour="finish"
         onClick={check}
-        className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] right-[40px]' : 'top-[72px] right-[19px]'}`}>
+        className={`absolute z-20 size-[50px] ${wide ? 'top-[30px] right-[40px]' : 'top-[62px] right-[19px]'}`}>
         <img src={checkIcon} alt="" className="size-full" />
       </button>
 
@@ -858,7 +858,7 @@ export function TadaScreen({ card, onChoose, onBack }: { card: Card; onChoose: (
   ]
   return (
     <div className="relative h-full overflow-hidden bg-[#f0f0f0] font-hand">
-      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[72px] left-[19px] z-10 size-[50px]">
+      <button aria-label={tr('Back')} onClick={onBack} className="absolute top-[62px] left-[19px] z-10 size-[50px]">
         <img src={backIcon} alt="" className="size-full" />
       </button>
       {sparks.map((s, i) => (
